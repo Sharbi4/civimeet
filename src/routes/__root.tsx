@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import sofiaFont from "@/assets/sofia-pro-soft.woff2.asset.json";
 
 function NotFoundComponent() {
   return (
