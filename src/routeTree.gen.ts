@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AgentRouteImport } from './routes/agent'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -20,6 +21,7 @@ import { Route as ProductRouteImport } from './routes/product'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
+import { Route as ApiAgentResearchRouteImport } from './routes/api.agent.research'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -29,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentRoute = AgentRouteImport.update({
+  id: '/agent',
+  path: '/agent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -76,10 +83,16 @@ const SolutionsSlugRoute = SolutionsSlugRouteImport.update({
   path: '/solutions/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentResearchRoute = ApiAgentResearchRouteImport.update({
+  id: '/api/agent/research',
+  path: '/api/agent/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -89,10 +102,12 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
+  '/api/agent/research': typeof ApiAgentResearchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -102,11 +117,13 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
+  '/api/agent/research': typeof ApiAgentResearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/agent': typeof AgentRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -116,12 +133,14 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
+  '/api/agent/research': typeof ApiAgentResearchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/about'
+    | '/agent'
     | '/auth'
     | '/contact'
     | '/how-it-works'
@@ -131,10 +150,12 @@ export interface FileRouteTypes {
     | '/terms'
     | '/solutions/$slug'
     | '/solutions/'
+    | '/api/agent/research'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
+    | '/agent'
     | '/auth'
     | '/contact'
     | '/how-it-works'
@@ -144,10 +165,12 @@ export interface FileRouteTypes {
     | '/terms'
     | '/solutions/$slug'
     | '/solutions'
+    | '/api/agent/research'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/agent'
     | '/auth'
     | '/contact'
     | '/how-it-works'
@@ -157,11 +180,13 @@ export interface FileRouteTypes {
     | '/terms'
     | '/solutions/$slug'
     | '/solutions/'
+    | '/api/agent/research'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AgentRoute: typeof AgentRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   HowItWorksRoute: typeof HowItWorksRoute
@@ -171,6 +196,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
+  ApiAgentResearchRoute: typeof ApiAgentResearchRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -187,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent': {
+      id: '/agent'
+      path: '/agent'
+      fullPath: '/agent'
+      preLoaderRoute: typeof AgentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -252,12 +285,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SolutionsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/research': {
+      id: '/api/agent/research'
+      path: '/api/agent/research'
+      fullPath: '/api/agent/research'
+      preLoaderRoute: typeof ApiAgentResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AgentRoute: AgentRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   HowItWorksRoute: HowItWorksRoute,
@@ -267,6 +308,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
+  ApiAgentResearchRoute: ApiAgentResearchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

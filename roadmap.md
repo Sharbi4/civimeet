@@ -6,6 +6,7 @@
 - [ ] 7-step organization onboarding → /dashboard
 - [ ] Dashboard shell + sidebar (15 sections), overview cards, activity feed, quick actions
 - [ ] AI Organizer workspace: chat, tasks, runtime abstraction, Live Agent Workspace panel
+- [x] Perplexity server research adapter + private /agent research preview (requires server secrets; customer auth, persistent memory and job execution still pending)
 - [ ] Communities, Memory, Vendors, Venues
 - [ ] Events wizard, RSVPs, Contacts, Communications, Approvals, Calendar
 - [ ] Analytics, Integrations, Settings, demo environment (labeled sample data)

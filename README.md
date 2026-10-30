@@ -1,6 +1,10 @@
 # CiviMeet
 
-Implement exactly the screenshot and nothing else
+AI community operations platform: Contribute → Connect → Convene.
+
+## Perplexity research
+
+The private research preview is available at `/agent`. Configure server secrets before use; see [Perplexity setup and current scope](docs/perplexity.md). Research is separate from the future autonomous organizer and does not publish or book anything.
 
 This project was built with [Lovable](https://lovable.dev).
 
