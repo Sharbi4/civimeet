@@ -17,6 +17,9 @@ begin
   select count(*) into observed_count from public.platform_agents;
   if observed_count<>6 then raise exception 'Expected six distinct platform agents'; end if;
   token_a:=public.rotate_platform_agent_token(fb_a); token_web:=public.rotate_platform_agent_token(web_a);
+  denied:=false;
+  begin perform * from private.agent_credentials; exception when others then denied:=true; end;
+  if not denied then raise exception 'Organization member read credential hashes directly'; end if;
   payload:=jsonb_build_object('details',jsonb_build_object('name','Test Catering','category','Catering','service_areas',jsonb_build_array('Tucson'),'email','original@example.invalid','phone','','contact_name','','notes',''),
     'source_url','https://example.invalid/community-post','source_excerpt','Public business details','links',jsonb_build_array(jsonb_build_object('platform','facebook','url','https://www.facebook.com/TestCatering/')),'idempotency_key',gen_random_uuid());
   result:=public.save_vendor_discovery(fb_a,payload); vendor_a:=(result->>'vendor_id')::uuid;
@@ -49,6 +52,21 @@ begin
   if not denied then raise exception 'Another platform agent finished this task'; end if;
   perform public.finish_agent_work(token_a,task,(claimed->>'lease_id')::uuid,true,'Research completed');
   if (select status from public.agent_work_items where id=task)<>'completed' then raise exception 'Task did not complete'; end if;
+  task:=public.enqueue_agent_work(fb_a,'Research a second neighborhood gathering');
+  claimed:=public.claim_agent_work(token_a);
+  execute 'reset role';
+  update public.agent_work_items set lease_until=now()-interval '1 second' where id=task;
+  execute 'set local role authenticated';
+  result:=public.claim_agent_work(token_a);
+  if (result->>'id')::uuid<>task or (result->>'attempts')::integer<>2 or result->>'lease_id'=claimed->>'lease_id' then raise exception 'Expired worker lease was not safely recovered'; end if;
+  denied:=false;
+  begin perform public.finish_agent_work(token_a,task,(claimed->>'lease_id')::uuid,true,'Stale worker'); exception when others then denied:=true; end;
+  if not denied then raise exception 'Stale worker completed reclaimed work'; end if;
+  execute 'reset role';
+  update public.agent_work_items set lease_until=now()-interval '1 second',attempts=3 where id=task;
+  execute 'set local role authenticated';
+  if public.claim_agent_work(token_a) is not null then raise exception 'Exhausted work was claimed again'; end if;
+  if (select status from public.agent_work_items where id=task)<>'failed' then raise exception 'Exhausted work was not marked failed'; end if;
 
   perform set_config('request.jwt.claims',jsonb_build_object('sub',user_b,'role','authenticated')::text,true);
   org_b:=public.create_vendor_workspace('Isolation test organization B');

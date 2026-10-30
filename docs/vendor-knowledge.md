@@ -25,9 +25,9 @@ VITE_SUPABASE_URL=<this project's Supabase API URL>
 VITE_SUPABASE_PUBLISHABLE_KEY=<this project's public publishable key>
 ```
 
-`VITE_SUPABASE_ANON_KEY` is accepted for projects still using a legacy public anon key. Never put a service-role key, secret key, or agent credential in a `VITE_` variable. The public key identifies the project; it is not a memory password. An API key for Perplexity is unrelated to database access. The older `CIVIMEET_RESEARCH_TOKEN` protects only the separate `/agent` research preview.
+For projects still using a legacy public anon key, place that public key in `VITE_SUPABASE_PUBLISHABLE_KEY`. Never put a service-role key, secret key, or agent credential in a `VITE_` variable. The public key identifies the project; it is not a memory password. An API key for Perplexity is unrelated to database access. The older `CIVIMEET_RESEARCH_TOKEN` protects only the separate `/agent` research preview.
 
-The Lovable database tools expose SQL access but not these public connection values. If the host has not injected them, the app shows a connection setup state; set them from the project's Cloud connection settings and rebuild. Merging the GitHub branch is required before Lovable's connected `main` branch includes these screens.
+Lovable has added this project's public connection configuration and generated Supabase client on `main`; those commits are merged into this branch. The app reuses that client, including Lovable preview-session storage. For other deployments, missing public configuration produces a setup state. Merging the GitHub branch is required before Lovable's connected `main` branch includes these screens.
 
 - `/auth`: sign in/create account, confirm email if required, create the first organization.
 - `/vendors`: paginated search by name/category, service area, and review status; sourced discoveries; business website/social links; contact editing; verification and archive status; latest 50 discovery snapshots.

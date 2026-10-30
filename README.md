@@ -6,6 +6,10 @@ AI community operations platform: Contribute → Connect → Convene.
 
 The private research preview is available at `/agent`. Configure server secrets before use; see [Perplexity setup and current scope](docs/perplexity.md). Research is separate from the future autonomous organizer and does not publish or book anything.
 
+## Organization and agent knowledge
+
+The cloud database stores an organization-owned vendor directory, sourced discoveries, shared knowledge, private memory per platform agent, and independent worker queues. Open `/vendors`, `/knowledge`, or `/platform-agents` after signing in and creating an organization. See [database setup, isolation, and worker interface](docs/vendor-knowledge.md).
+
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
