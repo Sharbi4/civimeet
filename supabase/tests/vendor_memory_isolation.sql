@@ -15,7 +15,8 @@ begin
   select id into fb_a from public.platform_agents where organization_id=org_a and platform='facebook';
   select id into web_a from public.platform_agents where organization_id=org_a and platform='web';
   select count(*) into observed_count from public.platform_agents;
-  if observed_count<>6 then raise exception 'Expected six distinct platform agents'; end if;
+  if observed_count<>7 then raise exception 'Expected seven distinct platform agents'; end if;
+  perform public.select_organization_platform(fb_a,true);
   token_a:=public.rotate_platform_agent_token(fb_a); token_web:=public.rotate_platform_agent_token(web_a);
   denied:=false;
   begin perform * from private.agent_credentials; exception when others then denied:=true; end;
@@ -71,7 +72,7 @@ begin
   perform set_config('request.jwt.claims',jsonb_build_object('sub',user_b,'role','authenticated')::text,true);
   org_b:=public.create_vendor_workspace('Isolation test organization B');
   select id into fb_b from public.platform_agents where organization_id=org_b and platform='facebook';
-  token_b:=public.rotate_platform_agent_token(fb_b);
+  perform public.select_organization_platform(fb_b,true); token_b:=public.rotate_platform_agent_token(fb_b);
   result:=public.save_vendor_discovery(fb_b,payload); vendor_b:=(result->>'vendor_id')::uuid;
   if vendor_a=vendor_b then raise exception 'Vendors merged across tenants'; end if;
   if (select count(*) from public.vendors)<>1 then raise exception 'Row-level vendor isolation failed'; end if;

@@ -1,8 +1,26 @@
 import { z } from "zod";
 
-export const platforms = ["web", "facebook", "instagram", "nextdoor", "reddit", "x"] as const;
+export const platforms = [
+  "web",
+  "x",
+  "eventbrite",
+  "facebook",
+  "reddit",
+  "nextdoor",
+  "instagram",
+] as const;
+export const platformLabels: Record<(typeof platforms)[number], string> = {
+  web: "Public web",
+  x: "X.com",
+  eventbrite: "Eventbrite",
+  facebook: "Facebook",
+  reddit: "Reddit",
+  nextdoor: "Nextdoor",
+  instagram: "Instagram",
+};
 export const linkPlatforms = [
   "website",
+  "eventbrite",
   "facebook",
   "instagram",
   "nextdoor",
@@ -51,6 +69,7 @@ export type PlatformAgent = {
   name: string;
   instructions: string;
   paused: boolean;
+  selected: boolean;
   last_collection_at: string | null;
 };
 export type Discovery = {

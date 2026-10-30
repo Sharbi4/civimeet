@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { PlatformAgent } from "@/lib/vendors";
+import { platformLabels, type PlatformAgent } from "@/lib/vendors";
 
 export const Route = createFileRoute("/platform-agents")({
   head: () => ({
@@ -137,6 +137,28 @@ function PlatformAgents() {
     else setToken(data as string);
   }
 
+  async function selectPlatform(enabled: boolean) {
+    if (!selected) return;
+    setBusy(true);
+    setError("");
+    const { error: failure } = await db.rpc("select_organization_platform", {
+      target_agent: selected.id,
+      is_selected: enabled,
+    });
+    setBusy(false);
+    if (failure) setError(failure.message);
+    else {
+      setSelected({ ...selected, selected: enabled });
+      setToken("");
+      setNotice(
+        enabled
+          ? "Platform selected for this organization. Account authorization still needs setup."
+          : "Platform removed from this organization's choices. Worker access is revoked; saved knowledge is retained.",
+      );
+      setRefresh((value) => value + 1);
+    }
+  }
+
   async function enqueue() {
     if (!selected) return;
     setBusy(true);
@@ -157,7 +179,11 @@ function PlatformAgents() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold">Platform agents</h2>
+        <h2 className="text-2xl font-semibold">Your organization's platforms</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Choose any combination of X.com, Eventbrite, Facebook, Reddit, Nextdoor, and Instagram.
+          Choices apply only to this organization. Public web research is available separately.
+        </p>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
           Each platform has its own instructions, private memory, credential, and work queue within
           this organization. Agents share the organization's vendor directory and knowledge.
@@ -184,6 +210,7 @@ function PlatformAgents() {
           {agents.map((agent) => (
             <button
               key={agent.id}
+              disabled={busy}
               className={`rounded-lg border p-5 text-left ${selected?.id === agent.id ? "border-primary" : ""}`}
               onClick={() => {
                 setSelected(agent);
@@ -191,10 +218,17 @@ function PlatformAgents() {
                 setError("");
               }}
             >
-              <p className="text-xs uppercase tracking-wide text-primary">{agent.platform}</p>
+              <p className="text-xs uppercase tracking-wide text-primary">
+                {platformLabels[agent.platform]}
+              </p>
               <h3 className="mt-2 font-semibold">{agent.name}</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                {agent.paused ? "Collection paused" : "Accepting authorized worker requests"}
+                {!agent.selected
+                  ? "Not selected"
+                  : agent.platform !== "web"
+                    ? "Selected · Account connection needs setup"
+                    : "Public web research selected"}
+                {agent.paused && " · Paused"}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 {agent.last_collection_at
@@ -213,6 +247,28 @@ function PlatformAgents() {
               Refresh memory and work
             </Button>
           </div>
+          {selected.platform !== "web" && (
+            <section className="space-y-3 rounded-md border bg-muted p-4">
+              <h4 className="font-semibold">{platformLabels[selected.platform]} connection</h4>
+              <p className="text-sm text-muted-foreground">
+                {selected.selected
+                  ? "Selected for this organization. "
+                  : "This platform is optional. "}
+                Account authorization is not available yet. Selecting a platform does not sign in,
+                grant account access, or start collecting information.
+              </p>
+              {administrator && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void selectPlatform(!selected.selected)}
+                >
+                  {selected.selected ? "Remove platform selection" : "Select for this organization"}
+                </Button>
+              )}
+            </section>
+          )}
           <form
             className="space-y-4"
             onSubmit={(e) => {
@@ -262,7 +318,11 @@ function PlatformAgents() {
                 organization's shared knowledge. Replacing it immediately invalidates the previous
                 credential.
               </p>
-              <Button variant="outline" disabled={busy} onClick={() => void rotateToken()}>
+              <Button
+                variant="outline"
+                disabled={busy || !selected.selected}
+                onClick={() => void rotateToken()}
+              >
                 Generate / replace credential
               </Button>
               {token && (
@@ -297,7 +357,7 @@ function PlatformAgents() {
                   maxLength={4000}
                   placeholder="Find vendors serving our next community gathering"
                 />
-                <Button disabled={busy || selected.paused}>Queue work</Button>
+                <Button disabled={busy || selected.paused || !selected.selected}>Queue work</Button>
               </form>
             )}
             {!work.length && (
