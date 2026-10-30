@@ -87,7 +87,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
   );
 }
 
-export function PageHeader({ eyebrow, title, intro }: { eyebrow?: string; title: string; intro?: string }) {
+export function PageHeader({ eyebrow, title, intro }: { eyebrow?: string | undefined; title: string; intro?: string | undefined }) {
   return (
     <section className="border-b bg-muted">
       <div className="mx-auto max-w-6xl px-4 py-14">

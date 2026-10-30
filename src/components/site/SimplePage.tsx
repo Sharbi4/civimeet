@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { PageHeader, SiteLayout } from "./SiteLayout";
 
-export function SimplePage({ eyebrow, title, intro, draft, children }: { eyebrow: string; title: string; intro?: string; draft?: boolean; children: ReactNode }) {
+export function SimplePage({ eyebrow, title, intro, draft, children }: { eyebrow: string; title: string; intro?: string | undefined; draft?: boolean; children: ReactNode }) {
   return (
     <SiteLayout>
       <PageHeader eyebrow={eyebrow} title={title} intro={intro} />
