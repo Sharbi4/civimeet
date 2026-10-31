@@ -1,5 +1,8 @@
 # CiviMeet roadmap
 
+- [ ] Replace Contact and Get Started with a stored demo request form; verify submission and owner follow-up access
+- [ ] Email demo requests to support@civimeet.com (requires verified sender domain)
+
 - [x] Google Analytics report uploads with authenticated, streamed AI traffic analysis and conversion recommendations
 
 - [x] Public site: home, product, how it works, solutions, pricing, about, contact, draft legal pages
