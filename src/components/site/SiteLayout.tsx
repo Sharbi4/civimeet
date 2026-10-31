@@ -118,7 +118,12 @@ export function SiteLayout({ children }: { children: ReactNode }) {
             </Link>
           </nav>
         </div>
-        <p className="pb-8 text-center text-xs text-muted-foreground">© 2026 CiviMeet</p>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-8 text-center text-xs text-muted-foreground">
+          <span>© 2026 CiviMeet</span>
+          <a href="mailto:support@civimeet.com" className="underline-offset-4 hover:text-foreground hover:underline">
+            support@civimeet.com
+          </a>
+        </div>
       </footer>
     </div>
   );
