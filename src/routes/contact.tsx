@@ -12,7 +12,12 @@ export const Route = createFileRoute("/contact")({
   }),
   component: () => (
     <SimplePage eyebrow="Contact" title="Contact us" intro="Questions about plans, Enterprise needs, or partnerships.">
-      <p>A contact form will be added once message delivery is set up. Until then, contact details are pending.</p>
+      <p>Need help or want to talk about CiviMeet? Email our team.</p>
+      <p className="mt-4">
+        <a href="mailto:support@civimeet.com" className="font-medium text-primary underline underline-offset-4 hover:text-foreground">
+          support@civimeet.com
+        </a>
+      </p>
     </SimplePage>
   ),
 });
