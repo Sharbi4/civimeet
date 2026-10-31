@@ -17,6 +17,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EventsRouteImport } from './routes/events'
+import { Route as GetStartedRouteImport } from './routes/get-started'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as PlatformAgentsRouteImport } from './routes/platform-agents'
@@ -70,6 +71,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const EventsRoute = EventsRouteImport.update({
   id: '/events',
   path: '/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GetStartedRoute = GetStartedRouteImport.update({
+  id: '/get-started',
+  path: '/get-started',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/events': typeof EventsRoute
+  '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
   '/platform-agents': typeof PlatformAgentsRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/events': typeof EventsRoute
+  '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
   '/platform-agents': typeof PlatformAgentsRoute
@@ -201,6 +209,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/events': typeof EventsRoute
+  '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
   '/platform-agents': typeof PlatformAgentsRoute
@@ -227,6 +236,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/events'
+    | '/get-started'
     | '/how-it-works'
     | '/knowledge'
     | '/platform-agents'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/events'
+    | '/get-started'
     | '/how-it-works'
     | '/knowledge'
     | '/platform-agents'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/events'
+    | '/get-started'
     | '/how-it-works'
     | '/knowledge'
     | '/platform-agents'
@@ -300,6 +312,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   EventsRoute: typeof EventsRoute
+  GetStartedRoute: typeof GetStartedRoute
   HowItWorksRoute: typeof HowItWorksRoute
   KnowledgeRoute: typeof KnowledgeRoute
   PlatformAgentsRoute: typeof PlatformAgentsRoute
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       path: '/events'
       fullPath: '/events'
       preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/get-started': {
+      id: '/get-started'
+      path: '/get-started'
+      fullPath: '/get-started'
+      preLoaderRoute: typeof GetStartedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works': {
@@ -484,6 +504,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   EventsRoute: EventsRoute,
+  GetStartedRoute: GetStartedRoute,
   HowItWorksRoute: HowItWorksRoute,
   KnowledgeRoute: KnowledgeRoute,
   PlatformAgentsRoute: PlatformAgentsRoute,
