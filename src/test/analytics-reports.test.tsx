@@ -17,7 +17,7 @@ describe("Analytics reports workspace", () => {
     await screen.findByText("traffic.csv");
     fireEvent.click(screen.getByRole("button", { name: "Analyze report" }));
     await waitFor(() => expect(signal).toBeDefined());
-    fireEvent.click(screen.getByRole("button", { name: "Stop", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^Stop$/ }));
     await screen.findByText("Stopped — partial results preserved");
     expect(signal?.aborted).toBe(true);
     expect(screen.getByRole("button", { name: "Analyze report" })).toBeEnabled();
