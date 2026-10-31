@@ -2,10 +2,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { DemoRequestForm } from "@/components/site/DemoRequestPage";
+import type { DemoRequest, DemoRequestResult } from "@/lib/demo-request";
 
 vi.mock("@/lib/demo-request.functions", () => ({ submitDemoRequest: vi.fn() }));
 afterEach(cleanup);
-async function setup(send: ReturnType<typeof vi.fn>) {
+async function setup(send: (data: DemoRequest) => Promise<DemoRequestResult>) {
   const root = createRootRoute({ component: () => <DemoRequestForm source="get-started" send={send} /> });
   render(<RouterProvider router={createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) })} />);
   await screen.findByRole("button", { name: "Request a demo" });
