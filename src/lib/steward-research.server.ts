@@ -138,12 +138,10 @@ const defaults: Dependencies = {
       parts.push(
         "Recent conversation: " +
           JSON.stringify(
-            (history.data ?? [])
-              .reverse()
-              .map((row) => ({
-                question: row.input.question,
-                answer: row.result?.answer?.slice(0, 600),
-              })),
+            (history.data ?? []).reverse().map((row) => ({
+              question: row.input.question,
+              answer: row.result?.answer?.slice(0, 600),
+            })),
           ).slice(0, 1600),
       );
     }

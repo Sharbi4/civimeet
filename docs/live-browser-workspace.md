@@ -28,7 +28,7 @@ The founder reported saving the Steel server key on October 30, 2026 (Phoenix). 
 
 ## Remaining acceptance work — not represented as shipped
 
-1. Run the actual provider create → navigate → scroll → inspect → release test from a signed-in organization administrator session. Verify deployment's WebSocket support and billing limits.
+1. Public-page live acceptance passed on October 31, 2026: the isolated demo owner opened example.com through the deployed authenticated API, received a real screenshot, scrolled, refreshed the capture, and disconnected; all returned HTTP 200. This proves the deployed CDP path for this public-page case, not credential handoff or social-platform execution. Fixes used manual redirect handling in the hosted runtime and stopped validating unused interactive viewer URLs for read-only sessions.
 2. Verify that `recordings: false` also prevents sensitive input from being retained in all applicable provider logs/traces, not only video. Use controlled test credentials/OTP, never customer credentials. Resolve any provider retention gap before enabling human handoff.
 3. Verify stale viewer URLs cannot control the successor session; test two administrators, multiple tabs, session expiry, membership removal, network failures and profile-save readiness. Add immediate cancellation/fencing for in-flight actions; current stop waits for the bounded operation lease.
 4. Add a short-lived authenticated streaming relay. Steel debug URLs are unauthenticated bearer capabilities; an iframe's pointer-event setting is not an authorization boundary. Current interactive URLs, when enabled, are restricted to the controlling administrator and capped by the provider session lifetime.

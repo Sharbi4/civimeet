@@ -17,7 +17,7 @@ These are our proposed adaptations, not claims about Muse functionality:
 | Onboarding | Capture mission, area, coordinator, voice, channel responsibilities and gathering goals | Saved organization brief |
 | Main conversation | Community Steward coordinates a shared community goal and routes work | Not yet built as a persistent coordinator chat |
 | Platform conversations | Each platform has its own visible thread and contextual directions | Perplexity-backed planning turns with scoped history |
-| Browser | Show the selected agent's actual work next to its conversation | Dock selects the platform; public-web navigation under live verification |
+| Browser | Show the selected agent's actual work next to its conversation | Dock selects the platform; example.com navigation, snapshots, scroll and stop verified live |
 | Intervention | Explain why help is needed, offer takeover, then return to the checkpoint | Contextual controls implemented; private handoff remains gated |
 | Login | Dedicated credential form, scoped vault, injection outside model context | Not yet implemented; never collect passwords in chat |
 | Progress | Events, vendors and commitments appear as useful results with a clear next action | Brief-based next steps and draft planning records |
