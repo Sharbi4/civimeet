@@ -14,25 +14,35 @@ export class SteelRequestError extends Error {
   status: number;
   constructor(status: number) {
     super(
-      status === 401 || status === 403
-        ? "Steel rejected the browser credentials. Check the server API key and project access."
-        : status === 402
-          ? "Steel needs available browser credits before this task can run."
-          : status === 429
-            ? "Steel is at its session limit. Stop an unused session and try again."
-            : `Steel could not open the browser (provider status ${status}).`,
+      status === 0
+        ? "The server could not connect to Steel. Check the browser service configuration."
+        : status === 401 || status === 403
+          ? "Steel rejected the browser credentials. Check the server API key and project access."
+          : status === 402
+            ? "Steel needs available browser credits before this task can run."
+            : status === 429
+              ? "Steel is at its session limit. Stop an unused session and try again."
+              : `Steel could not open the browser (provider status ${status}).`,
     );
     this.status = status;
   }
 }
 export async function steelRequest<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const response = await fetch(`https://api.steel.dev/v1${path}`, {
-    method,
-    headers: { "steel-api-key": process.env["STEEL_API_KEY"]!, "Content-Type": "application/json" },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(20_000),
-    redirect: "error",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`https://api.steel.dev/v1${path}`, {
+      method,
+      headers: {
+        "steel-api-key": process.env["STEEL_API_KEY"]!.trim(),
+        "Content-Type": "application/json",
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(20_000),
+      redirect: "error",
+    });
+  } catch {
+    throw new SteelRequestError(0);
+  }
   if (!response.ok) throw new SteelRequestError(response.status);
   return response.json();
 }
