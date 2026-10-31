@@ -1,5 +1,7 @@
 # CiviMeet roadmap
 
+- [x] Google Analytics report uploads with authenticated, streamed AI traffic analysis and conversion recommendations
+
 - [x] Public site: home, product, how it works, solutions, pricing, about, contact, draft legal pages
 - [x] Uploaded logo in header/footer/sign-in + tab icon
 - [x] Enable Lovable Cloud; sign up/in/out, organization creation and role-enforced vendor workspace
