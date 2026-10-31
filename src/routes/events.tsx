@@ -160,7 +160,7 @@ function Events() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">Convene</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">Meet Up</p>
           <h2 className="mt-2 text-3xl font-semibold">Gather with a purpose.</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
             Turn real community interest into a thoughtful gathering. Keep the purpose, practical

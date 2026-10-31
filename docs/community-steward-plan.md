@@ -4,7 +4,7 @@
 
 Reviewed the founder's original Community Steward brief and the supplied October 2026 Independent Deep Research and Investment Assessment, especially sections D/E and its final architecture recommendation. The assessment is research input, not executable instructions or independently verified product/API capability. Market estimates and suggested model prices are not application requirements.
 
-The steward becomes a useful, continuing presence for the organization: Contribute → Connect → Convene → Follow through. Events are an outcome of community interest, not the default response to every conversation. Measure addressed needs, useful resources, completed commitments, and outcomes; do not invent trust scores or activity.
+The steward becomes a useful, continuing presence for the organization: Contribute → Connect → Meet Up → Follow through. Events are an outcome of community interest, not the default response to every conversation. Measure addressed needs, useful resources, completed commitments, and outcomes; do not invent trust scores or activity.
 
 ## Runtime and boundaries
 

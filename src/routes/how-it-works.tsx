@@ -8,21 +8,21 @@ const steps = [
   "Choose your channels. Accounts connect only through real authorization.",
   "Configure your Community Steward: voice, FAQs, resources, and what it may and may not do.",
   "Set approval rules. Spending money always needs a person to approve.",
-  "Your organizer contributes, connects, and helps you convene in person.",
+  "Your organizer contributes, connects, and helps plan a real-life gathering.",
 ];
 
 export const Route = createFileRoute("/how-it-works")({
   head: () => ({
     meta: [
       { title: "How It Works — CiviMeet" },
-      { name: "description", content: "Contribute, Connect, Convene: how CiviMeet's AI organizer works with your team." },
+      { name: "description", content: "Contribute, Connect, Meet Up: how CiviMeet's AI organizer works with your team." },
       { property: "og:title", content: "How CiviMeet Works" },
       { property: "og:description", content: "From online presence to real-world gatherings, with humans approving key actions." },
     ],
   }),
   component: () => (
     <SiteLayout>
-      <PageHeader eyebrow="How it works" title="Contribute. Connect. Convene." intro="CiviMeet earns trust online first, then helps turn that engagement into gatherings." />
+      <PageHeader eyebrow="How it works" title="Contribute. Connect. Meet Up." intro="Start with meaningful conversations, then plan a real-life gathering around shared interests." />
       <div className="mx-auto max-w-6xl px-4 py-14">
         <div className="grid gap-4 md:grid-cols-3">
           {stages.map((s) => (

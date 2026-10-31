@@ -4,7 +4,7 @@
 
 Use **Steel Cloud + Chromium**, as selected by the founder. This supersedes the earlier Browserbase proposal. Perplexity remains the sourced research tool. Neither research output nor website text can grant browser, publishing, messaging, booking, or financial authority.
 
-The browser belongs in the product's global workspace, alongside Contribute → Connect → Convene → Follow through. It is not an administrative debug screen. Existing planning, vendor and payment approvals retain their boundaries.
+The browser belongs in the product's global workspace, alongside Contribute → Connect → Meet Up → Follow through. It is not an administrative debug screen. Existing planning, vendor and payment approvals retain their boundaries.
 
 ## Implemented first slice
 

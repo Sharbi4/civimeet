@@ -28,7 +28,7 @@ export const Route = createFileRoute("/product")({
       {
         property: "og:description",
         content:
-          "Contribute. Connect. Convene. Follow through. Explore the CiviMeet product experience.",
+          "Contribute. Connect. Meet Up. Follow through. Explore the CiviMeet product experience.",
       },
     ],
   }),
@@ -168,7 +168,7 @@ function ProductPage() {
           <ArrowRight />
           <span>Connect</span>
           <ArrowRight />
-          <span>Convene</span>
+          <span>Meet Up</span>
           <ArrowRight />
           <span>Follow through</span>
           <span className="cm-cycle-return">↺</span>

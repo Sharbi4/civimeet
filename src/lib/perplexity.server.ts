@@ -84,7 +84,7 @@ export async function researchCommunity(
         max_tool_calls: 3,
         store: false,
         instructions: [
-          "You are the research tool for CiviMeet's Community Steward. Contribute, connect, convene.",
+          "You are the research tool for CiviMeet's Community Steward. Contribute, connect, and help plan real-life gatherings.",
           "Use web search for current facts. Return a practical research brief with numbered source citations.",
           "Prefer official local organizations, venue and vendor websites, and primary sources.",
           "Separate verified facts from estimates and unknowns. Never invent prices, contacts, availability, or bookings.",

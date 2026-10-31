@@ -395,7 +395,7 @@ function BrowserDock({
           </span>
         </div>
         <p className="text-sm">
-          {session?.task || "Contribute → Connect → Convene → Follow through"}
+          {session?.task || "Contribute → Connect → Meet Up → Follow through"}
         </p>
         {session?.current_origin && (
           <p className="break-all text-xs text-muted-foreground">

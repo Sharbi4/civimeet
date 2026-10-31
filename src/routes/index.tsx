@@ -23,13 +23,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "An AI Community Steward that helps organizations research local needs, prepare thoughtful outreach, and coordinate real-world gatherings with human oversight.",
+          "CiviMeet helps you research local needs, draft community updates, and plan real-life meetups. Your team stays in control.",
       },
       { property: "og:title", content: "CiviMeet — Build communities. Bring people together." },
       {
         property: "og:description",
-        content:
-          "From a community question to a real-world gathering. Meet your AI Community Steward.",
+        content: "Find community needs. Prepare helpful updates. Plan a real-life meetup.",
       },
     ],
   }),
@@ -37,10 +36,10 @@ export const Route = createFileRoute("/")({
 });
 
 const journey = [
-  { title: "Contribute", text: "Find a need. Share something useful.", icon: Search },
-  { title: "Connect", text: "Keep the conversation going.", icon: MessageCircle },
-  { title: "Convene", text: "Turn shared interest into a gathering.", icon: CalendarDays },
-  { title: "Follow through", text: "Remember what matters next.", icon: HeartHandshake },
+  { title: "Contribute", text: "Find needs and useful resources.", icon: Search },
+  { title: "Connect", text: "Draft updates and replies.", icon: MessageCircle },
+  { title: "Meet Up", text: "Plan in-person events and RSVPs.", icon: CalendarDays },
+  { title: "Follow through", text: "Keep track of what's next.", icon: HeartHandshake },
 ];
 
 function Photo({
@@ -74,25 +73,25 @@ function HomePage() {
         <section className="cmh-hero cmh-wrap" aria-labelledby="cmh-title">
           <div className="cmh-hero-copy">
             <p className="cmh-eyebrow">
-              <span /> MEET YOUR AI COMMUNITY STEWARD
+              <span /> YOUR AI COMMUNITY ORGANIZER
             </p>
             <h1 id="cmh-title">
-              More connection. <em>Less coordination.</em>
+              Bring people together. <em>Let AI do the groundwork.</em>
             </h1>
             <p className="cmh-lead">
-              A thoughtful AI organizer for the work behind stronger communities. Discover local
-              needs, prepare helpful outreach, and bring people together in the real world.
+              Find community needs. Prepare helpful updates. Plan real-life meetups. CiviMeet helps
+              with the prep so your team can focus on people.
             </p>
             <div className="cmh-actions">
               <Link className="cmh-button" to="/auth" search={{ mode: "signup" }}>
-                Launch your Steward <ArrowUpRight size={19} />
+                Get started <ArrowUpRight size={19} />
               </Link>
               <a className="cmh-link" href="#see-it-work">
-                See how it works <ArrowRight size={18} />
+                See the demo <ArrowRight size={18} />
               </a>
             </div>
             <p className="cmh-hero-note">
-              <ShieldCheck size={16} /> Transparent AI. Human decisions.
+              <ShieldCheck size={16} /> AI prepares. You approve.
             </p>
           </div>
           <div className="cmh-hero-photo">
@@ -109,7 +108,7 @@ function HomePage() {
           className="cmh-journey cmh-wrap"
           aria-label="From community need to follow-through"
         >
-          <div className="cmh-journey-label">ONE CONTINUOUS JOURNEY</div>
+          <div className="cmh-journey-label">HOW IT WORKS</div>
           <div className="cmh-journey-list">
             {journey.map((step) => {
               const Icon = step.icon;
@@ -122,6 +121,9 @@ function HomePage() {
               );
             })}
           </div>
+          <Link className="cmh-journey-more" to="/how-it-works">
+            See the full process <ArrowUpRight size={16} />
+          </Link>
         </section>
 
         <section
@@ -132,18 +134,18 @@ function HomePage() {
           <div className="cmh-wrap">
             <div className="cmh-heading">
               <div>
-                <p className="cmh-eyebrow">THE STEWARD AT WORK</p>
+                <p className="cmh-eyebrow">SEE IT IN ACTION</p>
                 <h2 id="cmh-demo-title">
-                  From a question to <em>a plan.</em>
+                  See what your AI <em>actually does.</em>
                 </h2>
               </div>
               <div>
                 <p>
-                  Explore a sample community workflow, from the first signal to a proposed
-                  gathering. Every outward action stays under human control.
+                  Pick a task. See how the Steward turns a community question into research, a
+                  draft, or an event plan.
                 </p>
                 <Link className="cmh-link" to="/product" hash="interactive-demo">
-                  Full interactive demo <ArrowUpRight size={18} />
+                  Try the full product demo <ArrowUpRight size={18} />
                 </Link>
               </div>
             </div>
@@ -160,18 +162,18 @@ function HomePage() {
         >
           <div className="cmh-heading">
             <div>
-              <p className="cmh-eyebrow">BEYOND YOUR DASHBOARD</p>
+              <p className="cmh-eyebrow">PLATFORMS & CHANNELS</p>
               <h2 id="cmh-platforms-title">
-                Your community is <em>everywhere.</em>
+                Work where your <em>community is.</em>
               </h2>
             </div>
             <div>
               <p>
-                Research public resources and prepare outreach across the channels that matter to
-                you. Explore each platform's workflow and connection status.
+                Explore public websites and plan outreach for social platforms. See what's available
+                now and what's still in development.
               </p>
               <Link className="cmh-link" to="/platform-agents">
-                Explore platform agents <ArrowUpRight size={18} />
+                See platforms & capabilities <ArrowUpRight size={18} />
               </Link>
             </div>
           </div>
@@ -184,27 +186,26 @@ function HomePage() {
               <Photo name="garden" alt="Volunteers working together on a community garden" />
             </div>
             <div className="cmh-people-copy">
-              <p className="cmh-eyebrow">PEOPLE FIRST, ALWAYS</p>
+              <p className="cmh-eyebrow">YOU STAY IN CONTROL</p>
               <h2 id="cmh-people-title">
-                Technology helps. <em>People decide.</em>
+                AI does the prep. <em>You make the calls.</em>
               </h2>
               <p>
-                Your Steward helps carry the work forward while your organization stays responsible
-                for what gets shared, planned, and approved.
+                CiviMeet prepares research and plans. You approve what gets posted, booked, or paid.
               </p>
               <ul>
                 <li>
-                  <BookOpen size={20} /> Research and shared knowledge in one place
+                  <BookOpen size={20} /> Research and answers, organized
                 </li>
                 <li>
-                  <ShieldCheck size={20} /> Human approval for public and financial actions
+                  <ShieldCheck size={20} /> Approval before public or financial actions
                 </li>
                 <li>
-                  <CheckCircle2 size={20} /> A visible record of Steward activity
+                  <CheckCircle2 size={20} /> See what your AI has done
                 </li>
               </ul>
               <Link className="cmh-link" to="/how-it-works">
-                Learn how CiviMeet works <ArrowUpRight size={18} />
+                How it works <ArrowUpRight size={18} />
               </Link>
             </div>
           </div>
@@ -213,7 +214,7 @@ function HomePage() {
         <section className="cmh-solutions cmh-wrap" aria-labelledby="cmh-solutions-title">
           <div>
             <p className="cmh-eyebrow">MADE FOR YOUR MISSION</p>
-            <h2 id="cmh-solutions-title">For the people who bring people together.</h2>
+            <h2 id="cmh-solutions-title">Built for groups that bring people together.</h2>
           </div>
           <nav aria-label="Explore CiviMeet solutions">
             {solutions.map((solution) => (
@@ -228,11 +229,11 @@ function HomePage() {
           <div className="cmh-wrap cmh-final-layout">
             <div>
               <p className="cmh-eyebrow">LET'S BRING PEOPLE TOGETHER</p>
-              <h2 id="cmh-final-title">The next connection starts here.</h2>
+              <h2 id="cmh-final-title">Less admin. More community.</h2>
             </div>
             <div>
               <Link className="cmh-button cmh-button-light" to="/auth" search={{ mode: "signup" }}>
-                Launch your Steward <ArrowUpRight size={19} />
+                Get started <ArrowUpRight size={19} />
               </Link>
               <Link className="cmh-final-secondary" to="/pricing">
                 View proposed pricing <ArrowRight size={17} />
