@@ -1,6 +1,6 @@
 # CiviMeet roadmap
 
-- [ ] Replace Contact and Get Started with a stored demo request form; verify submission and owner follow-up access
+- [x] Replace Contact and Get Started with a stored demo request form; verified submission, private storage, and follow-up through Lovable Cloud
 - [ ] Email demo requests to support@civimeet.com (requires verified sender domain)
 
 - [x] Google Analytics report uploads with authenticated, streamed AI traffic analysis and conversion recommendations

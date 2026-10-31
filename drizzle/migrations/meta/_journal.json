@@ -8,6 +8,13 @@
       "when": 1793489665801,
       "tag": "0000_create_demo_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793489825202,
+      "tag": "0001_restrict_demo_request_grants",
+      "breakpoints": true
     }
   ]
 }
