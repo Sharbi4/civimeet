@@ -1,6 +1,6 @@
 # CiviMeet roadmap
 
-- [ ] Google Analytics report uploads with authenticated, streamed AI traffic analysis and conversion recommendations
+- [x] Google Analytics report uploads with authenticated, streamed AI traffic analysis and conversion recommendations
 
 - [x] Public site: home, product, how it works, solutions, pricing, about, contact, draft legal pages
 - [x] Uploaded logo in header/footer/sign-in + tab icon

@@ -5,6 +5,7 @@ describe("Analytics report imports", () => {
   it("reads GA comment headers, quoted channel names and metric values", () => {
     const report = parseAnalyticsReport("traffic.csv", '# Traffic acquisition\nSession channel,Sessions,Key events\n"Organic Search",120,8\n"Direct, unattributed",40,1');
     expect(report.rows).toBe(2);
+    expect(JSON.parse(report.normalized).metadata).toEqual(["# Traffic acquisition"]);
     expect(JSON.parse(report.normalized).rows[1]).toEqual(["Direct, unattributed", "40", "1"]);
   });
   it("rejects unsupported files and exports without data", () => {

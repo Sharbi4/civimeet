@@ -23,7 +23,8 @@ export function parseAnalyticsReport(filename: string, content: string) {
   if (result.errors.some((error) => error.code === "MissingQuotes")) throw new Error("This CSV has an unclosed quoted field.");
   const header = result.data[0];
   if (!header || header.length < 2 || result.data.length < 2) throw new Error("The CSV needs column headings and at least one data row.");
-  return { format: "CSV", rows: result.data.length - 1, normalized: JSON.stringify({ columns: header, rows: result.data.slice(1) }) };
+  const metadata = content.split(/\r?\n/).filter((line) => line.startsWith("#"));
+  return { format: "CSV", rows: result.data.length - 1, normalized: JSON.stringify({ metadata, columns: header, rows: result.data.slice(1) }) };
 }
 
 export type AnalysisEvent = { type: "text" | "reasoning" | "error" | "done"; text?: string };

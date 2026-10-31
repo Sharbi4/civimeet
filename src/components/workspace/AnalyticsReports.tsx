@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BarChart3, Download, FileSpreadsheet, Loader2, Square, Upload, X } from "lucide-react";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useWorkspace } from "./WorkspaceGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,7 +94,7 @@ export function AnalyticsReports() {
       {error && <p role="alert" className="rounded-md border border-destructive/30 p-4 text-sm text-destructive">{error}</p>}
       {status && <p role="status" className="text-sm text-muted-foreground">{status}</p>}
       {reasoning && <details className="border-b pb-4"><summary className="cursor-pointer text-sm text-muted-foreground">Analysis notes</summary><div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{reasoning}</div></details>}
-      {answer && <div className="border-t pt-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h3 className="text-xl font-semibold">Traffic findings & recommendations</h3><Button variant="outline" size="sm" disabled={busy} onClick={download}><Download className="size-4" />Download analysis</Button></div><div className="max-w-4xl break-words text-sm leading-7 [&_h1]:mb-3 [&_h1]:mt-7 [&_h1]:text-xl [&_h2]:mb-3 [&_h2]:mt-7 [&_h2]:text-xl [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-lg [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6"><Markdown>{answer}</Markdown></div></div>}
+      {answer && <div className="border-t pt-6"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h3 className="text-xl font-semibold">Traffic findings & recommendations</h3><Button variant="outline" size="sm" disabled={busy} onClick={download}><Download className="size-4" />Download analysis</Button></div><div className="max-w-4xl break-words text-sm leading-7 [&_h1]:mb-3 [&_h1]:mt-7 [&_h1]:text-xl [&_h2]:mb-3 [&_h2]:mt-7 [&_h2]:text-xl [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-lg [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6"><Markdown remarkPlugins={[remarkGfm]} components={{ table: ({ children }) => <div className="my-5 max-w-full overflow-x-auto"><table className="w-full border-collapse text-left text-sm [&_th]:border-b [&_th]:bg-muted [&_th]:p-3 [&_td]:border-b [&_td]:p-3 [&_td]:align-top">{children}</table></div> }}>{answer}</Markdown></div></div>}
     </section>
   );
 }
