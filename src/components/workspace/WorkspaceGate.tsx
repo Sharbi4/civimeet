@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Link } from "@tanstack/react-router";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { getDatabase } from "@/lib/database";
+import { lovable } from "@/integrations/lovable";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,7 +113,11 @@ export function WorkspaceGate({
     setNotice("");
     try {
       const { data, error: failure } = signup
-        ? await db.auth.signUp({ email, password })
+        ? await db.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: `${window.location.origin}/auth` },
+          })
         : await db.auth.signInWithPassword({ email, password });
       if (failure) throw failure;
       if (!data.session) setNotice("Check your email to confirm your account, then sign in.");
@@ -191,6 +196,26 @@ export function WorkspaceGate({
             <h2 className="text-xl font-semibold">
               {signup ? "Create your account" : "Sign in to your organization"}
             </h2>
+            <div className="grid gap-2">
+              {(["google", "lovable"] as const).map((provider) => (
+                <Button
+                  key={provider}
+                  type="button"
+                  variant="outline"
+                  disabled={loading}
+                  onClick={async () => {
+                    setError("");
+                    const result = await lovable.auth.signInWithOAuth(provider, {
+                      redirect_uri: `${window.location.origin}/auth`,
+                    });
+                    if (result.error) setError(result.error.message);
+                  }}
+                >
+                  Continue with {provider === "google" ? "Google" : "Lovable"}
+                </Button>
+              ))}
+            </div>
+            <p className="text-center text-xs text-muted-foreground">or use email</p>
             <div className="space-y-2">
               <Label htmlFor="workspace-email">Email</Label>
               <Input

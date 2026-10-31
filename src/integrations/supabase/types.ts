@@ -114,6 +114,199 @@ export type Database = {
           },
         ]
       }
+      browser_actions: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          finished_at: string | null
+          id: string
+          organization_id: string
+          outcome: string
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          finished_at?: string | null
+          id: string
+          organization_id: string
+          outcome?: string
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          organization_id?: string
+          outcome?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "browser_actions_organization_id_workspace_id_fkey"
+            columns: ["organization_id", "workspace_id"]
+            isOneToOne: false
+            referencedRelation: "browser_workspaces"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      browser_sites: {
+        Row: {
+          approved_by: string
+          created_at: string
+          organization_id: string
+          origin: string
+        }
+        Insert: {
+          approved_by: string
+          created_at?: string
+          organization_id: string
+          origin: string
+        }
+        Update: {
+          approved_by?: string
+          created_at?: string
+          organization_id?: string
+          origin?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "browser_sites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      browser_workspaces: {
+        Row: {
+          agent_id: string
+          current_origin: string
+          expires_at: string | null
+          human_actor: string | null
+          id: string
+          organization_id: string
+          state: string
+          task: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          current_origin?: string
+          expires_at?: string | null
+          human_actor?: string | null
+          id?: string
+          organization_id: string
+          state?: string
+          task?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          current_origin?: string
+          expires_at?: string | null
+          human_actor?: string | null
+          id?: string
+          organization_id?: string
+          state?: string
+          task?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "browser_workspaces_organization_id_agent_id_fkey"
+            columns: ["organization_id", "agent_id"]
+            isOneToOne: false
+            referencedRelation: "platform_agents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "browser_workspaces_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_events: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          budget_cents: number
+          created_at: string
+          created_by: string
+          event_date: string
+          id: string
+          organization_id: string
+          outcome: string
+          plan_id: string | null
+          purpose: string
+          revision: number
+          status: string
+          title: string
+          updated_at: string
+          venue: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_cents: number
+          created_at?: string
+          created_by: string
+          event_date: string
+          id?: string
+          organization_id: string
+          outcome?: string
+          plan_id?: string | null
+          purpose: string
+          revision?: number
+          status?: string
+          title: string
+          updated_at?: string
+          venue?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_cents?: number
+          created_at?: string
+          created_by?: string
+          event_date?: string
+          id?: string
+          organization_id?: string
+          outcome?: string
+          plan_id?: string | null
+          purpose?: string
+          revision?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_events_organization_id_plan_id_fkey"
+            columns: ["organization_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "steward_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       community_needs: {
         Row: {
           created_at: string
@@ -161,6 +354,72 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_payment_requests: {
+        Row: {
+          amount_cents: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          currency: string
+          description: string
+          event_id: string
+          event_revision: number
+          id: string
+          organization_id: string
+          quote_url: string
+          status: string
+          vendor_id: string
+        }
+        Insert: {
+          amount_cents: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by: string
+          currency?: string
+          description: string
+          event_id: string
+          event_revision: number
+          id?: string
+          organization_id: string
+          quote_url: string
+          status?: string
+          vendor_id: string
+        }
+        Update: {
+          amount_cents?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string
+          event_id?: string
+          event_revision?: number
+          id?: string
+          organization_id?: string
+          quote_url?: string
+          status?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_payment_requests_organization_id_event_id_fkey"
+            columns: ["organization_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "community_events"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "event_payment_requests_organization_id_vendor_id_fkey"
+            columns: ["organization_id", "vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -627,6 +886,16 @@ export type Database = {
     }
     Functions: {
       claim_agent_work: { Args: { agent_token: string }; Returns: Json }
+      claim_browser_operation: {
+        Args: {
+          actor: string
+          operation: string
+          request_key: string
+          target_agent: string
+          workspace: string
+        }
+        Returns: Json
+      }
       collect_agent_vendor: {
         Args: { agent_token: string; discovery: Json }
         Returns: Json
@@ -662,9 +931,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      finish_browser_operation: {
+        Args: { request_key: string; result: Json; success: boolean }
+        Returns: undefined
+      }
       finish_steward_research: {
         Args: { failure?: string; research_result?: Json; target_run: string }
         Returns: undefined
+      }
+      propose_event_payment: {
+        Args: {
+          amount: number
+          payment_description: string
+          quote_source: string
+          target_event: string
+          target_vendor: string
+        }
+        Returns: string
       }
       recall_agent_context: {
         Args: {
@@ -710,6 +993,19 @@ export type Database = {
         Args: { resolved: boolean; target_need: string }
         Returns: undefined
       }
+      review_community_event: {
+        Args: {
+          decision: string
+          expected_revision: number
+          result_note?: string
+          target_event: string
+        }
+        Returns: undefined
+      }
+      review_event_payment: {
+        Args: { decision: string; target_payment: string }
+        Returns: undefined
+      }
       review_steward_plan: {
         Args: {
           decision: string
@@ -725,6 +1021,15 @@ export type Database = {
       }
       rotate_platform_agent_token: {
         Args: { target_agent: string }
+        Returns: string
+      }
+      save_community_event: {
+        Args: {
+          event_data: Json
+          expected_revision?: number
+          target_event?: string
+          workspace: string
+        }
         Returns: string
       }
       save_organization_knowledge: {
