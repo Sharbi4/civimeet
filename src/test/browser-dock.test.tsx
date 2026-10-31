@@ -1,7 +1,11 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { BrowserWorkspaceProvider, useBrowserScope } from "@/components/workspace/BrowserDock";
+import {
+  BrowserWorkspaceProvider,
+  PlatformBrowser,
+  useBrowserScope,
+} from "@/components/workspace/BrowserDock";
 let authCallback: (event: string, session: unknown) => void;
 let workspaceRows: unknown[] = [];
 const db = {
@@ -56,6 +60,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("global browser dock", () => {
+  it("shows the browser inline without an extra open button and keeps logs collapsed", async () => {
+    render(
+      <BrowserWorkspaceProvider>
+        <Page name="Platform" />
+        <PlatformBrowser agentId="web-agent" />
+      </BrowserWorkspaceProvider>,
+    );
+    expect(await screen.findByLabelText("Community action agent browser")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Community action agent/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Activity history").closest("details")).not.toHaveAttribute("open");
+  });
   it("retains its open layout across workspace page changes", async () => {
     const view = render(
       <BrowserWorkspaceProvider>

@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/civimeet-logo.png.asset.json";
 
 const nav = [
   { to: "/product", label: "Product" },
@@ -15,7 +14,13 @@ const nav = [
 export function Logo() {
   return (
     <Link to="/" className="flex items-center" aria-label="CiviMeet home">
-      <img src={logo.url} alt="CiviMeet" className="h-10 w-auto" />
+      <img
+        src="/brand/civimeet-wordmark.svg"
+        alt="CiviMeet"
+        width={2020}
+        height={440}
+        className="h-10 w-auto max-w-[190px] object-contain"
+      />
     </Link>
   );
 }
@@ -44,7 +49,9 @@ export function SiteLayout({ children }: { children: ReactNode }) {
               <Link to="/auth">Sign In</Link>
             </Button>
             <Button asChild size="sm">
-              <Link to="/auth" search={{ mode: "signup" }}>Get Started</Link>
+              <Link to="/auth" search={{ mode: "signup" }}>
+                Get Started
+              </Link>
             </Button>
           </div>
           <button className="md:hidden" onClick={() => setOpen(!open)} aria-label="Menu">
@@ -59,9 +66,13 @@ export function SiteLayout({ children }: { children: ReactNode }) {
                   {n.label}
                 </Link>
               ))}
-              <Link to="/auth" className="text-sm">Sign In</Link>
+              <Link to="/auth" className="text-sm">
+                Sign In
+              </Link>
               <Button asChild size="sm">
-                <Link to="/auth" search={{ mode: "signup" }}>Get Started</Link>
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  Get Started
+                </Link>
               </Button>
             </div>
           </div>
@@ -72,17 +83,39 @@ export function SiteLayout({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 md:flex-row md:items-center md:justify-between">
           <Logo />
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            <Link to="/about" className="hover:text-foreground">About</Link>
-            <Link to="/product" className="hover:text-foreground">Features</Link>
-            <Link to="/pricing" className="hover:text-foreground">Pricing</Link>
-            <Link to="/contact" className="hover:text-foreground">Contact</Link>
-            <Link to="/agent" className="hover:text-foreground">Research Preview</Link>
-            <Link to="/dashboard" className="hover:text-foreground">Community Dashboard</Link>
-            <Link to="/vendors" className="hover:text-foreground">Vendor Directory</Link>
-            <Link to="/platform-agents" className="hover:text-foreground">Platform Agents</Link>
-            <Link to="/terms" className="hover:text-foreground">Terms</Link>
-            <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
-            <Link to="/auth" className="hover:text-foreground">Sign In</Link>
+            <Link to="/about" className="hover:text-foreground">
+              About
+            </Link>
+            <Link to="/product" className="hover:text-foreground">
+              Features
+            </Link>
+            <Link to="/pricing" className="hover:text-foreground">
+              Pricing
+            </Link>
+            <Link to="/contact" className="hover:text-foreground">
+              Contact
+            </Link>
+            <Link to="/agent" className="hover:text-foreground">
+              Research Preview
+            </Link>
+            <Link to="/dashboard" className="hover:text-foreground">
+              Community Dashboard
+            </Link>
+            <Link to="/vendors" className="hover:text-foreground">
+              Vendor Directory
+            </Link>
+            <Link to="/platform-agents" className="hover:text-foreground">
+              Platform Agents
+            </Link>
+            <Link to="/terms" className="hover:text-foreground">
+              Terms
+            </Link>
+            <Link to="/privacy" className="hover:text-foreground">
+              Privacy
+            </Link>
+            <Link to="/auth" className="hover:text-foreground">
+              Sign In
+            </Link>
           </nav>
         </div>
         <p className="pb-8 text-center text-xs text-muted-foreground">© 2026 CiviMeet</p>
@@ -91,7 +124,15 @@ export function SiteLayout({ children }: { children: ReactNode }) {
   );
 }
 
-export function PageHeader({ eyebrow, title, intro }: { eyebrow?: string | undefined; title: string; intro?: string | undefined }) {
+export function PageHeader({
+  eyebrow,
+  title,
+  intro,
+}: {
+  eyebrow?: string | undefined;
+  title: string;
+  intro?: string | undefined;
+}) {
   return (
     <section className="border-b bg-muted">
       <div className="mx-auto max-w-6xl px-4 py-14">

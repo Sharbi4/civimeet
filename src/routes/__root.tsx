@@ -83,6 +83,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "CiviMeet" },
       { name: "description", content: "AI community organizers for civic organizations." },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://civimeet.com/brand/civimeet-transparent.png" },
+      { property: "og:image:alt", content: "CiviMeet" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -90,7 +92,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "icon", href: "/brand/civimeet-mark.svg", type: "image/svg+xml" },
       {
         rel: "preload",
         href: sofiaFont.url,

@@ -26,6 +26,28 @@ type Scope = {
   role: string;
 };
 const BrowserScope = createContext<((scope: Scope | null) => void) | null>(null);
+const InlineBrowserScope = createContext<{
+  scope: Scope | null;
+  setInline: (value: boolean) => void;
+} | null>(null);
+const ignoreSplit = () => {};
+export function PlatformBrowser({ agentId }: { agentId: string }) {
+  const context = useContext(InlineBrowserScope);
+  const setInline = context?.setInline;
+  useEffect(() => {
+    setInline?.(true);
+    return () => setInline?.(false);
+  }, [setInline]);
+  return context?.scope ? (
+    <BrowserDock
+      key={`${context.scope.organizationId}:${agentId}`}
+      scope={context.scope}
+      onSplit={ignoreSplit}
+      embedded
+      initialAgentId={agentId}
+    />
+  ) : null;
+}
 export function useBrowserScope(scope: Scope | null) {
   const register = useContext(BrowserScope);
   const { db, organizationId, name, userId, role } = scope ?? {};
@@ -37,6 +59,7 @@ export function useBrowserScope(scope: Scope | null) {
 export function BrowserWorkspaceProvider({ children }: { children: ReactNode }) {
   const [scope, setScope] = useState<Scope | null>(null);
   const [split, setSplit] = useState(false);
+  const [inline, setInline] = useState(false);
   const db = scope?.db;
   const userId = scope?.userId;
   useEffect(() => {
@@ -48,19 +71,33 @@ export function BrowserWorkspaceProvider({ children }: { children: ReactNode }) 
   }, [db, userId]);
   return (
     <BrowserScope.Provider value={setScope}>
-      <div className={scope && split ? "md:pr-[50vw]" : ""}>{children}</div>
-      {scope && (
-        <BrowserDock
-          key={`${scope.organizationId}:${scope.userId}:${scope.role}`}
-          scope={scope}
-          onSplit={setSplit}
-        />
-      )}
+      <InlineBrowserScope.Provider value={{ scope, setInline }}>
+        <div className={scope && split ? "md:pr-[50vw]" : ""}>{children}</div>
+        {scope && !inline && (
+          <BrowserDock
+            key={`${scope.organizationId}:${scope.userId}:${scope.role}`}
+            scope={scope}
+            onSplit={setSplit}
+          />
+        )}
+      </InlineBrowserScope.Provider>
     </BrowserScope.Provider>
   );
 }
-function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolean) => void }) {
-  const [layout, setLayout] = useState<"collapsed" | "panel" | "split" | "full">("collapsed");
+function BrowserDock({
+  scope,
+  onSplit,
+  embedded = false,
+  initialAgentId = "",
+}: {
+  scope: Scope;
+  onSplit: (value: boolean) => void;
+  embedded?: boolean;
+  initialAgentId?: string;
+}) {
+  const [layout, setLayout] = useState<"collapsed" | "panel" | "split" | "full">(
+    embedded ? "panel" : "collapsed",
+  );
   useEffect(() => {
     onSplit(layout === "split");
     return () => onSplit(false);
@@ -72,7 +109,7 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
   const [actions, setActions] = useState<
     { id: string; action: string; outcome: string; created_at: string }[]
   >([]);
-  const [agentId, setAgentId] = useState("");
+  const [agentId, setAgentId] = useState(initialAgentId);
   const [error, setError] = useState("");
   const [configured, setConfigured] = useState(false);
   const [handoff, setHandoff] = useState(false);
@@ -261,7 +298,15 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
   const observeRef = useRef(() => command("observe"));
   observeRef.current = () => command("observe");
   useEffect(() => {
-    if (layout === "collapsed" || !active || !administrator || state !== "ready" || error) return;
+    if (
+      layout === "collapsed" ||
+      !active ||
+      !administrator ||
+      !["ready", "human_controlling"].includes(state) ||
+      error
+    )
+      return;
+    void observeRef.current();
     const timer = setInterval(() => {
       if (!document.hidden) void observeRef.current();
     }, 5000);
@@ -277,21 +322,30 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
   return (
     <aside
       aria-label="Community action agent browser"
-      className={`fixed z-40 flex flex-col border bg-background shadow-2xl ${layout === "full" ? "inset-0" : layout === "split" ? "inset-y-0 right-0 w-full md:w-1/2" : "bottom-4 right-4 top-20 w-[min(680px,calc(100vw-2rem))] rounded-xl"}`}
+      className={
+        embedded && layout !== "full"
+          ? "flex flex-col rounded-xl border bg-background"
+          : `fixed z-40 flex flex-col border bg-background shadow-2xl ${layout === "full" ? "inset-0" : layout === "split" ? "inset-y-0 right-0 w-full md:w-1/2" : "bottom-4 right-4 top-20 w-[min(680px,calc(100vw-2rem))] rounded-xl"}`
+      }
     >
       <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
         <div>
-          <h2 className="font-semibold">Your community action agent</h2>
+          <h2 className="flex items-center gap-2 font-semibold">
+            <img src="/brand/civimeet-mark.svg" alt="" className="h-7 w-7" />
+            {embedded ? "Browser" : "Your community action agent"}
+          </h2>
           <p className="text-xs text-muted-foreground">{scope.name}</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setLayout(layout === "split" ? "panel" : "split")}
-          >
-            Split
-          </Button>
+          {!embedded && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setLayout(layout === "split" ? "panel" : "split")}
+            >
+              Split
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -299,37 +353,41 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
           >
             Full screen
           </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Collapse browser"
-            onClick={() => setLayout("collapsed")}
-          >
-            <Minimize2 size={16} />
-          </Button>
+          {!embedded && (
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Collapse browser"
+              onClick={() => setLayout("collapsed")}
+            >
+              <Minimize2 size={16} />
+            </Button>
+          )}
         </div>
       </header>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        <label className="block text-sm">
-          Agent session
-          <select
-            aria-label="Agent session"
-            className="mt-2 w-full rounded-md border bg-background p-2"
-            disabled={busy}
-            value={agentId}
-            onChange={(e) => {
-              setAgentId(e.target.value);
-              setMedia(null);
-              setError("");
-            }}
-          >
-            {agents.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {item.platform}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!embedded && (
+          <label className="block text-sm">
+            Agent session
+            <select
+              aria-label="Agent session"
+              className="mt-2 w-full rounded-md border bg-background p-2"
+              disabled={busy}
+              value={agentId}
+              onChange={(e) => {
+                setAgentId(e.target.value);
+                setMedia(null);
+                setError("");
+              }}
+            >
+              {agents.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {item.platform}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="capitalize">{browserStateLabel(state)}</span>
           <span className="text-xs text-muted-foreground">
@@ -554,8 +612,10 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
             )}
           </>
         )}
-        <section>
-          <h3 className="text-sm font-semibold">Recent actions</h3>
+        <details>
+          <summary className="cursor-pointer text-xs text-muted-foreground">
+            Activity history
+          </summary>
           {!actions.length && (
             <p className="mt-2 text-xs text-muted-foreground">No browser actions recorded.</p>
           )}
@@ -564,7 +624,7 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
               {item.action} · {item.outcome} · {new Date(item.created_at).toLocaleTimeString()}
             </p>
           ))}
-        </section>
+        </details>
       </div>
     </aside>
   );
