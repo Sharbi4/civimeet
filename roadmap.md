@@ -1,7 +1,8 @@
 # CiviMeet roadmap
 
 - [x] Replace Contact and Get Started with a stored demo request form; verified submission, private storage, and follow-up through Lovable Cloud
-- [ ] Email demo requests to support@civimeet.com (requires verified sender domain)
+- [x] Prepare managed app emails and fixed-recipient demo notification template for notify.civimeet.com
+- [ ] Enable and verify demo emails to support@civimeet.com (blocked on notify.civimeet.com DNS verification)
 
 - [x] Google Analytics report uploads with authenticated, streamed AI traffic analysis and conversion recommendations
 
