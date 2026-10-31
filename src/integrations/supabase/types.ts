@@ -423,6 +423,47 @@ export type Database = {
           },
         ]
       }
+      organization_briefs: {
+        Row: {
+          area: string
+          coordinator: string
+          event_goal: string
+          mission: string
+          organization_id: string
+          platform_actions: Json
+          updated_at: string
+          voice: string
+        }
+        Insert: {
+          area: string
+          coordinator: string
+          event_goal?: string
+          mission: string
+          organization_id: string
+          platform_actions?: Json
+          updated_at?: string
+          voice: string
+        }
+        Update: {
+          area?: string
+          coordinator?: string
+          event_goal?: string
+          mission?: string
+          organization_id?: string
+          platform_actions?: Json
+          updated_at?: string
+          voice?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_briefs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_knowledge: {
         Row: {
           content: string
@@ -1031,6 +1072,10 @@ export type Database = {
           workspace: string
         }
         Returns: string
+      }
+      save_organization_brief: {
+        Args: { brief: Json; workspace: string }
+        Returns: undefined
       }
       save_organization_knowledge: {
         Args: {
