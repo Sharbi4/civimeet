@@ -311,6 +311,7 @@ export function WorkspaceGate({
                 <Link to="/vendors">Vendors</Link>
                 <Link to="/platform-agents">Community channels</Link>
                 <Link to="/knowledge">Shared knowledge</Link>
+                <Link to="/analytics">Analytics</Link>
               </nav>
             </div>
             <WorkspaceContext.Provider value={{ db, organizationId, role: membership.role }}>
