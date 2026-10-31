@@ -27,6 +27,7 @@ import { Route as VendorsRouteImport } from './routes/vendors'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
 import { Route as ApiAgentResearchRouteImport } from './routes/api.agent.research'
+import { Route as ApiBrowserCommandRouteImport } from './routes/api.browser.command'
 import { Route as ApiStewardResearchRouteImport } from './routes/api.steward.research'
 
 const IndexRoute = IndexRouteImport.update({
@@ -119,6 +120,11 @@ const ApiAgentResearchRoute = ApiAgentResearchRouteImport.update({
   path: '/api/agent/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBrowserCommandRoute = ApiBrowserCommandRouteImport.update({
+  id: '/api/browser/command',
+  path: '/api/browser/command',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStewardResearchRoute = ApiStewardResearchRouteImport.update({
   id: '/api/steward/research',
   path: '/api/steward/research',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
 }
 export interface FileRoutesByTo {
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
 }
 export interface FileRoutesById {
@@ -187,6 +195,7 @@ export interface FileRoutesById {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
 }
 export interface FileRouteTypes {
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
+    | '/api/browser/command'
     | '/api/steward/research'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions'
     | '/api/agent/research'
+    | '/api/browser/command'
     | '/api/steward/research'
   id:
     | '__root__'
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
+    | '/api/browser/command'
     | '/api/steward/research'
   fileRoutesById: FileRoutesById
 }
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
   ApiAgentResearchRoute: typeof ApiAgentResearchRoute
+  ApiBrowserCommandRoute: typeof ApiBrowserCommandRoute
   ApiStewardResearchRoute: typeof ApiStewardResearchRoute
 }
 
@@ -405,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/browser/command': {
+      id: '/api/browser/command'
+      path: '/api/browser/command'
+      fullPath: '/api/browser/command'
+      preLoaderRoute: typeof ApiBrowserCommandRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/steward/research': {
       id: '/api/steward/research'
       path: '/api/steward/research'
@@ -434,6 +454,7 @@ const rootRouteChildren: RootRouteChildren = {
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
   ApiAgentResearchRoute: ApiAgentResearchRoute,
+  ApiBrowserCommandRoute: ApiBrowserCommandRoute,
   ApiStewardResearchRoute: ApiStewardResearchRoute,
 }
 export const routeTree = rootRouteImport

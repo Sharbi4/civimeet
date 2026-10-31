@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import sofiaFont from "@/assets/sofia-pro-soft.woff2.asset.json";
+import { BrowserWorkspaceProvider } from "@/components/workspace/BrowserDock";
 
 function NotFoundComponent() {
   return (
@@ -81,7 +82,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "CiviMeet" },
       { name: "description", content: "AI community organizers for civic organizations." },
-            { property: "og:type", content: "website" },
+      { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -125,7 +126,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <BrowserWorkspaceProvider>
+        <Outlet />
+      </BrowserWorkspaceProvider>
     </QueryClientProvider>
   );
 }

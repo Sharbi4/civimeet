@@ -6,6 +6,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useBrowserScope } from "./BrowserDock";
 
 type Membership = { role: string; organization: { id: string; name: string } };
 type Workspace = { db: SupabaseClient; organizationId: string; role: string };
@@ -136,6 +137,17 @@ export function WorkspaceGate({
   }
 
   const membership = memberships.find((item) => item.organization.id === organizationId);
+  useBrowserScope(
+    db && session && membership
+      ? {
+          db,
+          organizationId,
+          name: membership.organization.name,
+          userId: session.user.id,
+          role: membership.role,
+        }
+      : null,
+  );
   return (
     <SiteLayout>
       <div className="mx-auto max-w-6xl px-4 py-8">
