@@ -17,8 +17,8 @@ function useRovingKeys(count: number, setIndex: (i: number) => void) {
     };
     if (!(e.key in map)) return;
     e.preventDefault();
-    setIndex(map[e.key]);
-    refs.current[map[e.key]]?.focus();
+    setIndex(map[e.key]!);
+    refs.current[map[e.key]!]?.focus();
   };
   return { refs, onKeyDown };
 }
@@ -26,7 +26,7 @@ function useRovingKeys(count: number, setIndex: (i: number) => void) {
 export function StewardMiniDemo() {
   const [index, setIndex] = useState(0);
   const { refs, onKeyDown } = useRovingKeys(stewardTasks.length, setIndex);
-  const task = stewardTasks[index];
+  const task = stewardTasks[index] ?? stewardTasks[0]!;
   return (
     <div className="cmh-demo">
       <div className="cmh-demo-tasks" role="group" aria-label="Steward tasks">
@@ -83,7 +83,7 @@ export function StewardMiniDemo() {
 export function PlatformExplorer() {
   const [index, setIndex] = useState(0);
   const { refs, onKeyDown } = useRovingKeys(homePlatforms.length, setIndex);
-  const p = homePlatforms[index];
+  const p = homePlatforms[index] ?? homePlatforms[0]!;
   return (
     <div className="cmh-explorer">
       <div className="cmh-orbit">
@@ -149,7 +149,7 @@ export function PlatformExplorer() {
 export function AudienceSelector() {
   const [index, setIndex] = useState(0);
   const { refs, onKeyDown } = useRovingKeys(audiences.length, setIndex);
-  const a = audiences[index];
+  const a = audiences[index] ?? audiences[0];
   return (
     <div className="cmh-audience">
       <div className="cmh-audience-tabs" role="group" aria-label="Organization type">
