@@ -107,7 +107,7 @@ describe("Community Steward dashboard", () => {
     render(<Dashboard />);
     await screen.findByText("Accessible resources");
     fireEvent.click(screen.getByRole("button", { name: "Steward plans" }));
-    fireEvent.click(screen.getByRole("button", { name: "Approve revision 3" }));
+    fireEvent.click(screen.getByRole("button", { name: "Approve plan" }));
     await waitFor(() =>
       expect(state.rpc).toHaveBeenCalledWith("review_steward_plan", {
         target_plan: "plan-a",
@@ -124,7 +124,7 @@ describe("Community Steward dashboard", () => {
       screen.queryByRole("button", { name: /Prepare a helpful response/ }),
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Steward plans" }));
-    expect(screen.queryByRole("button", { name: /Approve revision/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Approve plan/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save draft plan" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Research" }));
     expect(screen.queryByRole("button", { name: "Run research" })).not.toBeInTheDocument();

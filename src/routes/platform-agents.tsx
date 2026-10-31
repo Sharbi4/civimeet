@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { platformLabels, type PlatformAgent } from "@/lib/vendors";
+import { platformPlaybooks, buildPlatformInstructions } from "@/lib/platform-playbooks";
 
 export const Route = createFileRoute("/platform-agents")({
   head: () => ({
@@ -185,12 +186,12 @@ function PlatformAgents() {
           Choices apply only to this organization. Public web research is available separately.
         </p>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Each platform has its own instructions, private memory, credential, and work queue within
-          this organization. Agents share the organization's vendor directory and knowledge.
+          Give each channel a clear purpose: contribute useful information, build relationships, and
+          help turn real community interest into well-organized gatherings.
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          These records prepare your agents for connected workers. Creating a credential does not
-          connect a social account or start browsing.
+          Choose the platforms that matter to your community. Account connections and automatic
+          activity are not available yet.
         </p>
       </div>
       {error && (
@@ -223,6 +224,9 @@ function PlatformAgents() {
               </p>
               <h3 className="mt-2 font-semibold">{agent.name}</h3>
               <p className="mt-2 text-sm text-muted-foreground">
+                {platformPlaybooks[agent.platform].mission}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
                 {!agent.selected
                   ? "Not selected"
                   : agent.platform !== "web"
@@ -233,7 +237,7 @@ function PlatformAgents() {
               <p className="mt-2 text-xs text-muted-foreground">
                 {agent.last_collection_at
                   ? `Last vendor discovery: ${new Date(agent.last_collection_at).toLocaleString()}`
-                  : "No worker discoveries recorded"}
+                  : "No discoveries yet"}
               </p>
             </button>
           ))}
@@ -244,7 +248,7 @@ function PlatformAgents() {
           <div className="flex justify-between gap-3">
             <h3 className="text-xl font-semibold">{selected.name}</h3>
             <Button variant="outline" onClick={() => setRefresh((value) => value + 1)}>
-              Refresh memory and work
+              Refresh activity
             </Button>
           </div>
           {selected.platform !== "web" && (
@@ -269,159 +273,198 @@ function PlatformAgents() {
               )}
             </section>
           )}
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void configure();
-            }}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="agent-name">Agent name</Label>
-              <Input
-                id="agent-name"
-                required
-                minLength={2}
-                maxLength={160}
-                value={selected.name}
-                disabled={!administrator}
-                onChange={(e) => setSelected({ ...selected, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="agent-instructions">Organization and platform instructions</Label>
-              <Textarea
-                id="agent-instructions"
-                maxLength={4000}
-                rows={4}
-                value={selected.instructions}
-                disabled={!administrator}
-                onChange={(e) => setSelected({ ...selected, instructions: e.target.value })}
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={selected.paused}
-                disabled={!administrator}
-                onChange={(e) => setSelected({ ...selected, paused: e.target.checked })}
-              />
-              Pause this agent's collection and worker access
-            </label>
-            {administrator && <Button disabled={busy}>Save settings</Button>}
-          </form>
+          <section className="space-y-4">
+            <h4 className="font-semibold">How this channel will help your community</h4>
+            <p className="text-sm text-muted-foreground">
+              {platformPlaybooks[selected.platform].personality}
+            </p>
+            <ul className="list-disc space-y-2 pl-5 text-sm">
+              {platformPlaybooks[selected.platform].contributions.map((task) => (
+                <li key={task}>{task}</li>
+              ))}
+            </ul>
+            <p className="text-sm">
+              <strong>When it's time to gather:</strong>{" "}
+              {platformPlaybooks[selected.platform].events}
+            </p>
+          </section>
           {administrator && (
-            <section className="space-y-3 border-t pt-5">
-              <h4 className="font-semibold">Worker credential</h4>
+            <details className="space-y-5 border-t pt-5">
+              <summary className="cursor-pointer text-sm text-muted-foreground">
+                Administrator settings
+              </summary>
               <p className="text-sm text-muted-foreground">
-                This credential grants access only to this agent's memory and work, plus this
-                organization's shared knowledge. Replacing it immediately invalidates the previous
-                credential.
+                {platformPlaybooks[selected.platform].access}
               </p>
               <Button
                 variant="outline"
-                disabled={busy || !selected.selected}
-                onClick={() => void rotateToken()}
+                disabled={busy}
+                onClick={() =>
+                  setSelected({
+                    ...selected,
+                    instructions: buildPlatformInstructions(selected.platform),
+                  })
+                }
               >
-                Generate / replace credential
+                Load recommended steward instructions
               </Button>
-              {token && (
-                <div className="space-y-2 rounded-md border bg-muted p-4">
-                  <p className="text-sm">
-                    Save this in the worker's secret settings. It is shown only now.
-                  </p>
-                  <code className="block break-all text-sm select-all">{token}</code>
-                  <Button variant="outline" onClick={() => setToken("")}>
-                    Hide credential
-                  </Button>
-                </div>
-              )}
-            </section>
-          )}
-          <section className="space-y-4 border-t pt-5">
-            <h4 className="font-semibold">Work queue · Latest 50 items</h4>
-            {role !== "viewer" && (
               <form
-                className="flex flex-col gap-3 sm:flex-row"
+                className="space-y-4"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  void enqueue();
+                  void configure();
                 }}
               >
-                <Input
-                  aria-label="Work objective"
-                  value={objective}
-                  onChange={(e) => setObjective(e.target.value)}
-                  required
-                  minLength={10}
-                  maxLength={4000}
-                  placeholder="Find vendors serving our next community gathering"
-                />
-                <Button disabled={busy || selected.paused || !selected.selected}>Queue work</Button>
+                <div className="space-y-2">
+                  <Label htmlFor="agent-name">Agent name</Label>
+                  <Input
+                    id="agent-name"
+                    required
+                    minLength={2}
+                    maxLength={160}
+                    value={selected.name}
+                    disabled={!administrator}
+                    onChange={(e) => setSelected({ ...selected, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="agent-instructions">Organization and platform instructions</Label>
+                  <Textarea
+                    id="agent-instructions"
+                    maxLength={4000}
+                    rows={4}
+                    value={selected.instructions}
+                    disabled={!administrator}
+                    onChange={(e) => setSelected({ ...selected, instructions: e.target.value })}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selected.paused}
+                    disabled={!administrator}
+                    onChange={(e) => setSelected({ ...selected, paused: e.target.checked })}
+                  />
+                  Pause this agent's collection and worker access
+                </label>
+                {administrator && <Button disabled={busy}>Save settings</Button>}
               </form>
-            )}
-            {!work.length && (
-              <p className="text-sm text-muted-foreground">
-                No work has been queued for this agent.
-              </p>
-            )}
-            {work.map((task) => (
-              <article key={task.id} className="rounded-md border p-4">
-                <p className="text-xs text-primary">
-                  {task.status} · {task.attempts} attempts
-                </p>
-                <p className="mt-2 text-sm">{task.objective}</p>
-                {task.result && (
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                    {task.result}
+              {administrator && (
+                <section className="space-y-3 border-t pt-5">
+                  <h4 className="font-semibold">Worker credential</h4>
+                  <p className="text-sm text-muted-foreground">
+                    This credential grants access only to this agent's memory and work, plus this
+                    organization's shared knowledge. Replacing it immediately invalidates the
+                    previous credential.
                   </p>
-                )}
-                {task.status === "running" && task.lease_until && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Worker lease expires {new Date(task.lease_until).toLocaleString()}. Expired work
-                    is recovered when a worker next checks the queue.
-                  </p>
-                )}
-              </article>
-            ))}
-          </section>
-          <section className="space-y-3 border-t pt-5">
-            <h4 className="font-semibold">Private agent memory · Latest 50 entries</h4>
-            <p className="text-sm text-muted-foreground">
-              Other platform workers cannot retrieve these entries. Your organization's members can
-              review them here.
-            </p>
-            {!memory.length && (
-              <p className="text-sm text-muted-foreground">
-                The agent has not saved memory yet. Its worker can persist facts, conversation
-                summaries, follow-ups, and checkpoints.
-              </p>
-            )}
-            {memory.map((entry) => (
-              <article key={entry.id} className="rounded-md border p-4">
-                <p className="text-xs text-primary">
-                  {entry.kind.replaceAll("_", " ")} · {entry.memory_key}
-                </p>
-                <p className="mt-2 whitespace-pre-wrap text-sm">{entry.content}</p>
-                {entry.source_url && (
-                  <a
-                    href={entry.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 block break-all text-sm text-primary underline"
+                  <Button
+                    variant="outline"
+                    disabled={busy || !selected.selected}
+                    onClick={() => void rotateToken()}
                   >
-                    Source
-                  </a>
+                    Generate / replace credential
+                  </Button>
+                  {token && (
+                    <div className="space-y-2 rounded-md border bg-muted p-4">
+                      <p className="text-sm">
+                        Save this in the worker's secret settings. It is shown only now.
+                      </p>
+                      <code className="block break-all text-sm select-all">{token}</code>
+                      <Button variant="outline" onClick={() => setToken("")}>
+                        Hide credential
+                      </Button>
+                    </div>
+                  )}
+                </section>
+              )}
+              <section className="space-y-4 border-t pt-5">
+                <h4 className="font-semibold">Work queue · Latest 50 items</h4>
+                {role !== "viewer" && (
+                  <form
+                    className="flex flex-col gap-3 sm:flex-row"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void enqueue();
+                    }}
+                  >
+                    <Input
+                      aria-label="Work objective"
+                      value={objective}
+                      onChange={(e) => setObjective(e.target.value)}
+                      required
+                      minLength={10}
+                      maxLength={4000}
+                      placeholder="Find vendors serving our next community gathering"
+                    />
+                    <Button disabled={busy || selected.paused || !selected.selected}>
+                      Queue work
+                    </Button>
+                  </form>
                 )}
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Updated {new Date(entry.updated_at).toLocaleString()}
-                  {entry.expires_at
-                    ? ` · Expires ${new Date(entry.expires_at).toLocaleString()}`
-                    : ""}
+                {!work.length && (
+                  <p className="text-sm text-muted-foreground">
+                    No work has been queued for this agent.
+                  </p>
+                )}
+                {work.map((task) => (
+                  <article key={task.id} className="rounded-md border p-4">
+                    <p className="text-xs text-primary">
+                      {task.status} · {task.attempts} attempts
+                    </p>
+                    <p className="mt-2 text-sm">{task.objective}</p>
+                    {task.result && (
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                        {task.result}
+                      </p>
+                    )}
+                    {task.status === "running" && task.lease_until && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Worker lease expires {new Date(task.lease_until).toLocaleString()}. Expired
+                        work is recovered when a worker next checks the queue.
+                      </p>
+                    )}
+                  </article>
+                ))}
+              </section>
+              <section className="space-y-3 border-t pt-5">
+                <h4 className="font-semibold">Private agent memory · Latest 50 entries</h4>
+                <p className="text-sm text-muted-foreground">
+                  Other platform workers cannot retrieve these entries. Your organization's members
+                  can review them here.
                 </p>
-              </article>
-            ))}
-          </section>
+                {!memory.length && (
+                  <p className="text-sm text-muted-foreground">
+                    The agent has not saved memory yet. Its worker can persist facts, conversation
+                    summaries, follow-ups, and checkpoints.
+                  </p>
+                )}
+                {memory.map((entry) => (
+                  <article key={entry.id} className="rounded-md border p-4">
+                    <p className="text-xs text-primary">
+                      {entry.kind.replaceAll("_", " ")} · {entry.memory_key}
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm">{entry.content}</p>
+                    {entry.source_url && (
+                      <a
+                        href={entry.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 block break-all text-sm text-primary underline"
+                      >
+                        Source
+                      </a>
+                    )}
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Updated {new Date(entry.updated_at).toLocaleString()}
+                      {entry.expires_at
+                        ? ` · Expires ${new Date(entry.expires_at).toLocaleString()}`
+                        : ""}
+                    </p>
+                  </article>
+                ))}
+              </section>
+            </details>
+          )}
         </div>
       )}
     </div>

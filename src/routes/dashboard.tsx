@@ -157,6 +157,7 @@ function Dashboard() {
         .from("steward_research_runs")
         .select("id", { count: "exact", head: true })
         .eq("organization_id", organizationId)
+        .eq("status", "completed")
         .gte("created_at", since),
     ]);
     const failure = results.find((result) => result.error)?.error;
@@ -281,10 +282,10 @@ function Dashboard() {
           </div>
           <div className="self-end rounded-xl border border-white/15 bg-white/5 p-4 text-sm">
             <p className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-300" /> Human-led planning
+              <span className="h-2 w-2 rounded-full bg-amber-300" /> Your next contribution
             </p>
             <p className="mt-2 max-w-52 text-xs leading-5 text-slate-400">
-              Research runs on request. Platform monitoring and automatic outreach are not running.
+              Start with a community need. Review the plan, then decide the next step.
             </p>
           </div>
         </div>
@@ -319,8 +320,8 @@ function Dashboard() {
             icon: HeartHandshake,
           },
           {
-            label: "Research runs · 24 hours",
-            value: `${counts.research} / 10`,
+            label: "Research briefs · 24 hours",
+            value: counts.research,
             target: "Research" as Tab,
             icon: Search,
           },
@@ -426,7 +427,7 @@ function Dashboard() {
                 <section className="rounded-xl border bg-card p-6">
                   <h3 className="text-lg font-semibold">Keep your commitments</h3>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Next follow-ups from approved plans in the latest 100 records.
+                    Upcoming commitments from your recent approved plans.
                   </p>
                   {upcoming.map((item) => (
                     <button
@@ -446,11 +447,12 @@ function Dashboard() {
                   )}
                 </section>
                 <section className="rounded-xl border bg-card p-6">
-                  <h3 className="font-semibold">Your organization's memory</h3>
+                  <h3 className="font-semibold">Your community knowledge</h3>
                   <div className="mt-4 grid gap-3 text-sm text-primary">
                     <Link to="/knowledge">Shared knowledge and useful resources →</Link>
                     <Link to="/vendors">Vendor directory and source history →</Link>
-                    <Link to="/platform-agents">Platform choices and private agent memory →</Link>
+                    <Link to="/events">Gatherings, vendors, and budgets →</Link>
+                    <Link to="/platform-agents">Community channels →</Link>
                   </div>
                 </section>
               </div>
@@ -613,9 +615,7 @@ function Dashboard() {
                   <div className="mb-5 flex justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-semibold">
-                        {editing
-                          ? `Edit plan · Revision ${editing.revision}`
-                          : "Design a useful contribution"}
+                        {editing ? "Edit your plan" : "Design a useful contribution"}
                       </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
                         A structured team-authored plan. Editing resets approval. Approval here
@@ -703,7 +703,7 @@ function Dashboard() {
                   <article key={item.id} className="space-y-4 rounded-xl border bg-card p-6">
                     <div>
                       <p className="text-xs uppercase tracking-wide text-primary">
-                        {item.status} · Revision {item.revision} · Follow up {item.follow_up_on}
+                        {item.status} · Follow up {item.follow_up_on}
                       </p>
                       <h4 className="mt-2 text-xl font-semibold">{item.title}</h4>
                     </div>
@@ -727,7 +727,7 @@ function Dashboard() {
                     {item.outcome && (
                       <div className="rounded-lg bg-muted p-4">
                         <p className="flex items-center gap-2 text-sm font-medium">
-                          <CheckCircle2 size={16} /> Recorded outcome
+                          <CheckCircle2 size={16} /> What we learned
                         </p>
                         <p className="mt-2 whitespace-pre-wrap text-sm">{item.outcome}</p>
                       </div>
@@ -779,11 +779,11 @@ function Dashboard() {
                                   expected_revision: item.revision,
                                   decision: "approve",
                                 }),
-                              "This exact plan revision is approved for team planning.",
+                              "Plan approved. Your team can now follow through and record the outcome.",
                             )
                           }
                         >
-                          Approve revision {item.revision}
+                          Approve plan
                         </Button>
                       )}
                     </div>
@@ -827,17 +827,17 @@ function Dashboard() {
             <div className="grid gap-6 lg:grid-cols-[0.9fr_1.3fr]">
               <div className="space-y-4">
                 <div className="rounded-xl border bg-card p-5">
-                  <h3 className="font-semibold">Perplexity research</h3>
+                  <h3 className="font-semibold">Find useful answers</h3>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {configured === true
-                      ? "Server configuration is present. A successful saved result verifies the provider connection."
+                      ? "Ask a question to find useful resources, vendors, and practical next steps. Saved results appear here with their sources."
                       : configured === false
-                        ? "Server setup is incomplete. Configure PERPLEXITY_API_KEY, SUPABASE_URL, and SUPABASE_SERVICE_ROLE_KEY in hosting secrets."
-                        : "Provider readiness could not be checked. Try refreshing this page."}
+                        ? "Research needs setup. Your administrator can finish connecting the research service."
+                        : "Research availability could not be checked. Please refresh this page."}
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    One active request and 10 attempts per rolling 24 hours per organization. Failed
-                    attempts count toward the limit.
+                    Research is limited to 10 requests per day for your organization. Unsuccessful
+                    attempts count toward this allowance.
                   </p>
                 </div>
                 {editor && (
@@ -878,7 +878,7 @@ function Dashboard() {
                         ))}
                       </select>
                     </Field>
-                    <Field label="Plan context">
+                    <Field label="Related plan">
                       <select
                         className={selectClass}
                         value={research.planId}
@@ -898,7 +898,7 @@ function Dashboard() {
                         checked={research.includeKnowledge}
                         onChange={(e) => changeResearch({ includeKnowledge: e.target.checked })}
                       />
-                      Include excerpts from the latest three shared knowledge entries
+                      Use recent shared knowledge to inform this research
                     </label>
                     <p className="text-xs leading-5 text-muted-foreground">
                       Your question and selected context are sent to Perplexity. Keep private member
@@ -930,14 +930,14 @@ function Dashboard() {
               <section className="space-y-4">
                 <h3 className="font-semibold">Saved research · Latest 30</h3>
                 {!runs.length && (
-                  <Empty text="No research has run for this organization. Results, sources, and actual provider usage will appear here." />
+                  <Empty text="Your saved research and useful sources will appear here." />
                 )}
                 {runs.map((item) => (
                   <article key={item.id} className="rounded-xl border bg-card p-5">
                     <p className="text-xs text-primary">
                       {item.status === "running" &&
                       Date.now() - Date.parse(item.created_at) > 180000
-                        ? "Interrupted · new requests recover expired runs"
+                        ? "Research interrupted · Try again"
                         : item.status}{" "}
                       · {new Date(item.created_at).toLocaleString()}
                     </p>
@@ -985,7 +985,7 @@ function Dashboard() {
                 <Activity size={18} /> Organization activity · Latest 30
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Saved operations from your team and workers. Refresh to see updates.
+                Recent contributions, planning decisions, and progress from your organization.
               </p>
               {!feed.length && <Empty text="Your organization's saved actions will appear here." />}
               <ol className="mt-5 divide-y">

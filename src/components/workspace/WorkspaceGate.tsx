@@ -270,8 +270,9 @@ export function WorkspaceGate({
               </select>
               <nav aria-label="Workspace" className="flex flex-wrap gap-5 text-sm text-primary">
                 <Link to="/dashboard">Dashboard</Link>
+                <Link to="/events">Gatherings</Link>
                 <Link to="/vendors">Vendors</Link>
-                <Link to="/platform-agents">Platform agents</Link>
+                <Link to="/platform-agents">Community channels</Link>
                 <Link to="/knowledge">Shared knowledge</Link>
               </nav>
             </div>

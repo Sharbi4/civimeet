@@ -23,3 +23,7 @@ Configuration present is not a live provider test. Live verification requires an
 ## Scope and next steps
 
 This implements the first two phases of `community-steward-plan.md` as a human-initiated planning workflow. Hosted continuous stewardship, automated signal ingestion, AI plan generation, provider account authorization, communications approval/execution, and event logistics are not running. Platform selections remain clearly distinguished from connections.
+
+Live provider verification (2026-10-30 Phoenix): after updating the hosting secret and publishing, the live preview research endpoint returned HTTP 200 with 10 sources and recorded provider usage. The authenticated dashboard research save flow still needs a signed-in browser check. Configuration readiness alone is not proof of that full flow.
+
+The main workspace emphasizes useful findings, needs, plans, gatherings and outcomes. Raw agent instructions, worker credentials, work queues and private memory controls sit behind administrator-only settings. Research model and cost diagnostics are collapsed for administrators; exact approval revisions remain enforced in the backend.

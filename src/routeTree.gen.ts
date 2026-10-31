@@ -15,6 +15,7 @@ import { Route as AgentRouteImport } from './routes/agent'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as EventsRouteImport } from './routes/events'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as PlatformAgentsRouteImport } from './routes/platform-agents'
@@ -56,6 +57,11 @@ const ContactRoute = ContactRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/events': typeof EventsRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
   '/platform-agents': typeof PlatformAgentsRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/events': typeof EventsRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
   '/platform-agents': typeof PlatformAgentsRoute
@@ -167,6 +175,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/events': typeof EventsRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
   '/platform-agents': typeof PlatformAgentsRoute
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/dashboard'
+    | '/events'
     | '/how-it-works'
     | '/knowledge'
     | '/platform-agents'
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/dashboard'
+    | '/events'
     | '/how-it-works'
     | '/knowledge'
     | '/platform-agents'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/dashboard'
+    | '/events'
     | '/how-it-works'
     | '/knowledge'
     | '/platform-agents'
@@ -250,6 +262,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
+  EventsRoute: typeof EventsRoute
   HowItWorksRoute: typeof HowItWorksRoute
   KnowledgeRoute: typeof KnowledgeRoute
   PlatformAgentsRoute: typeof PlatformAgentsRoute
@@ -306,6 +319,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works': {
@@ -402,6 +422,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
+  EventsRoute: EventsRoute,
   HowItWorksRoute: HowItWorksRoute,
   KnowledgeRoute: KnowledgeRoute,
   PlatformAgentsRoute: PlatformAgentsRoute,
