@@ -11,6 +11,8 @@
 
 ## Rules
 
+- Contact and Get Started share a validated public demo-request server action with private, idempotent database inserts; ordinary workspace members cannot read website leads. Why: public acquisition leads belong to the site owner, not customer organizations.
+
 - Analytics report analysis is editor-only and uses a user-scoped membership check, bounded CSV/JSON parsing, and a cancellable AI Gateway Responses stream; uploads/results remain transient unless users download results, avoiding unnecessary retention of analytics data.
 - AI Gateway Responses helpers live in `src/lib/ai` with request-local gateway-issued run IDs and no automatic retries; analytics uses the shared helpers without changing the existing research provider.
 

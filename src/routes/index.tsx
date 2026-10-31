@@ -26,6 +26,8 @@ export const Route = createFileRoute("/")({
           "CiviMeet helps you research local needs, draft community updates, and plan real-life meetups. Your team stays in control.",
       },
       { property: "og:title", content: "CiviMeet — Build communities. Bring people together." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         property: "og:description",
         content: "Find community needs. Prepare helpful updates. Plan a real-life meetup.",
@@ -83,7 +85,7 @@ function HomePage() {
               with the prep so your team can focus on people.
             </p>
             <div className="cmh-actions">
-              <Link className="cmh-button" to="/auth" search={{ mode: "signup" }}>
+              <Link className="cmh-button" to="/get-started">
                 Get started <ArrowUpRight size={19} />
               </Link>
               <a className="cmh-link" href="#see-it-work">
@@ -232,7 +234,7 @@ function HomePage() {
               <h2 id="cmh-final-title">Less admin. More community.</h2>
             </div>
             <div>
-              <Link className="cmh-button cmh-button-light" to="/auth" search={{ mode: "signup" }}>
+              <Link className="cmh-button cmh-button-light" to="/get-started">
                 Get started <ArrowUpRight size={19} />
               </Link>
               <Link className="cmh-final-secondary" to="/pricing">

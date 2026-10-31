@@ -23,7 +23,7 @@ export const Route = createFileRoute("/pricing")({
             <p className="text-4xl font-semibold">{p.price}<span className="text-base font-normal text-muted-foreground">{p.unit}</span></p>
             <p className="mt-3 flex-1 text-sm text-muted-foreground">{p.text}</p>
             <Button asChild className="mt-6" variant={p.name === "Enterprise" ? "outline" : "default"}>
-              {p.name === "Enterprise" ? <Link to="/contact">Contact us</Link> : <Link to="/auth" search={{ mode: "signup" }}>Get Started</Link>}
+              {p.name === "Enterprise" ? <Link to="/contact">Contact us</Link> : <Link to="/get-started">Get Started</Link>}
             </Button>
           </div>
         ))}

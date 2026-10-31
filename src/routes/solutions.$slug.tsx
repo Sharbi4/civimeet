@@ -34,7 +34,7 @@ function Solution() {
           ))}
         </ul>
         <div className="mt-8 flex gap-3">
-          <Button asChild><Link to="/auth" search={{ mode: "signup" }}>Get Started</Link></Button>
+          <Button asChild><Link to="/get-started">Get Started</Link></Button>
           <Button asChild variant="outline"><Link to="/solutions">All solutions</Link></Button>
         </div>
       </div>
