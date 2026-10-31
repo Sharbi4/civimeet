@@ -114,6 +114,56 @@ export type Database = {
           },
         ]
       }
+      community_needs: {
+        Row: {
+          created_at: string
+          created_by: string
+          detail: string
+          id: string
+          kind: string
+          organization_id: string
+          priority: string
+          source_url: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          detail?: string
+          id?: string
+          kind: string
+          organization_id: string
+          priority: string
+          source_url?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          detail?: string
+          id?: string
+          kind?: string
+          organization_id?: string
+          priority?: string
+          source_url?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_needs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_knowledge: {
         Row: {
           content: string
@@ -240,6 +290,141 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      steward_plans: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_revision: number | null
+          connection: string
+          contribution: string
+          created_at: string
+          created_by: string
+          follow_up: string
+          follow_up_on: string
+          gathering: string
+          id: string
+          need_id: string | null
+          organization_id: string
+          outcome: string
+          revision: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_revision?: number | null
+          connection?: string
+          contribution: string
+          created_at?: string
+          created_by: string
+          follow_up: string
+          follow_up_on: string
+          gathering?: string
+          id?: string
+          need_id?: string | null
+          organization_id: string
+          outcome?: string
+          revision?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_revision?: number | null
+          connection?: string
+          contribution?: string
+          created_at?: string
+          created_by?: string
+          follow_up?: string
+          follow_up_on?: string
+          gathering?: string
+          id?: string
+          need_id?: string | null
+          organization_id?: string
+          outcome?: string
+          revision?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steward_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steward_plans_organization_id_need_id_fkey"
+            columns: ["organization_id", "need_id"]
+            isOneToOne: false
+            referencedRelation: "community_needs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      steward_research_runs: {
+        Row: {
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          input: Json
+          organization_id: string
+          plan_id: string | null
+          request_id: string
+          requested_by: string
+          result: Json | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          input: Json
+          organization_id: string
+          plan_id?: string | null
+          request_id: string
+          requested_by: string
+          result?: Json | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          input?: Json
+          organization_id?: string
+          plan_id?: string | null
+          request_id?: string
+          requested_by?: string
+          result?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steward_research_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steward_research_runs_organization_id_plan_id_fkey"
+            columns: ["organization_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "steward_plans"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -477,6 +662,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      finish_steward_research: {
+        Args: { failure?: string; research_result?: Json; target_run: string }
+        Returns: undefined
+      }
       recall_agent_context: {
         Args: {
           agent_token: string
@@ -484,6 +673,17 @@ export type Database = {
           search_text?: string
         }
         Returns: Json
+      }
+      record_community_need: {
+        Args: {
+          need_detail: string
+          need_kind: string
+          need_title: string
+          source?: string
+          urgency?: string
+          workspace: string
+        }
+        Returns: string
       }
       remember_agent: {
         Args: {
@@ -495,6 +695,29 @@ export type Database = {
           expiry?: string
         }
         Returns: string
+      }
+      reserve_steward_research: {
+        Args: {
+          actor: string
+          request_key: string
+          research_input: Json
+          target_plan?: string
+          workspace: string
+        }
+        Returns: Json
+      }
+      resolve_community_need: {
+        Args: { resolved: boolean; target_need: string }
+        Returns: undefined
+      }
+      review_steward_plan: {
+        Args: {
+          decision: string
+          expected_revision: number
+          result_note?: string
+          target_plan: string
+        }
+        Returns: undefined
       }
       review_vendor: {
         Args: { details: Json; review_status: string; target_vendor: string }
@@ -509,6 +732,15 @@ export type Database = {
           entry_content: string
           entry_source?: string
           entry_title: string
+          workspace: string
+        }
+        Returns: string
+      }
+      save_steward_plan: {
+        Args: {
+          expected_revision?: number
+          plan: Json
+          target_plan?: string
           workspace: string
         }
         Returns: string
