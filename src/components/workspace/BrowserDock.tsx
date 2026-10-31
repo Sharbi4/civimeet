@@ -100,6 +100,22 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
   const administrator = ["owner", "admin"].includes(scope.role);
   const session = sessions.find((item) => item.agent_id === agentId);
   const agent = agents.find((item) => item.id === agentId);
+  useEffect(() => {
+    const open = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (
+        detail?.organizationId !== scope.organizationId ||
+        !agents.some((item) => item.id === detail.agentId)
+      )
+        return;
+      setAgentId(detail.agentId);
+      setMedia(null);
+      setError("");
+      setLayout("panel");
+    };
+    window.addEventListener("civimeet:open-agent-browser", open);
+    return () => window.removeEventListener("civimeet:open-agent-browser", open);
+  }, [agents, scope.organizationId]);
   const load = useCallback(async () => {
     const siteRows = await scope.db
       .from("browser_sites")

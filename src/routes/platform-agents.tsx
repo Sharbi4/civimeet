@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { WorkspaceGate, useWorkspace } from "@/components/workspace/WorkspaceGate";
+import { PlatformConversation } from "@/components/workspace/PlatformConversation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -245,6 +246,7 @@ function PlatformAgents() {
       )}
       {selected && (
         <div className="space-y-6 rounded-lg border p-6">
+          <PlatformConversation key={selected.id} agent={selected} />
           <div className="flex justify-between gap-3">
             <h3 className="text-xl font-semibold">{selected.name}</h3>
             <Button variant="outline" onClick={() => setRefresh((value) => value + 1)}>

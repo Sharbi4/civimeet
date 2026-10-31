@@ -7,7 +7,12 @@ import {
   type BrowserState,
   type BrowserWorkspace,
 } from "./browser-workspace";
-import { SteelRequestError, steelProvider, withSteelPage } from "./steel.server";
+import {
+  SteelProtocolError,
+  SteelRequestError,
+  steelProvider,
+  withSteelPage,
+} from "./steel.server";
 
 type Runtime = {
   provider_session: string | null;
@@ -249,7 +254,8 @@ export async function handleBrowserCommand(
     } else {
       if (!result.providerSession)
         throw new BrowserError(409, "There is no active browser session.");
-      const live = await deps.provider.live(result.providerSession);
+      phase = "provider_observe";
+      const live = await deps.provider.live(result.providerSession, Boolean(result.humanActor));
       if (!live.live || Date.parse(result.expiresAt ?? "") <= Date.now()) {
         result.state = "session_expired";
         result.humanActor = null;
@@ -302,7 +308,9 @@ export async function handleBrowserCommand(
       {
         phase,
         error:
-          error instanceof BrowserError || error instanceof SteelRequestError
+          error instanceof BrowserError ||
+          error instanceof SteelRequestError ||
+          error instanceof SteelProtocolError
             ? error.message
             : "Browser action could not be verified. Stop the session before reconnecting.",
       },

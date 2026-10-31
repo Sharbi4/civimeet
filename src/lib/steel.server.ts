@@ -10,6 +10,7 @@ type SteelSession = {
   timeout?: number;
   debugConfig?: { interactive?: boolean };
 };
+export class SteelProtocolError extends Error {}
 export class SteelRequestError extends Error {
   status: number;
   constructor(status: number) {
@@ -66,12 +67,16 @@ export const steelProvider = {
       debugConfig: { interactive },
       dimensions: { width: 1280, height: 800 },
     });
-    if (session.id !== id || session.status !== "live")
-      throw new Error("Browser did not become ready.");
+    if (session.id !== id)
+      throw new SteelProtocolError(
+        "Steel returned a different session ID. Stop the task before retrying.",
+      );
+    if (session.status !== "live")
+      throw new SteelProtocolError("Steel created the session but did not report it as live.");
     return {
       id: session.id,
       profileId: session.profileId ?? null,
-      viewer: safeSteelViewer(session.debugUrl),
+      viewer: interactive ? safeSteelViewer(session.debugUrl) : "",
     };
   },
   async release(id: string) {
@@ -87,9 +92,12 @@ export const steelProvider = {
     const session = await steelRequest<SteelSession>(`/sessions/${id}`);
     if (session.status === "live") throw new Error("Browser is still stopping. Try stop again.");
   },
-  async live(id: string) {
+  async live(id: string, interactive = false) {
     const session = await steelRequest<SteelSession>(`/sessions/${id}`);
-    return { live: session.status === "live", viewer: safeSteelViewer(session.debugUrl) };
+    return {
+      live: session.status === "live",
+      viewer: interactive ? safeSteelViewer(session.debugUrl) : "",
+    };
   },
 };
 

@@ -9,6 +9,7 @@ const inputSchema = researchInputSchema.extend({
   requestId: z.string().uuid(),
   planId: z.string().uuid().nullable().default(null),
   includeKnowledge: z.boolean().default(false),
+  agentId: z.string().uuid().nullable().default(null),
 });
 type Submission = z.infer<typeof inputSchema>;
 type Run = {
@@ -74,6 +75,19 @@ const defaults: Dependencies = {
     return data.user.id;
   },
   async reserve(actor, input) {
+    if (input.agentId) {
+      const agent = await database()
+        .from("platform_agents")
+        .select("id,selected,paused")
+        .eq("organization_id", input.organizationId)
+        .eq("id", input.agentId)
+        .maybeSingle();
+      if (agent.error || !agent.data?.selected || agent.data.paused)
+        throw new ResearchError(
+          409,
+          "Select and unpause this platform before asking its agent to work.",
+        );
+    }
     const { data, error } = await database().rpc("reserve_steward_research", {
       actor,
       workspace: input.organizationId,
@@ -84,6 +98,7 @@ const defaults: Dependencies = {
         location: input.location,
         purpose: input.purpose,
         includeKnowledge: input.includeKnowledge,
+        agentId: input.agentId,
       },
     });
     if (error) {
@@ -102,6 +117,36 @@ const defaults: Dependencies = {
   async context(input) {
     const db = database();
     const parts: string[] = [];
+    if (input.agentId) {
+      const agent = await db
+        .from("platform_agents")
+        .select("platform,name,instructions")
+        .eq("organization_id", input.organizationId)
+        .eq("id", input.agentId)
+        .single();
+      if (agent.error) throw new Error("Platform agent context could not be loaded");
+      parts.push("Platform assignment: " + JSON.stringify(agent.data).slice(0, 1800));
+      const history = await db
+        .from("steward_research_runs")
+        .select("input,result")
+        .eq("organization_id", input.organizationId)
+        .eq("input->>agentId", input.agentId)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(2);
+      if (history.error) throw new Error("Platform conversation could not be loaded");
+      parts.push(
+        "Recent conversation: " +
+          JSON.stringify(
+            (history.data ?? [])
+              .reverse()
+              .map((row) => ({
+                question: row.input.question,
+                answer: row.result?.answer?.slice(0, 600),
+              })),
+          ).slice(0, 1600),
+      );
+    }
     const brief = await db
       .from("organization_briefs")
       .select("area,mission,voice,event_goal,platform_actions")
