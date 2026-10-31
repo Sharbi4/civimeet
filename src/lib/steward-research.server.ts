@@ -102,6 +102,13 @@ const defaults: Dependencies = {
   async context(input) {
     const db = database();
     const parts: string[] = [];
+    const brief = await db
+      .from("organization_briefs")
+      .select("area,mission,voice,event_goal,platform_actions")
+      .eq("organization_id", input.organizationId)
+      .maybeSingle();
+    if (brief.error) throw new Error("Community brief could not be loaded");
+    if (brief.data) parts.push("Community brief: " + JSON.stringify(brief.data).slice(0, 3000));
     if (input.planId) {
       const { data, error } = await db
         .from("steward_plans")

@@ -66,7 +66,10 @@ function dependencies() {
     pageMock: page,
   };
 }
-beforeEach(() => vi.unstubAllGlobals());
+beforeEach(() => {
+  vi.unstubAllGlobals();
+  vi.stubEnv("STEEL_API_KEY", "test-key");
+});
 describe("browser command boundaries", () => {
   it("rejects cross-site calls before claiming or provisioning", async () => {
     const deps = dependencies();

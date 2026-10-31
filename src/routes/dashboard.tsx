@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { WorkspaceGate, useWorkspace } from "@/components/workspace/WorkspaceGate";
+import { OrganizationBrief } from "@/components/workspace/OrganizationBrief";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -263,6 +264,10 @@ function Dashboard() {
     .slice(0, 5);
   return (
     <div className="space-y-6">
+      <OrganizationBrief
+        next={counts.drafts ? "review" : counts.due ? "followup" : "research"}
+        onNext={() => setTab(counts.drafts || counts.due ? "Steward plans" : "Research")}
+      />
       <section className="relative overflow-hidden rounded-2xl bg-slate-950 p-6 text-white md:p-9">
         <div className="absolute -right-12 -top-20 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" />
         <div className="relative flex flex-wrap justify-between gap-5">

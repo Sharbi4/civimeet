@@ -134,6 +134,7 @@ export async function handleBrowserCommand(
     return json({ error: "Send JSON." }, 415);
   let input: BrowserCommand;
   let result: Result | null = null;
+  let phase = "request";
   try {
     const reader = request.body?.getReader();
     if (!reader) throw new BrowserError(400, "Provide a browser command.");
@@ -158,6 +159,7 @@ export async function handleBrowserCommand(
     const parsed = browserCommandSchema.safeParse(JSON.parse(text));
     if (!parsed.success) throw new BrowserError(400, "Invalid browser command.");
     input = parsed.data;
+    phase = "authorization";
     const actor = await deps.authorize(token, input.organizationId);
     const origins = await deps.origins(input.organizationId);
     if (input.command === "takeover" && !deps.handoff())
@@ -171,6 +173,7 @@ export async function handleBrowserCommand(
         "Your administrator needs to enable an authorized website first.",
       );
     if (input.url) approvedBrowserUrl(input.url, origins);
+    phase = "reservation";
     const { workspace, runtime } = await deps.claim(actor, input);
     result = {
       state: workspace.state,
@@ -185,6 +188,7 @@ export async function handleBrowserCommand(
     let screenshot: string | undefined;
     let viewer: string | undefined;
     const stop = async () => {
+      phase = "provider_stop";
       if (result!.providerSession) await deps.provider.release(result!.providerSession);
       result!.providerSession = null;
       result!.humanActor = null;
@@ -217,6 +221,7 @@ export async function handleBrowserCommand(
       // The provider session is rotated before handing control to a different principal.
       // Old interactive viewer URLs can never address the new agent session.
       result.providerSession = input.requestId;
+      phase = "provider_create";
       const created = await deps.provider.create(
         input.requestId,
         input.command === "takeover",
@@ -228,6 +233,7 @@ export async function handleBrowserCommand(
       result.humanActor = input.command === "takeover" ? actor : null;
       result.state = input.command === "takeover" ? "human_controlling" : "ready";
       result.checkpointUrl = checkpoint;
+      phase = "page_connection";
       if (checkpoint)
         await deps.page(created.id, async (page) => {
           await page.navigate(checkpoint);
@@ -274,6 +280,7 @@ export async function handleBrowserCommand(
         });
       }
     }
+    phase = "save_result";
     await deps.finish(input.requestId, result, true);
     return json({
       state: result.state,
@@ -293,6 +300,7 @@ export async function handleBrowserCommand(
     }
     return json(
       {
+        phase,
         error:
           error instanceof BrowserError || error instanceof SteelRequestError
             ? error.message

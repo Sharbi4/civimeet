@@ -38,7 +38,8 @@ export async function steelRequest<T>(path: string, method = "GET", body?: unkno
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: AbortSignal.timeout(20_000),
-      redirect: "error",
+      // Workers supports manual/follow; manual also prevents forwarding the key on redirects.
+      redirect: "manual",
     });
   } catch {
     throw new SteelRequestError(0);

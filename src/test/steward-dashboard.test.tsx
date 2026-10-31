@@ -27,6 +27,7 @@ vi.mock("@/components/workspace/WorkspaceGate", () => ({
             return chain;
           },
           eq: () => chain,
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
           order: () => chain,
           limit: () => chain,
           gte: () => chain,
