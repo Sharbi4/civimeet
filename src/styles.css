@@ -4,6 +4,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Sofia Pro Soft (Olivier Gourvat / Mostardesign) — served from Lovable assets.
+   Single weight file, declared as a full range so bold/semibold text reuses it
+   instead of falling back or being synthetically emboldened. */
+@font-face {
+  font-family: "Sofia Pro Soft";
+  src: url("/__l5e/assets-v1/77902c86-6b0a-46fc-93af-d06070a0a366/sofia-pro-soft.woff2")
+    format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /*
  * Design system definition.
  *
@@ -64,7 +76,7 @@
 
 :root {
   --radius: 0.5rem;
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Sofia Pro Soft", ui-sans-serif, system-ui, sans-serif;
   --background: oklch(0.99 0.002 250);
   --foreground: oklch(0.2 0.02 260);
   --card: oklch(1 0 0);

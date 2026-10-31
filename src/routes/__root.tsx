@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import sofiaFont from "@/assets/sofia-pro-soft.woff2.asset.json";
 
 function NotFoundComponent() {
   return (
@@ -89,8 +90,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" },
+      {
+        rel: "preload",
+        href: sofiaFont.url,
+        as: "font",
+        type: "font/woff2",
+        crossorigin: "anonymous",
+      },
     ],
   }),
   shellComponent: RootShell,
