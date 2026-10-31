@@ -17,7 +17,7 @@ export function DemoRequestForm({ source, send }: {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
-  const [fields, setFields] = useState<Record<string, string>>({});
+  const [fields, setFields] = useState<Partial<Record<keyof DemoRequest, string>>>({});
   const submissionKey = useRef<string | undefined>(undefined);
   const sending = useRef(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -56,7 +56,7 @@ export function DemoRequestForm({ source, send }: {
       <Button asChild variant="outline"><Link to="/product">Explore CiviMeet <ArrowUpRight /></Link></Button>
     </div>
   );
-  const fieldError = (name: string) => fields[name] ? <p id={`${name}-error`} className="text-sm text-destructive">{fields[name]}</p> : null;
+  const fieldError = (name: keyof DemoRequest) => fields[name] ? <p id={`${name}-error`} className="text-sm text-destructive">{fields[name]}</p> : null;
   return (
     <form onSubmit={submit} noValidate className="space-y-6" aria-label="Demo request">
       <div className="grid gap-6 sm:grid-cols-2">
