@@ -19,9 +19,9 @@ CiviMeet uses Perplexity's current Agent API (`POST https://api.perplexity.ai/v1
 
 ## Current scope
 
-The repository does not yet have working customer authentication, organizations, tasks, or a database. This is a **single-operator research preview**, protected by a shared access token. The token stays in React memory and is not persisted in local/session storage. Use HTTPS outside localhost; anyone with the operator token can use the configured API budget. Rotate it by updating the server secret.
+The `/agent` route remains a **single-operator research preview**, protected by a shared access token. The signed-in `/dashboard` now provides organization-scoped research with persistent results and durable usage limits; see [the dashboard integration](steward-dashboard.md). The preview token stays in React memory and is not persisted in local/session storage. Use HTTPS outside localhost; anyone with the operator token can use the configured API budget. Rotate it by updating the server secret.
 
-Each server instance permits one concurrent request and five submissions per minute. These limits reset on restart and are not shared across instances. Before customer rollout, replace operator access with authenticated organization membership, persistent per-organization quotas and usage/audit storage. Do not treat this preview as a multi-tenant agent runtime.
+Each preview server instance permits one concurrent request and five submissions per minute. These preview limits reset on restart and are not shared across instances. Customer research uses the authenticated dashboard endpoint with database-enforced per-organization limits. Do not treat the operator preview as a multi-tenant agent runtime.
 
 Only the submitted question, purpose, and location are sent to Perplexity. `store: false` is requested; this is not a guarantee about provider retention policies. No automatic retries incur extra costs. Results are not saved to community memory, and nothing is posted, booked, sent, scheduled, or paid for.
 

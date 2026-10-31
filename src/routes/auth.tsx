@@ -15,10 +15,11 @@ function Auth() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Your organization workspace is ready</h2>
         <p className="text-muted-foreground">
-          Manage vendor knowledge and the memory of each platform agent.
+          Review community needs, plan useful contributions, and build lasting organizational
+          knowledge.
         </p>
         <Button asChild>
-          <Link to="/vendors">Open vendor directory</Link>
+          <Link to="/dashboard">Open community dashboard</Link>
         </Button>
       </div>
     </WorkspaceGate>

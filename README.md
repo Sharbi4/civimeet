@@ -2,6 +2,8 @@
 
 AI community operations platform: Contribute → Connect → Convene.
 
+The signed-in `/dashboard` brings community needs, contribution-first plans, exact-revision review, follow-up dates, saved Perplexity research, and organization activity together. See [steward workflow and configuration](docs/steward-dashboard.md) and the [research-informed implementation plan](docs/community-steward-plan.md).
+
 ## Perplexity research
 
 The private research preview is available at `/agent`. Configure server secrets before use; see [Perplexity setup and current scope](docs/perplexity.md). Research is separate from the future autonomous organizer and does not publish or book anything.

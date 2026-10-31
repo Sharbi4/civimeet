@@ -77,6 +77,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
             <Link to="/pricing" className="hover:text-foreground">Pricing</Link>
             <Link to="/contact" className="hover:text-foreground">Contact</Link>
             <Link to="/agent" className="hover:text-foreground">Research Preview</Link>
+            <Link to="/dashboard" className="hover:text-foreground">Community Dashboard</Link>
             <Link to="/vendors" className="hover:text-foreground">Vendor Directory</Link>
             <Link to="/platform-agents" className="hover:text-foreground">Platform Agents</Link>
             <Link to="/terms" className="hover:text-foreground">Terms</Link>

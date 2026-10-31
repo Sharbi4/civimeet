@@ -87,7 +87,17 @@ export function WorkspaceGate({
         }
         const rows = (data ?? []) as unknown as Membership[];
         setMemberships(rows);
-        setOrganizationId(rows[0]?.organization.id ?? "");
+        let preferred = "";
+        try {
+          preferred = sessionStorage.getItem(`civimeet-organization:${session.user.id}`) ?? "";
+        } catch {
+          /* Storage may be disabled. */
+        }
+        setOrganizationId(
+          rows.find((item) => item.organization.id === preferred)?.organization.id ??
+            rows[0]?.organization.id ??
+            "",
+        );
       });
     return () => {
       alive = false;
@@ -132,7 +142,9 @@ export function WorkspaceGate({
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b pb-5">
           <div>
             <p className="text-sm text-primary">CiviMeet organization workspace</p>
-            <h1 className="text-2xl font-semibold">Community knowledge</h1>
+            <h1 className="text-2xl font-semibold">
+              {membership?.organization.name ?? "Community Steward"}
+            </h1>
           </div>
           {session && db && (
             <Button
@@ -238,7 +250,17 @@ export function WorkspaceGate({
                 id="organization-switch"
                 className="rounded-md border bg-background p-2"
                 value={organizationId}
-                onChange={(e) => setOrganizationId(e.target.value)}
+                onChange={(e) => {
+                  setOrganizationId(e.target.value);
+                  try {
+                    sessionStorage.setItem(
+                      `civimeet-organization:${session.user.id}`,
+                      e.target.value,
+                    );
+                  } catch {
+                    /* Storage may be disabled. */
+                  }
+                }}
               >
                 {memberships.map((item) => (
                   <option key={item.organization.id} value={item.organization.id}>
@@ -246,7 +268,8 @@ export function WorkspaceGate({
                   </option>
                 ))}
               </select>
-              <nav aria-label="Workspace" className="flex gap-5 text-sm text-primary">
+              <nav aria-label="Workspace" className="flex flex-wrap gap-5 text-sm text-primary">
+                <Link to="/dashboard">Dashboard</Link>
                 <Link to="/vendors">Vendors</Link>
                 <Link to="/platform-agents">Platform agents</Link>
                 <Link to="/knowledge">Shared knowledge</Link>
