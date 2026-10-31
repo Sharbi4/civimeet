@@ -82,7 +82,7 @@ export type HomePlatform = {
   access: string;
 };
 
-const p = (k: Key) => playbooks[k];
+const p = (k: Key) => ({ ...playbooks[k], contributions: playbooks[k].contributions as [string, ...string[]] });
 
 export const homePlatforms: HomePlatform[] = [
   {
