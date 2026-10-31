@@ -55,7 +55,7 @@ export async function handleAnalyticsAnalysis(request: Request, authorize = auth
     catch (error) { return jsonError(error instanceof Error ? error.message : "Invalid report.", 400); }
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return jsonError("AI analysis is not configured.", 503);
-    let upstreamError: AnalysisError | null = null;
+    const upstream: { error: AnalysisError | null } = { error: null };
     const call = createResponsesCall(request, {
       apiKey, baseURL: "https://ai.gateway.lovable.dev/v1", model: "openai/gpt-6-astra",
       onResponse: async (response) => {
@@ -65,7 +65,7 @@ export async function handleAnalyticsAnalysis(request: Request, authorize = auth
             const body = await response.clone().json();
             message = body.message ?? body.error?.message ?? message;
           } catch { /* Never expose raw request details or credentials. */ }
-          upstreamError = new AnalysisError(response.status, message);
+          upstream.error = new AnalysisError(response.status, message);
         }
       },
     }, [{ role: "user", content: JSON.stringify({ conversionGoal: parsed.data.goal, report: report.normalized }) }],
@@ -73,7 +73,7 @@ export async function handleAnalyticsAnalysis(request: Request, authorize = auth
     const iterator = call.result.fullStream[Symbol.asyncIterator]();
     const first = await iterator.next();
     await call.gateway.waitForRunId();
-    if (upstreamError) { await iterator.return?.(); return jsonError(upstreamError.message, upstreamError.status); }
+    if (upstream.error) { await iterator.return?.(); return jsonError(upstream.error.message, upstream.error.status); }
     const encoder = new TextEncoder();
     let answer = "";
     let terminal = false;
@@ -84,7 +84,7 @@ export async function handleAnalyticsAnalysis(request: Request, authorize = auth
           if (!part) return;
           if (part.type === "text-delta") { answer += part.text; send({ type: "text", text: part.text }); }
           if (part.type === "reasoning-delta") send({ type: "reasoning", text: part.text });
-          if (part.type === "error") { terminal = true; send({ type: "error", text: upstreamError?.message ?? "AI analysis failed. No automatic retry was made." }); }
+          if (part.type === "error") { terminal = true; send({ type: "error", text: upstream.error?.message ?? "AI analysis failed. No automatic retry was made." }); }
         };
         try {
           consume(first.value);
