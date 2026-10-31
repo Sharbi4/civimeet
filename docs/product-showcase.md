@@ -15,3 +15,7 @@ Images are served locally; below-fold photography is lazy-loaded. Dimensional bl
 ## Capability boundaries
 
 Research, organization memory, planning records and controlled public-page browser snapshots reflect current capabilities. Social listening/publishing, private login/takeover, unattended execution, operational RSVPs, bookings and financial transactions are expressly identified as previews or in development. The static browser composition is labeled UI preview and has no pretend operational controls.
+
+## Homepage
+
+`/` reuses the same three local photos, `product.css` tokens/sculptures and `home.css` (`cmh-` prefix). Its mini demo, platform explorer and audience selector (`src/components/home/`) are local selection-only UI: no network calls, logins or messages. Platform statuses derive from `platform-playbooks.json`; only public-web supervised browsing is marked available.
