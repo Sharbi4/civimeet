@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SimplePage } from "@/components/site/SimplePage";
+import { DemoRequestPage } from "@/components/site/DemoRequestPage";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -8,16 +8,9 @@ export const Route = createFileRoute("/contact")({
       { name: "description", content: "Get in touch with the CiviMeet team about plans and partnerships." },
       { property: "og:title", content: "Contact CiviMeet" },
       { property: "og:description", content: "Talk to us about CiviMeet for your organization." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: () => (
-    <SimplePage eyebrow="Contact" title="Contact us" intro="Questions about plans, Enterprise needs, or partnerships.">
-      <p>Need help or want to talk about CiviMeet? Email our team.</p>
-      <p className="mt-4">
-        <a href="mailto:support@civimeet.com" className="font-medium text-primary underline underline-offset-4 hover:text-foreground">
-          support@civimeet.com
-        </a>
-      </p>
-    </SimplePage>
-  ),
+  component: () => <DemoRequestPage source="contact" />,
 });

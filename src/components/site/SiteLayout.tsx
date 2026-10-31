@@ -49,7 +49,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
               <Link to="/auth">Sign In</Link>
             </Button>
             <Button asChild size="sm">
-              <Link to="/auth" search={{ mode: "signup" }}>
+              <Link to="/get-started">
                 Get Started
               </Link>
             </Button>
@@ -70,7 +70,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
                 Sign In
               </Link>
               <Button asChild size="sm">
-                <Link to="/auth" search={{ mode: "signup" }}>
+                <Link to="/get-started" onClick={() => setOpen(false)}>
                   Get Started
                 </Link>
               </Button>
