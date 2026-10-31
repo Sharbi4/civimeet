@@ -7,7 +7,7 @@ import {
   type BrowserState,
   type BrowserWorkspace,
 } from "./browser-workspace";
-import { steelProvider, withSteelPage } from "./steel.server";
+import { SteelRequestError, steelProvider, withSteelPage } from "./steel.server";
 
 type Runtime = {
   provider_session: string | null;
@@ -232,9 +232,12 @@ export async function handleBrowserCommand(
         await deps.page(created.id, async (page) => {
           await page.navigate(checkpoint);
           const inspection = await page.inspect();
+          if (inspection.url !== "about:blank") approvedBrowserUrl(inspection.url, origins);
           result!.origin = new URL(inspection.url).origin;
           if (inspection.sensitive && input.command !== "takeover")
             result!.state = "authentication_required";
+          if (!inspection.sensitive && input.command !== "takeover")
+            screenshot = await page.screenshot();
         });
       if (input.command === "takeover") viewer = created.viewer;
     } else {
@@ -291,7 +294,7 @@ export async function handleBrowserCommand(
     return json(
       {
         error:
-          error instanceof BrowserError
+          error instanceof BrowserError || error instanceof SteelRequestError
             ? error.message
             : "Browser action could not be verified. Stop the session before reconnecting.",
       },

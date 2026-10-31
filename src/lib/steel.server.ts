@@ -10,10 +10,18 @@ type SteelSession = {
   timeout?: number;
   debugConfig?: { interactive?: boolean };
 };
-class SteelRequestError extends Error {
+export class SteelRequestError extends Error {
   status: number;
   constructor(status: number) {
-    super("Browser provider request failed.");
+    super(
+      status === 401 || status === 403
+        ? "Steel rejected the browser credentials. Check the server API key and project access."
+        : status === 402
+          ? "Steel needs available browser credits before this task can run."
+          : status === 429
+            ? "Steel is at its session limit. Stop an unused session and try again."
+            : `Steel could not open the browser (provider status ${status}).`,
+    );
     this.status = status;
   }
 }

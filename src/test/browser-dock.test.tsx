@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BrowserWorkspaceProvider, useBrowserScope } from "@/components/workspace/BrowserDock";
 let authCallback: (event: string, session: unknown) => void;
+let workspaceRows: unknown[] = [];
 const db = {
   auth: {
     onAuthStateChange: (callback: typeof authCallback) => {
@@ -30,7 +31,9 @@ const db = {
                     paused: false,
                   },
                 ]
-              : [],
+              : table === "browser_workspaces"
+                ? workspaceRows
+                : [],
           error: null,
         }).then(resolve),
     };
@@ -41,12 +44,13 @@ function Page({ name, organizationId = "org-a" }: { name: string; organizationId
   useBrowserScope({ db, organizationId, name: organizationId, userId: "user", role: "owner" });
   return <p>{name}</p>;
 }
-beforeEach(() =>
+beforeEach(() => {
+  workspaceRows = [];
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue(Response.json({ configured: false, handoffEnabled: false })),
-  ),
-);
+  );
+});
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -58,16 +62,16 @@ describe("global browser dock", () => {
         <Page key="dashboard" name="Dashboard" />
       </BrowserWorkspaceProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /Steward browser/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Community action agent/ }));
     expect(await screen.findByText("Live browser setup is not complete yet.")).toBeInTheDocument();
     view.rerender(
       <BrowserWorkspaceProvider>
         <Page key="events" name="Gatherings" />
       </BrowserWorkspaceProvider>,
     );
-    expect(screen.getByLabelText("Community Steward live browser")).toBeInTheDocument();
+    expect(screen.getByLabelText("Community action agent browser")).toBeInTheDocument();
     expect(screen.getByText("Gatherings")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Take control" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Take control" })).not.toBeInTheDocument();
   });
   it("clears the old workspace panel when switching organizations", async () => {
     const view = render(
@@ -75,13 +79,41 @@ describe("global browser dock", () => {
         <Page name="Dashboard" />
       </BrowserWorkspaceProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /Steward browser/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Community action agent/ }));
     view.rerender(
       <BrowserWorkspaceProvider>
         <Page name="Dashboard" organizationId="org-b" />
       </BrowserWorkspaceProvider>,
     );
-    expect(screen.queryByLabelText("Community Steward live browser")).not.toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: /Steward browser/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Community action agent browser")).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /Community action agent/ }),
+    ).toBeInTheDocument();
+  });
+  it.each([
+    ["ready", null, "Pause", "Take control"],
+    ["authentication_required", null, "Take control", "Return control to agent"],
+    ["human_controlling", "user", "Return control to agent", "Take control"],
+    ["paused", null, "Resume task", "Pause"],
+    ["failed", null, "Stop task", "Start task"],
+  ])("shows the next action for %s", async (state, human_actor, shown, hidden) => {
+    workspaceRows = [
+      {
+        id: "session",
+        agent_id: "web-agent",
+        state,
+        human_actor,
+        expires_at: new Date(Date.now() + 300000).toISOString(),
+      },
+    ];
+    vi.mocked(fetch).mockResolvedValue(Response.json({ configured: true, handoffEnabled: true }));
+    render(
+      <BrowserWorkspaceProvider>
+        <Page name="Dashboard" />
+      </BrowserWorkspaceProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Community action agent/ }));
+    expect(await screen.findByRole("button", { name: shown! })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: hidden! })).not.toBeInTheDocument();
   });
 });

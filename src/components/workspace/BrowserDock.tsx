@@ -77,6 +77,8 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
   const [configured, setConfigured] = useState(false);
   const [handoff, setHandoff] = useState(false);
   const [busy, setBusy] = useState(false);
+  const operation = useRef(false);
+  const [pendingAction, setPendingAction] = useState("");
   const [media, setMedia] = useState<{
     screenshot?: string;
     viewer?: string;
@@ -168,7 +170,9 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
     return () => clearTimeout(timer);
   }, [media?.expiresAt]);
   async function command(command: BrowserCommand["command"]) {
-    if (busy) return;
+    if (operation.current) return;
+    operation.current = true;
+    setPendingAction(command);
     const selected = agentId;
     setBusy(true);
     setError("");
@@ -193,8 +197,8 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
       });
       const result = await response.json();
       if (!mounted.current || selection.current !== selected) return;
-      if (!response.ok) throw new Error(result.error ?? "Browser request failed.");
       await load();
+      if (!response.ok) throw new Error(result.error ?? "Browser request failed.");
       if (result.viewer || result.screenshot) setMedia(result);
     } catch (e) {
       if (mounted.current && selection.current === selected) {
@@ -202,7 +206,11 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
         setError(e instanceof Error ? e.message : "Browser connection failed.");
       }
     } finally {
-      if (mounted.current) setBusy(false);
+      operation.current = false;
+      if (mounted.current) {
+        setBusy(false);
+        setPendingAction("");
+      }
     }
   }
   async function authorizeSite() {
@@ -234,21 +242,30 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
     session && session.expires_at && Date.parse(session.expires_at) <= Date.now()
       ? "session_expired"
       : (session?.state ?? "not_connected");
+  const observeRef = useRef(() => command("observe"));
+  observeRef.current = () => command("observe");
+  useEffect(() => {
+    if (layout === "collapsed" || !active || !administrator || state !== "ready" || error) return;
+    const timer = setInterval(() => {
+      if (!document.hidden) void observeRef.current();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [layout, active, administrator, state, error]);
   if (layout === "collapsed")
     return (
       <Button className="fixed bottom-5 right-5 z-40 shadow-lg" onClick={() => setLayout("panel")}>
         <Monitor size={16} className="mr-2" />
-        Steward browser{session?.state === "authentication_required" ? " · Needs you" : ""}
+        Community action agent{session?.state === "authentication_required" ? " · Needs you" : ""}
       </Button>
     );
   return (
     <aside
-      aria-label="Community Steward live browser"
+      aria-label="Community action agent browser"
       className={`fixed z-40 flex flex-col border bg-background shadow-2xl ${layout === "full" ? "inset-0" : layout === "split" ? "inset-y-0 right-0 w-full md:w-1/2" : "bottom-4 right-4 top-20 w-[min(680px,calc(100vw-2rem))] rounded-xl"}`}
     >
       <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
         <div>
-          <h2 className="font-semibold">Community Steward · Live workspace</h2>
+          <h2 className="font-semibold">Your community action agent</h2>
           <p className="text-xs text-muted-foreground">{scope.name}</p>
         </div>
         <div className="flex gap-2">
@@ -338,70 +355,101 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
                     ? "Browser automation for this platform is not enabled yet."
                     : state === "authentication_required"
                       ? "This page needs private human review. Its contents are hidden."
-                      : "Open an authorized website, then inspect its real browser view. No activity is simulated."}
+                      : busy
+                        ? "Connecting to your browser…"
+                        : "Start a task to see your agent’s browser here."}
             </div>
           )}
         </div>
         {media?.screenshot && (
           <p className="text-xs text-muted-foreground">
-            Latest verified capture. Select “Inspect browser” to refresh.
+            Live session snapshots · refreshes automatically while you watch.
           </p>
         )}
         {administrator && (
           <>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                disabled={!configured || busy || !active}
-                onClick={() => void command("observe")}
-              >
-                Inspect browser
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={
-                  !handoff ||
-                  busy ||
-                  !active ||
-                  Boolean(session?.human_actor && session.human_actor !== scope.userId)
-                }
-                onClick={() => void command("takeover")}
-              >
-                Take control
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy || session?.human_actor !== scope.userId}
-                onClick={() => void command("resume")}
-              >
-                Return control to agent
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy || !session}
-                onClick={() => void command("pause")}
-              >
-                Pause / stop
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy || !session}
-                onClick={() => void command("disconnect")}
-              >
-                Disconnect
-              </Button>
-            </div>
-            {!handoff && (
-              <p className="text-xs text-muted-foreground">
-                Private login handoff is awaiting verification. Do not enter credentials into
-                research or planning fields.
+            <div aria-live="polite" className="rounded-lg border p-4 space-y-3">
+              <p className="text-sm">
+                {busy
+                  ? pendingAction === "observe"
+                    ? "Checking the page…"
+                    : pendingAction === "start"
+                      ? "Opening your browser and checking the page…"
+                      : "Updating your task…"
+                  : session?.human_actor
+                    ? "You have control. Finish this step, then return the task to your agent."
+                    : state === "authentication_required"
+                      ? "Your agent needs your help with a sign-in or a protected page."
+                      : state === "paused"
+                        ? "Task paused. Your page checkpoint is saved."
+                        : state === "failed"
+                          ? "The task needs attention. Stop this session, then try again."
+                          : active
+                            ? "Your browser is connected. The view refreshes automatically while this panel is open."
+                            : "Choose a page and a task to get started."}
               </p>
-            )}
-            {agent?.platform === "web" && (
+              <div className="flex flex-wrap gap-2">
+                {active &&
+                  !session?.human_actor &&
+                  ["authentication_required", "waiting_for_human", "waiting_for_approval"].includes(
+                    state,
+                  ) &&
+                  (handoff ? (
+                    <Button size="sm" disabled={busy} onClick={() => void command("takeover")}>
+                      Take control
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Private sign-in is not available yet. Stop this task or use a public page.
+                    </p>
+                  ))}
+                {session?.human_actor === scope.userId && (
+                  <Button size="sm" disabled={busy} onClick={() => void command("resume")}>
+                    Return control to agent
+                  </Button>
+                )}
+                {state === "paused" && (
+                  <Button
+                    size="sm"
+                    disabled={busy || !configured}
+                    onClick={() => void command("resume")}
+                  >
+                    Resume task
+                  </Button>
+                )}
+                {active && state !== "failed" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void command("pause")}
+                  >
+                    Pause
+                  </Button>
+                )}
+                {session && state !== "not_connected" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void command("disconnect")}
+                  >
+                    Stop task
+                  </Button>
+                )}
+                {active && !session?.human_actor && state === "ready" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void command("scroll")}
+                  >
+                    Continue down page
+                  </Button>
+                )}
+              </div>
+            </div>
+            {agent?.platform === "web" && !active && state !== "paused" && state !== "failed" && (
               <form
                 className="space-y-3 rounded-lg border p-4"
                 onSubmit={(e) => {
@@ -409,8 +457,22 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
                   void command(active ? "navigate" : "start");
                 }}
               >
+                {sites.includes("https://example.com") && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => {
+                      setUrl("https://example.com");
+                      setTask("Demo: review an approved public resource");
+                    }}
+                  >
+                    Try the public-page demo
+                  </Button>
+                )}
                 <label className="block text-sm">
-                  Community task
+                  What should your agent do?
                   <Input
                     className="mt-2"
                     maxLength={500}
@@ -469,16 +531,7 @@ function BrowserDock({ scope, onSplit }: { scope: Scope; onSplit: (value: boolea
                       Boolean(session?.human_actor)
                     }
                   >
-                    Approve & open page
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={busy || !active || Boolean(session?.human_actor)}
-                    onClick={() => void command("scroll")}
-                  >
-                    Scroll down
+                    Start task
                   </Button>
                 </div>
               </form>
