@@ -5,6 +5,7 @@ import { z } from "zod";
 // Civi's conversation (which can also request a tool with a <civi_action> line).
 export type ChatIntent =
   | { type: "connect_platform"; platform: string; goal?: string | undefined }
+  | { type: "browse_task"; platform: string; objective: string }
   | { type: "open_browser"; platform?: string | undefined }
   | { type: "show_agent"; platform: string }
   | { type: "pause_agent"; platform: string; resume: boolean }
@@ -16,6 +17,11 @@ export const chatIntentSchema: z.ZodType<ChatIntent> = z.union([
     type: z.literal("connect_platform"),
     platform: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/),
     goal: z.string().trim().max(1000).optional(),
+  }),
+  z.object({
+    type: z.literal("browse_task"),
+    platform: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/),
+    objective: z.string().trim().min(3).max(1000),
   }),
   z.object({
     type: z.literal("open_browser"),
@@ -79,6 +85,11 @@ const showWords =
 const connectionsWords =
   /\b(?:connections|connectors|connected\s+accounts|my\s+accounts|integrations)\b/i;
 
+const browseVerb =
+  /\b(?:show(?:\s+me)?|go\s+to|take\s+me\s+to|check(?:\s+on)?|look\s+at|open|pull\s+up|browse|see|review|what(?:'s|\s+is)\s+(?:on|new\s+on|happening\s+on))\b/i;
+const browseObject =
+  /\b(?:our|my|the|this)\s+(?:[\w.-]+\s+){0,2}?(?:page|profile|feed|groups?|notifications?|inbox|messages|events?|timeline|posts|insights|followers|mentions|account|home)\b/i;
+
 /** What else the person wants once the action is done ("…and find local groups"). */
 function remainingGoal(message: string) {
   const parts = message
@@ -137,6 +148,20 @@ export function parseChatIntent(raw: string): ChatIntent | null {
   if (platform && showAgent.test(message) && !connectVerb.test(message))
     return { type: "show_agent", platform };
 
+  // "Show me our Facebook Page": a read-only look inside the connected account.
+  if (
+    platform &&
+    !connectVerb.test(message) &&
+    browseVerb.test(message) &&
+    browseObject.test(message) &&
+    !/\bagent\b/i.test(message)
+  )
+    return {
+      type: "browse_task",
+      platform: platform === "facebook_page" ? "facebook" : platform,
+      objective: message.slice(0, 1000),
+    };
+
   if (
     platform &&
     (connectVerb.test(message) ||
@@ -167,6 +192,7 @@ export function extractChatAction(answer: string): { answer: string; action?: Ch
 export const toolManifest = [
   "TOOLS YOU CAN USE FROM THIS CHAT (the app carries them out; never say you can't open a browser, log in or connect an account):",
   "connect_platform: open a platform in the organization's secure agent browser so the team can sign in themselves (two-factor included), or open the already-connected account; official sign-in for Google Calendar, Zoom and Facebook Pages. You never see or ask for passwords.",
+  'browse_task: have the platform agent look inside the connected account in its secure browser (read-only: it navigates and reports what it sees, and never posts or changes anything), e.g. {"type":"browse_task","platform":"facebook","objective":"Show our Facebook Page and summarize recent posts"}.',
   "open_browser: show the agent's browser in the panel. show_agent: open a platform agent's chat and activity. pause_agent: pause or resume a platform agent (platform 'all' for every plan). show_approvals: open what's waiting for approval. show_connections: open Connections.",
   'When the team asks for one of these, reply in one short sentence saying what you\'re doing and end with one line like <civi_action>{"type":"connect_platform","platform":"facebook","goal":"find local groups"}</civi_action>. Use only those types; platform ids: facebook, facebook_page, instagram, linkedin, x, nextdoor, reddit, tiktok, eventbrite, meetup, zoom, google_calendar. Never claim the action already succeeded; the app reports the real result. Never ask anyone to type a password into chat.',
 ].join(" ");

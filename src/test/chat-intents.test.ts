@@ -23,6 +23,12 @@ describe("chat instructions route to tools", () => {
     ["Show my pending approvals.", { type: "show_approvals" }],
     ["what's waiting for my approval?", { type: "show_approvals" }],
     ["show my connections", { type: "show_connections" }],
+    [
+      "Show me our Facebook Page.",
+      { type: "browse_task", platform: "facebook", objective: "Show me our Facebook Page." },
+    ],
+    ["check our instagram notifications", { type: "browse_task", platform: "instagram" }],
+    ["Open our LinkedIn page", { type: "browse_task", platform: "linkedin" }],
   ])("%s", (message, expected) => {
     expect(parseChatIntent(message)).toMatchObject(expected);
   });

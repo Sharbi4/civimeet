@@ -536,6 +536,14 @@ export function OrganizerChat({
       action,
     })),
   ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  // Open on the most recent message, and follow new messages and replies as they arrive.
+  const scroller = useRef<HTMLDivElement>(null);
+  const latest = entries.at(-1);
+  const latestKey = `${entries.length}:${latest?.turn?.status ?? ""}:${latest?.action?.status ?? ""}:${latest?.action?.reply?.length ?? 0}`;
+  useEffect(() => {
+    const element = scroller.current;
+    if (element) element.scrollTop = element.scrollHeight;
+  }, [latestKey]);
   const browse =
     thread === "main" || thread === "discover"
       ? (url: string, title: string) =>
@@ -559,7 +567,7 @@ export function OrganizerChat({
       {!isPlatformThread(thread) && (
         <OrganizerVoice key={`${organizationId}:${thread}`} thread={thread} />
       )}
-      <div className="ow-messages" aria-live="polite">
+      <div className="ow-messages" aria-live="polite" ref={scroller}>
         {thread === "main" && (
           <section
             className="mb-5 rounded-xl border border-blue-100 bg-blue-50/50 p-4"

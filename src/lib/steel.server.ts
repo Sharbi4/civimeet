@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import { safeSteelViewer } from "./browser-workspace";
+import type { FocusInfo, PointInfo } from "./browser-agent-policy";
 
 type SteelSession = {
   id: string;
@@ -294,6 +295,109 @@ export class SteelPage {
     const challenge = challengeSelectors ? await this.exists(challengeSelectors) : false;
     if (typeof url !== "string") throw new Error("Could not read the browser location.");
     return { url, passwordField, challenge };
+  }
+  // ---- Computer-use primitives (the same CDP input events Playwright sends) ----
+  /** Viewport size in CSS pixels; screenshots are captured at exactly this size. */
+  async viewport(): Promise<{ width: number; height: number }> {
+    const value = await this.evaluate("JSON.stringify({w:innerWidth,h:innerHeight})");
+    const parsed = JSON.parse(String(value)) as { w: number; h: number };
+    return { width: Math.round(parsed.w), height: Math.round(parsed.h) };
+  }
+  /** JPEG of the visible viewport at CSS-pixel scale, so model coordinates map 1:1 to clicks. */
+  async capture(): Promise<{ dataUrl: string; width: number; height: number }> {
+    const { width, height } = await this.viewport();
+    const result = await this.send("Page.captureScreenshot", {
+      format: "jpeg",
+      quality: 70,
+      captureBeyondViewport: false,
+      clip: { x: 0, y: 0, width, height, scale: 1 },
+    });
+    if (typeof result.data !== "string" || result.data.length > 6_000_000)
+      throw new Error("Browser image unavailable.");
+    return { dataUrl: `data:image/jpeg;base64,${result.data}`, width, height };
+  }
+  async location(): Promise<{ url: string; title: string }> {
+    const value = await this.evaluate("JSON.stringify({u:location.href,t:document.title})");
+    const parsed = JSON.parse(String(value)) as { u: string; t: string };
+    return { url: parsed.u, title: String(parsed.t ?? "").slice(0, 200) };
+  }
+  /** What sits under a point: used to refuse consequential clicks before they happen. */
+  async inspectPoint(x: number, y: number): Promise<PointInfo | null> {
+    const value = await this.evaluate(`(() => {
+      const start = document.elementFromPoint(${Math.round(x)}, ${Math.round(y)});
+      if (!start) return "null";
+      const el = start.closest('a,button,[role],input,textarea,select,summary,label,[contenteditable="true"],[onclick]') || start;
+      const text = (el.getAttribute('aria-label') || el.innerText || el.value || el.title || '').toString().trim().replace(/\\s+/g, ' ').slice(0, 120);
+      const form = el.closest('form');
+      return JSON.stringify({
+        tag: el.tagName.toLowerCase(), role: el.getAttribute('role') || '', type: (el.getAttribute('type') || '').toLowerCase(),
+        text, href: el.tagName === 'A' ? el.href : '', editable: !!el.isContentEditable,
+        composer: !!(form && form.querySelector('textarea,[contenteditable="true"]')) || !!el.closest('[contenteditable="true"]'),
+      });
+    })()`);
+    return value === "null" ? null : (JSON.parse(String(value)) as PointInfo);
+  }
+  /** The focused element, to allow typing only into search boxes. */
+  async activeElement(): Promise<FocusInfo> {
+    const value = await this.evaluate(`(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return JSON.stringify({ tag: 'body', type: '', role: '', label: '', search: false });
+      const label = [el.getAttribute('aria-label'), el.getAttribute('placeholder'), el.getAttribute('name'), el.getAttribute('title')].filter(Boolean).join(' ').slice(0, 120);
+      const type = (el.getAttribute('type') || '').toLowerCase();
+      const role = el.getAttribute('role') || '';
+      return JSON.stringify({ tag: el.tagName.toLowerCase(), type, role, label,
+        search: type === 'search' || role === 'searchbox' || role === 'combobox' && /search/i.test(label) || /search/i.test(label) });
+    })()`);
+    return JSON.parse(String(value)) as FocusInfo;
+  }
+  async mouse(
+    type: "mouseMoved" | "mousePressed" | "mouseReleased",
+    x: number,
+    y: number,
+    button = "none",
+    clickCount = 0,
+  ) {
+    await this.send("Input.dispatchMouseEvent", {
+      type,
+      x,
+      y,
+      button,
+      clickCount,
+      buttons: type === "mousePressed" ? 1 : 0,
+    });
+  }
+  async clickAt(x: number, y: number, button: "left" | "right" | "middle" = "left", count = 1) {
+    await this.mouse("mouseMoved", x, y);
+    for (let i = 1; i <= count; i++) {
+      await this.mouse("mousePressed", x, y, button, i);
+      await this.mouse("mouseReleased", x, y, button, i);
+    }
+  }
+  async wheel(x: number, y: number, deltaX: number, deltaY: number) {
+    await this.send("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX, deltaY });
+  }
+  async insertText(text: string) {
+    await this.send("Input.insertText", { text });
+  }
+  async key(key: string, code: string, keyCode: number, modifiers = 0, text?: string) {
+    await this.send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key,
+      code,
+      windowsVirtualKeyCode: keyCode,
+      modifiers,
+      ...(text ? { text } : {}),
+    });
+    await this.send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key,
+      code,
+      windowsVirtualKeyCode: keyCode,
+      modifiers,
+    });
+  }
+  async historyBack() {
+    await this.evaluate("history.back(), true");
   }
   async screenshot(): Promise<string> {
     const result = await this.send("Page.captureScreenshot", {

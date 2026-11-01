@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   MessageCircle,
@@ -1486,6 +1486,14 @@ function DemoChat({
   const [message, setMessage] = useState(initialMessage);
   const actions = useChatActions();
   const label = chatLabel(thread, platformName);
+  // The sample conversation also opens on its most recent message.
+  const scroller = useRef<HTMLDivElement>(null);
+  const sampleCount = sent.length + (actions?.demoActions.length ?? 0);
+  const sampleLast = actions?.demoActions.at(-1)?.status ?? "";
+  useEffect(() => {
+    const element = scroller.current;
+    if (element) element.scrollTop = element.scrollHeight;
+  }, [thread, sampleCount, sampleLast]);
   const reply = isPlatformThread(thread)
     ? `This week on ${platformName ?? "this platform"}, I’d share the mobile pantry schedule in two neighborhood groups, answer the weekend-meals question in Midvale Park with sourced options, and invite partners to the Resource Fair once the venue is confirmed.\n\nFirst draft is ready for your review. Nothing is posted until you approve it.`
     : demoReplies[thread];
@@ -1495,7 +1503,7 @@ function DemoChat({
         <h2>{label}</h2>
         <p>Sample conversation · no AI or browser calls</p>
       </header>
-      <div className="ow-messages">
+      <div className="ow-messages" ref={scroller}>
         <div className="ow-user-message">
           {thread === "main"
             ? "Help us organize a neighborhood resource fair in Tucson next month."

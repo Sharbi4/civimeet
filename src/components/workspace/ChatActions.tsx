@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { connectorRequest } from "./Connectors";
 import { usePlans } from "./AgentPlans";
@@ -36,8 +45,29 @@ type Workspace = {
   navigate: (view: "connectors" | "approvals") => void;
   openChatThread: (thread: string) => void;
 };
+/** A computer-use run in the agent's browser, as the dashboard shows it. */
+export type AgentRun = {
+  id: string;
+  platform: string;
+  name: string;
+  objective: string;
+  status: "running" | "waiting_for_human" | "paused" | "succeeded" | "failed" | "cancelled";
+  detail: string;
+  currentAction: string;
+  url: string;
+  screenshot: string | null;
+  viewer: string | null;
+  safetyChecks: { id: string; code: string | null; message: string | null }[];
+  events: { id: string; kind: string; summary: string; created_at: string }[];
+  actionId: string | null;
+  result: { summary?: string; url?: string; title?: string } | null;
+};
+type RunCommand =
+  "pause" | "resume" | "stop" | "takeover" | "release" | "approve_safety" | "decline_safety";
 type ChatActionsValue = {
   run: (intent: ChatIntent, message: string, thread: string, source?: "civi") => Promise<void>;
+  agentRun: AgentRun | null;
+  controlRun: (command: RunCommand) => Promise<void>;
   liveSession: LiveSession | null;
   finishSignIn: () => Promise<void>;
   closeSession: () => Promise<void>;
@@ -74,6 +104,8 @@ export function ChatActionsProvider({
   const [busy, setBusy] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [demoActions, setDemoActions] = useState<ChatActionRecord[]>([]);
+  const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
+  const stepping = useRef(false);
 
   const log = useCallback(
     async (
@@ -219,6 +251,188 @@ export function ChatActionsProvider({
     [demo, role, db, organizationId, request, settle],
   );
 
+  const agentBrowser = useCallback(
+    async (body: Record<string, unknown>) => {
+      if (!db || !organizationId) throw new Error("Sign in to your organization first.");
+      const { data } = await db.auth.getSession();
+      if (!data.session) throw new Error("Sign in again to use the agent browser.");
+      const response = await fetch("/api/agent/browser", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${data.session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ organizationId, ...body }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as Record<string, unknown> & {
+        error?: string;
+      };
+      if (!response.ok)
+        throw new Error(payload.error ?? "The agent browser couldn't run that step.");
+      return payload;
+    },
+    [db, organizationId],
+  );
+
+  const browse = useCallback(
+    async (actionId: string, platform: string, objective: string) => {
+      const name = nameOf(platform);
+      if (demo)
+        return settle(
+          actionId,
+          "succeeded",
+          `This is the sample workspace, so no real browser runs here. In your workspace, the ${name} agent would open your account in its secure browser, look around read-only, and tell you what it found.`,
+        );
+      if (!isAdmin(role))
+        return settle(
+          actionId,
+          "failed",
+          `Only an organization owner or administrator can send the ${name} agent into the browser.`,
+        );
+      try {
+        const started = await agentBrowser({
+          command: "start",
+          platform,
+          objective,
+          chatActionId: actionId,
+        });
+        setAgentRun({
+          id: String(started["runId"]),
+          platform,
+          name,
+          objective,
+          status: "running",
+          detail: "",
+          currentAction: "Opening the browser",
+          url: "",
+          screenshot: null,
+          viewer: null,
+          safetyChecks: [],
+          events: [],
+          actionId,
+          result: null,
+        });
+        openAgentPanel("browser");
+        return settle(
+          actionId,
+          "started",
+          `On it. The ${name} agent is opening your account and looking now (read-only).`,
+        );
+      } catch (failure) {
+        return settle(
+          actionId,
+          "failed",
+          failure instanceof Error ? failure.message : `The ${name} agent couldn't start.`,
+        );
+      }
+    },
+    [demo, role, agentBrowser, settle],
+  );
+
+  // Advance the run one verified step at a time while it is running.
+  const loadEvents = useCallback(
+    async (runId: string) => {
+      if (!db) return [];
+      const { data } = await db
+        .from("browser_agent_events")
+        .select("id,kind,summary,created_at")
+        .eq("run_id", runId)
+        .order("created_at", { ascending: false })
+        .limit(12);
+      return (data ?? []) as AgentRun["events"];
+    },
+    [db],
+  );
+  const applyStep = useCallback(
+    async (current: AgentRun, payload: Record<string, unknown>) => {
+      const status = (payload["status"] as AgentRun["status"]) ?? current.status;
+      const next: AgentRun = {
+        ...current,
+        status,
+        detail: String(payload["detail"] ?? (status === "running" ? "" : current.detail)),
+        currentAction: String(
+          payload["currentAction"] ?? (status === "running" ? current.currentAction : ""),
+        ),
+        url: String(payload["url"] ?? current.url),
+        screenshot:
+          typeof payload["screenshot"] === "string"
+            ? (payload["screenshot"] as string)
+            : current.screenshot,
+        viewer:
+          typeof payload["viewer"] === "string"
+            ? (payload["viewer"] as string)
+            : status === "running"
+              ? null
+              : current.viewer,
+        safetyChecks: Array.isArray(payload["safetyChecks"])
+          ? (payload["safetyChecks"] as AgentRun["safetyChecks"])
+          : status === "running"
+            ? []
+            : current.safetyChecks,
+        result: (payload["result"] as AgentRun["result"]) ?? current.result,
+        events: await loadEvents(current.id),
+      };
+      setAgentRun(next);
+      if (status === "succeeded")
+        await settle(
+          current.actionId,
+          "succeeded",
+          `Here's what I saw on ${current.name} (read-only): ${next.result?.summary ?? "Done."}`,
+        );
+      else if (status === "failed")
+        await settle(
+          current.actionId,
+          "failed",
+          next.detail || `The ${current.name} agent couldn't finish.`,
+        );
+      else if (status === "cancelled")
+        await settle(current.actionId, "failed", next.detail || "Stopped.");
+      else if (status === "waiting_for_human" && current.status !== "waiting_for_human")
+        await settle(
+          current.actionId,
+          "needs_user",
+          next.detail || `The ${current.name} agent needs you in the browser.`,
+        );
+    },
+    [loadEvents, settle],
+  );
+  useEffect(() => {
+    if (!agentRun || agentRun.status !== "running" || stepping.current) return;
+    stepping.current = true;
+    const current = agentRun;
+    void agentBrowser({ command: "step", runId: current.id })
+      .then((payload) => applyStep(current, payload))
+      .catch(async (failure: unknown) => {
+        const message = failure instanceof Error ? failure.message : "The browser step failed.";
+        // A step still in progress elsewhere is not a failure; check again shortly.
+        if (/still working/i.test(message))
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        else await applyStep(current, { status: "failed", detail: message });
+      })
+      .finally(() => {
+        stepping.current = false;
+        setAgentRun((latest) => (latest && latest.id === current.id ? { ...latest } : latest));
+      });
+  }, [agentRun, agentBrowser, applyStep]);
+  const controlRun = useCallback(
+    async (command: RunCommand) => {
+      if (!agentRun) return;
+      setBusy(command);
+      try {
+        const payload = await agentBrowser({ command, runId: agentRun.id });
+        await applyStep(agentRun, payload);
+      } catch (failure) {
+        setAgentRun({
+          ...agentRun,
+          detail: failure instanceof Error ? failure.message : "That didn't work.",
+        });
+      } finally {
+        setBusy(null);
+      }
+    },
+    [agentRun, agentBrowser, applyStep],
+  );
+
   const run = useCallback(
     async (intent: ChatIntent, message: string, thread: string, source?: "civi") => {
       const goal = intent.type === "connect_platform" ? (intent.goal ?? "") : "";
@@ -272,6 +486,8 @@ export function ChatActionsProvider({
           openAgentPanel("activity");
           return await settle(actionId, "succeeded", `Here's what the ${name} agent is doing.`);
         }
+        if (intent.type === "browse_task")
+          return await browse(actionId, intent.platform, intent.objective);
         // pause_agent
         if (intent.platform === "all") {
           const active =
@@ -334,6 +550,7 @@ export function ChatActionsProvider({
     [
       log,
       connect,
+      browse,
       settle,
       approvalsPending,
       navigate,
@@ -421,6 +638,8 @@ export function ChatActionsProvider({
   const value = useMemo<ChatActionsValue>(
     () => ({
       run,
+      agentRun,
+      controlRun,
       liveSession,
       finishSignIn,
       closeSession,
@@ -429,7 +648,18 @@ export function ChatActionsProvider({
       version,
       demoActions,
     }),
-    [run, liveSession, finishSignIn, closeSession, sessionExpired, busy, version, demoActions],
+    [
+      run,
+      agentRun,
+      controlRun,
+      liveSession,
+      finishSignIn,
+      closeSession,
+      sessionExpired,
+      busy,
+      version,
+      demoActions,
+    ],
   );
   return <ChatActionsContext.Provider value={value}>{children}</ChatActionsContext.Provider>;
 }

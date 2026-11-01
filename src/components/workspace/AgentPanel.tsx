@@ -19,6 +19,7 @@ import { PlatformBrowser } from "./BrowserDock";
 import { LiveBrowser, connectorRequest } from "./Connectors";
 import { PlanSummary } from "./AgentPlans";
 import { useChatActions } from "./ChatActions";
+import { BrowserRun } from "./BrowserRun";
 import type { ReviewItem } from "@/lib/organizer";
 
 export type PanelActivity = {
@@ -362,7 +363,13 @@ function PanelView({
           />
         )}
         {tab === "browser" &&
-          (session && actions ? (
+          (actions?.agentRun && !session ? (
+            <BrowserRun
+              run={actions.agentRun}
+              busy={actions.busy}
+              onControl={(command) => void actions.controlRun(command)}
+            />
+          ) : session && actions ? (
             <LiveBrowser
               name={session.name}
               viewer={{ url: session.viewer, expiresAt: session.expiresAt }}

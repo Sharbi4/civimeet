@@ -32,6 +32,7 @@ import { Route as ApiConnectorsRouteImport } from './routes/api.connectors'
 import { Route as ApiResearchRouteImport } from './routes/api.research'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
+import { Route as ApiAgentBrowserRouteImport } from './routes/api.agent.browser'
 import { Route as ApiAgentResearchRouteImport } from './routes/api.agent.research'
 import { Route as ApiAgentRunRouteImport } from './routes/api.agent.run'
 import { Route as ApiAnalyticsAnalyzeRouteImport } from './routes/api.analytics.analyze'
@@ -156,6 +157,11 @@ const SolutionsSlugRoute = SolutionsSlugRouteImport.update({
   path: '/solutions/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentBrowserRoute = ApiAgentBrowserRouteImport.update({
+  id: '/api/agent/browser',
+  path: '/api/agent/browser',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentResearchRoute = ApiAgentResearchRouteImport.update({
   id: '/api/agent/research',
   path: '/api/agent/research',
@@ -223,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
+  '/api/agent/browser': typeof ApiAgentBrowserRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
   '/api/agent/run': typeof ApiAgentRunRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
+  '/api/agent/browser': typeof ApiAgentBrowserRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
   '/api/agent/run': typeof ApiAgentRunRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
@@ -290,6 +298,7 @@ export interface FileRoutesById {
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
+  '/api/agent/browser': typeof ApiAgentBrowserRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
   '/api/agent/run': typeof ApiAgentRunRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
@@ -325,6 +334,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
+    | '/api/agent/browser'
     | '/api/agent/research'
     | '/api/agent/run'
     | '/api/analytics/analyze'
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions'
+    | '/api/agent/browser'
     | '/api/agent/research'
     | '/api/agent/run'
     | '/api/analytics/analyze'
@@ -391,6 +402,7 @@ export interface FileRouteTypes {
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
+    | '/api/agent/browser'
     | '/api/agent/research'
     | '/api/agent/run'
     | '/api/analytics/analyze'
@@ -425,6 +437,7 @@ export interface RootRouteChildren {
   ApiResearchRoute: typeof ApiResearchRoute
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
+  ApiAgentBrowserRoute: typeof ApiAgentBrowserRoute
   ApiAgentResearchRoute: typeof ApiAgentResearchRoute
   ApiAgentRunRoute: typeof ApiAgentRunRoute
   ApiAnalyticsAnalyzeRoute: typeof ApiAnalyticsAnalyzeRoute
@@ -597,6 +610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SolutionsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/browser': {
+      id: '/api/agent/browser'
+      path: '/api/agent/browser'
+      fullPath: '/api/agent/browser'
+      preLoaderRoute: typeof ApiAgentBrowserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent/research': {
       id: '/api/agent/research'
       path: '/api/agent/research'
@@ -692,6 +712,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiResearchRoute: ApiResearchRoute,
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
+  ApiAgentBrowserRoute: ApiAgentBrowserRoute,
   ApiAgentResearchRoute: ApiAgentResearchRoute,
   ApiAgentRunRoute: ApiAgentRunRoute,
   ApiAnalyticsAnalyzeRoute: ApiAnalyticsAnalyzeRoute,
