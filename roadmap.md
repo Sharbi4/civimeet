@@ -1,7 +1,8 @@
 # CiviMeet roadmap
 
 - [x] Organizer Chat voice controls through linked ElevenLabs: authorized token endpoint, explicit microphone start, cleanup, disabled unconfigured demo, tests and setup documentation; no outbound actions
-- [ ] Enable and verify live Organizer voice (blocked on dedicated private, tool-free ELEVENLABS_AGENT_ID; provider token TTL and cryptographic organization binding are not documented)
+- [x] Configure existing private ElevenLabs planning agent and server agent setting; updated isolation check passed and authenticated preview voice status returned ready
+- [ ] Verify actual voice/audio in a separately authorized session (not attempted: no token or microphone started); voice is isolated discussion, not the organization-memory/orchestrator path, and phone outreach stays disabled
 
 - [x] Replace Contact and Get Started with a stored demo request form; verified submission, private storage, and follow-up through Lovable Cloud
 - [x] Prepare managed app emails and fixed-recipient demo notification template for notify.civimeet.com
