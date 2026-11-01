@@ -37,10 +37,12 @@ export function OrganizerChat({
   thread,
   initialMessage = "",
   onDraft,
+  eventId,
 }: {
   thread: OrganizerThread | "discover";
   initialMessage?: string;
-  onDraft: (content: string) => void;
+  onDraft?: (content: string) => void;
+  eventId?: string;
 }) {
   const { db, organizationId, role } = useWorkspace();
   const [turns, setTurns] = useState<OrganizerTurn[]>([]);
@@ -60,17 +62,17 @@ export function OrganizerChat({
     };
   }, []);
   const load = useCallback(async () => {
-    const r = await db
+    let query = db
       .from("steward_research_runs")
       .select("id,input,status,result,error,created_at")
       .eq("organization_id", organizationId)
-      .eq("input->>threadKey", thread)
-      .order("created_at", { ascending: false })
-      .limit(25);
+      .eq("input->>threadKey", thread);
+    if (eventId) query = query.eq("input->>eventId", eventId);
+    const r = await query.order("created_at", { ascending: false }).limit(25);
     if (!alive.current) return;
     if (r.error) setError("Conversation could not be loaded. Try again.");
     else setTurns(((r.data ?? []) as OrganizerTurn[]).reverse());
-  }, [db, organizationId, thread]);
+  }, [db, organizationId, thread, eventId]);
   useEffect(() => {
     void load();
     let active = true;
@@ -111,6 +113,7 @@ export function OrganizerChat({
         },
         body: JSON.stringify({
           organizationId,
+          eventId,
           requestId: key,
           question,
           purpose: thread === "venue" ? "venues" : thread === "discover" ? purpose : "general",
@@ -238,6 +241,7 @@ export function OrganizerChat({
         )}
         {turns.map((t) => (
           <article key={t.id}>
+            {t.input.eventId && <p className="text-xs text-muted-foreground">Event research · {t.input.location}</p>}
             <div className="ow-user-message">{t.input.question}</div>
             <div className="ow-agent-message">
               <strong>Civi · AI organizer</strong>
@@ -246,7 +250,7 @@ export function OrganizerChat({
               ) : t.result ? (
                 <>
                   <ResearchAnswer result={t.result} />
-                  {role !== "viewer" && (
+                  {role !== "viewer" && onDraft && (
                     <button
                       className="ow-link"
                       onClick={() => {

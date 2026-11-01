@@ -17,7 +17,7 @@ export const threadPrompts: Record<OrganizerThread, string> = {
 };
 export type OrganizerTurn = {
   id: string;
-  input: { question: string; threadKey?: OrganizerThread };
+  input: { question: string; threadKey?: OrganizerThread; location?: string; eventId?: string };
   status: string;
   result: ResearchResult | null;
   error: string | null;

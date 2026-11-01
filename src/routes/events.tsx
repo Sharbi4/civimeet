@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { dollarsToCents, formatMoney } from "@/lib/event-money";
+import { LocalDiscoveryPanel } from "@/components/workspace/LocalDiscoveryPanel";
+import { OrganizerChat } from "@/components/workspace/OrganizerChat";
 export const Route = createFileRoute("/events")({
   head: () => ({
     meta: [{ title: "Community Gatherings — CiviMeet" }, { name: "robots", content: "noindex" }],
@@ -24,6 +26,7 @@ type Event = {
   purpose: string;
   event_date: string;
   venue: string;
+  geographic_area: string;
   budget_cents: number;
   status: string;
   revision: number;
@@ -43,6 +46,7 @@ const blank = () => ({
   purpose: "",
   event_date: "",
   venue: "",
+  geographic_area: "",
   budget: "0",
   plan_id: "",
 });
@@ -170,6 +174,8 @@ export function Events() {
         {editor && (
           <Button
             onClick={() => {
+              setError("");
+              setNotice("");
               setEditing(null);
               setForm(blank());
               setShowForm(!showForm);
@@ -194,6 +200,10 @@ export function Events() {
           className="space-y-5 rounded-xl border bg-card p-6"
           onSubmit={(e) => {
             e.preventDefault();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(form.event_date) || !form.geographic_area.trim()) {
+              setError("Choose a date and event community area before saving.");
+              return;
+            }
             void action(async () => {
               const id = await rpc("save_community_event", {
                 workspace: organizationId,
@@ -250,6 +260,20 @@ export function Events() {
                 value={form.venue}
                 onChange={(e) => setForm({ ...form, venue: e.target.value })}
               />
+            </Field>
+            <Field label="Event community area">
+              <Input
+                required
+                minLength={3}
+                maxLength={160}
+                value={form.geographic_area}
+                onChange={(e) => setForm({ ...form, geographic_area: e.target.value })}
+                placeholder="Orlando, Florida — Downtown and nearby neighborhoods"
+              />
+              <p className="text-xs text-muted-foreground">
+                Where should your agent find communities and vendors? This can differ from your
+                organization's home area. It does not change any account's address or access.
+              </p>
             </Field>
             <Field label="Preferred date">
               <Input
@@ -329,6 +353,10 @@ export function Events() {
                   <p className="text-xs uppercase text-primary">{selected.status}</p>
                   <h3 className="mt-2 text-2xl font-semibold">{selected.title}</h3>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{selected.purpose}</p>
+                  <p className="mt-3 text-sm font-medium">
+                    Community area:{" "}
+                    {selected.geographic_area || "Add an area to focus your agent's research"}
+                  </p>
                   <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin size={16} />
                     {selected.venue || "Venue to be researched"}
@@ -360,6 +388,7 @@ export function Events() {
                             purpose: selected.purpose,
                             event_date: selected.event_date,
                             venue: selected.venue,
+                            geographic_area: selected.geographic_area ?? "",
                             budget: (Number(selected.budget_cents) / 100).toFixed(2),
                             plan_id: selected.plan_id ?? "",
                           });
@@ -414,6 +443,39 @@ export function Events() {
                     </div>
                   )}
                 </article>
+                {selected.geographic_area && ["draft", "approved"].includes(selected.status) && (
+                  <section className="space-y-4" aria-label="Event community research">
+                    <h3 className="text-lg font-semibold">
+                      Build connections in {selected.geographic_area}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Research uses this event's saved area. It finds relevant communities and
+                      vendors, saves findings to your organization, and prepares contributions for
+                      review. No groups are joined or messages sent.
+                    </p>
+                    <LocalDiscoveryPanel
+                      key={`vendors:${selected.id}:${selected.revision}`}
+                      event={selected}
+                      onSaved={() => void load()}
+                    />
+                    <details className="rounded-xl border bg-card p-4">
+                      <summary className="cursor-pointer font-medium">
+                        Plan a helpful presence in this community
+                      </summary>
+                      <div className="mt-4">
+                        <OrganizerChat
+                          key={`presence:${selected.id}:${selected.revision}`}
+                          thread="main"
+                          eventId={selected.id}
+                        />
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Results also appear in Main Organizer Chat, where you can prepare an exact
+                        draft for the Approvals queue.
+                      </p>
+                    </details>
+                  </section>
+                )}
                 <section className="space-y-4 rounded-xl border bg-card p-6">
                   <h3 className="flex items-center gap-2 text-lg font-semibold">
                     <Wallet size={18} /> Vendors & costs

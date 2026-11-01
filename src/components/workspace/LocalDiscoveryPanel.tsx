@@ -12,7 +12,13 @@ type DiscoveryRun = {
   result: ResearchResult | null;
   error: string | null;
 };
-export function LocalDiscoveryPanel({ onSaved }: { onSaved?: () => void }) {
+export function LocalDiscoveryPanel({
+  onSaved,
+  event,
+}: {
+  onSaved?: () => void;
+  event?: { id: string; geographic_area: string; title: string; purpose: string };
+}) {
   const { db, organizationId, role } = useWorkspace();
   const [area, setArea] = useState("");
   const [goal, setGoal] = useState("");
@@ -62,16 +68,18 @@ export function LocalDiscoveryPanel({ onSaved }: { onSaved?: () => void }) {
         setError("Could not load local discovery. Refresh to retry.");
         return;
       }
-      setArea(brief.data?.area ?? "");
-      setGoal(brief.data?.event_goal ?? "");
+      setArea(event?.geographic_area ?? brief.data?.area ?? "");
+      setGoal(
+        event ? `${event.title}: ${event.purpose}`.slice(0, 1000) : (brief.data?.event_goal ?? ""),
+      );
       if (agent.data?.selected && !agent.data.paused) setAgentId(agent.data.id);
-      setRun(history.data?.[0] ?? null);
+      setRun(event ? null : (history.data?.[0] ?? null));
       setReady(true);
     });
     return () => {
       active = false;
     };
-  }, [db, organizationId]);
+  }, [db, organizationId, event?.id, event?.geographic_area, event?.title, event?.purpose]);
   useEffect(() => {
     if (run?.status !== "running") return;
     let active = true;
@@ -97,7 +105,7 @@ export function LocalDiscoveryPanel({ onSaved }: { onSaved?: () => void }) {
     if (busy || !agentId || !area.trim()) return;
     if (run?.status === "running" && !running) request.current = { fingerprint: "", id: "" };
     const org = organizationId;
-    const fingerprint = JSON.stringify({ org, area, goal, agentId });
+    const fingerprint = JSON.stringify({ org, area, goal, agentId, eventId: event?.id });
     if (request.current.fingerprint !== fingerprint)
       request.current = { fingerprint, id: crypto.randomUUID() };
     setBusy(true);
@@ -115,6 +123,7 @@ export function LocalDiscoveryPanel({ onSaved }: { onSaved?: () => void }) {
         body: JSON.stringify({
           organizationId: org,
           agentId,
+          eventId: event?.id,
           requestId: request.current.id,
           collectVendors: true,
           skillId: "local_partner_discovery",
@@ -167,6 +176,7 @@ export function LocalDiscoveryPanel({ onSaved }: { onSaved?: () => void }) {
                 required
                 maxLength={160}
                 value={area}
+                readOnly={!!event}
                 onChange={(e) => setArea(e.target.value)}
                 placeholder="City, neighborhood, and state"
               />
@@ -237,7 +247,8 @@ export function LocalDiscoveryPanel({ onSaved }: { onSaved?: () => void }) {
       )}
       <p className="text-xs text-muted-foreground">
         One research run completes the discovery and draft automatically. Public information only;
-        contacts and availability need review. Nothing is sent, booked, or charged.
+        contacts and availability need review. Vendors stay in your organization's memory with
+        sourced service areas for future events. Nothing is sent, booked, or charged.
       </p>
     </section>
   );

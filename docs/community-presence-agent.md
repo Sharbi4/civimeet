@@ -16,3 +16,13 @@ Results persist in research history and shared organization knowledge using the 
 - Recurring background jobs, calendar invites, RSVP synchronization and budget enforcement/payment execution.
 
 The new skill is research and preparation, not an unattended social-media operator. The website now explains the larger product vision and labels connected execution as in development.
+
+## Event geography
+
+An event now captures a separate `geographic_area` (for example Orlando, Florida). This is independent of the organization's home area and any connected account's address. Existing events keep an empty area until a person supplies one; no location is inferred from a venue name.
+
+The Events view offers vendor discovery and community presence research using that event. API requests carry the event ID; after membership validation, the server retrieves the event within the same organization, checks its active status and saved area, and overrides any caller-supplied location before reserving the run. Event-specific chat history is filtered by event ID. Shared organizational memory remains available, with instructions to use the event's geography over the home area and to check vendor service-area evidence.
+
+Vendor candidates continue through the existing atomic discovery flow: sourced public business details and profile links, review status, deduplication and organization-scoped storage. Research run inputs retain the event ID and area. Existing vendor service areas are included in context; a vendor is not automatically considered local just because the event is there. Research is a saved snapshot, not a live statement of availability or willingness to participate.
+
+This does not automatically join every local group, change a Nextdoor address, collect private resident data or publish comments. Location identifies where to research; mission, group rules, account eligibility and human approval still determine whether an eventual action is appropriate. Event edits revise the event and invalidate existing vendor-cost approvals.

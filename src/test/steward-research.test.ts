@@ -41,6 +41,53 @@ function dependencies() {
   };
 }
 describe("Authenticated steward research", () => {
+  it("uses the saved event area instead of caller geography before reserving and researching", async () => {
+    const deps = {
+      ...dependencies(),
+      event: vi
+        .fn()
+        .mockResolvedValue({
+          id: "event",
+          title: "Local fair",
+          purpose: "Meet neighbors",
+          geographic_area: "Orlando, Florida",
+          revision: 2,
+          status: "draft",
+        }),
+    };
+    const eventId = "8e0cf07d-a77a-4833-81b3-9b87f9edcf5c";
+    const response = await handleStewardResearch(
+      request({ ...input, eventId, location: "Tucson", skillId: "community_presence" }),
+      deps,
+    );
+    expect(response.status).toBe(200);
+    expect(deps.event).toHaveBeenCalledWith(input.organizationId, eventId);
+    expect(deps.reserve).toHaveBeenCalledWith(
+      "verified-user",
+      expect.objectContaining({ location: "Orlando, Florida", eventId }),
+    );
+    expect(deps.research).toHaveBeenCalledWith(
+      expect.objectContaining({ location: "Orlando, Florida" }),
+      expect.stringContaining('"geographic_area":"Orlando, Florida"'),
+      false,
+      "community_presence",
+    );
+  });
+  it("does not research an unavailable or cross-organization event", async () => {
+    const deps = {
+      ...dependencies(),
+      event: vi
+        .fn()
+        .mockRejectedValue(new ResearchError(404, "Event not found in this organization.")),
+    };
+    const response = await handleStewardResearch(
+      request({ ...input, eventId: "8e0cf07d-a77a-4833-81b3-9b87f9edcf5c" }),
+      deps,
+    );
+    expect(response.status).toBe(404);
+    expect(deps.reserve).not.toHaveBeenCalled();
+    expect(deps.research).not.toHaveBeenCalled();
+  });
   it("runs the presence skill with tenant context and saves its result without vendor collection", async () => {
     const deps = dependencies();
     const response = await handleStewardResearch(
