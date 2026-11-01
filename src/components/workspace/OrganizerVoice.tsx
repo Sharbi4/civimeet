@@ -65,7 +65,7 @@ export function OrganizerVoice({ thread }: { thread: OrganizerThread | "discover
         onMessage: event => {
           if (current === generation.current) setTranscript(rows => [...rows.slice(-199), { speaker: event.source === "user" ? "You" : "Civi", text: event.message }]);
         },
-        onDisconnect: () => { if (current === generation.current) { session.current = null; setPhase("idle"); setStatus("Voice disconnected"); } },
+        onDisconnect: () => { if (current === generation.current) { generation.current += 1; session.current = null; setPhase("idle"); setStatus("Voice disconnected"); } },
         onError: () => { if (current === generation.current) { stop(); setStatus("Voice connection interrupted. Try again."); } },
       });
       if (current !== generation.current) { await active.endSession(); return; }

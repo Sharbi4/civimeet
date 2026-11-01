@@ -51,4 +51,16 @@ it("stops and closes the active voice session", async () => {
   await screen.findByText("Live voice · preparation only");
   fireEvent.click(screen.getByRole("button", { name: "Stop voice" }));
   expect(mocks.end).toHaveBeenCalledTimes(1);
+});it("does not restore a session that disconnected while starting", async () => {
+  setupFetch();
+  mocks.start.mockImplementation(async options => {
+    options.onDisconnect();
+    return { endSession: mocks.end };
+  });
+  render(<OrganizerVoice thread="main" />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Start voice" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "Start voice" }));
+  await screen.findByText("Voice disconnected");
+  await waitFor(() => expect(mocks.end).toHaveBeenCalledTimes(1));
+  expect(screen.queryByText("Live voice · preparation only")).not.toBeInTheDocument();
 });

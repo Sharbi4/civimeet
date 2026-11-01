@@ -33,8 +33,9 @@ export function isIsolatedVoiceAgent(agent: unknown): boolean {
     return Object.entries(value).some(([key, child]) => {
       const next = `${path}.${key}`;
       const hasContent = Array.isArray(child) ? child.length > 0 : child !== null && child !== undefined && child !== false && child !== "" && (typeof child !== "object" || Object.keys(child).length > 0);
-      if (/^(tools|tool_ids|tools_config_list|mcp_servers|mcp_server_ids|knowledge_base|procedure_ids|start_procedure_ids|procedures)$/.test(key) && hasContent) return true;
-      if (/override/i.test(next) && child === true) return true;
+      if (/^(tools|tool_ids|tools_config_list|mcp_servers|mcp_server_ids|native_mcp_server_ids|knowledge_base|procedure_ids|start_procedure_ids|procedures)$/.test(key) && hasContent) return true;
+      if (key === "built_in_tools" && child && typeof child === "object" && Object.values(child).some(tool => tool !== null)) return true;
+      if (next.startsWith(".platform_settings.overrides.") && child === true) return true;
       return hasUnsafeConfiguration(child, next);
     });
   }
@@ -45,7 +46,17 @@ export function isIsolatedVoiceAgent(agent: unknown): boolean {
       tool_ids: z.array(z.unknown()).max(0).optional(),
       knowledge_base: z.array(z.unknown()).max(0).optional(),
     }) }) }),
-    workflow: z.union([z.null(), z.object({ nodes: z.record(z.unknown()).refine(nodes => Object.keys(nodes).length === 0), edges: z.record(z.unknown()).optional() })]).optional(),
+    workflow: z.union([z.null(), z.object({
+      nodes: z.record(z.object({
+        type: z.literal("start"),
+        position: z.object({ x: z.number(), y: z.number() }).strict().optional(),
+        edge_order: z.array(z.never()).optional(),
+        parent_subgraph_id: z.null().optional(),
+      }).strict()).refine(nodes => Object.keys(nodes).length <= 1),
+      edges: z.record(z.never()).optional(),
+      subgraphs: z.record(z.never()).optional(),
+      prevent_subagent_loops: z.boolean().optional(),
+    }).strict()]).optional(),
   });
   return schema.safeParse(agent).success && !hasUnsafeConfiguration(agent);
 }
@@ -78,8 +89,7 @@ export async function handleOrganizerVoice(request: Request, authorize = authori
     const call = async (path: string) => {
       const response = await provider(`https://api.elevenlabs.io/v1${path}`, { headers: { "xi-api-key": key }, signal: request.signal });
       if (!response.ok) {
-        const body = await response.text();
-        console.error(`ElevenLabs voice failed [${response.status}]: ${body}`);
+        console.error(`ElevenLabs voice failed [${response.status}]`);
         throw new VoiceAccessError(response.status, `ElevenLabs voice is unavailable (${response.status}). Check the connected account and agent configuration.`);
       }
       return response.json();

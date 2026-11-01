@@ -51,4 +51,12 @@ describe("Organizer voice boundaries", () => {
     expect(provider.mock.calls.map(call => call[0])).toEqual(["https://api.elevenlabs.io/v1/convai/agents/agent-fixture", "https://api.elevenlabs.io/v1/convai/agents/agent-fixture", "https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=agent-fixture"]);
     expect(provider.mock.calls.every(call => !call[1].method || call[1].method === "GET")).toBe(true);
   });
+});it("accepts only the provider's inert start workflow and no executable nodes", () => {
+  const workflow = { nodes: { start_node: { type: "start", position: { x: 0, y: 0 }, edge_order: [], parent_subgraph_id: null } }, edges: {}, subgraphs: {}, prevent_subagent_loops: false };
+  const agent = { ...safeAgent, workflow, conversation_config: { agent: { prompt: { built_in_tools: { transfer_to_number: null } }, text_behavior_overrides: { whatsapp: { disable_max_duration: true } } } } };
+  expect(isIsolatedVoiceAgent(agent)).toBe(true);
+  expect(isIsolatedVoiceAgent({ ...agent, workflow: { ...workflow, edges: { outbound: {} } } })).toBe(false);
+  expect(isIsolatedVoiceAgent({ ...agent, workflow: { ...workflow, nodes: { start_node: { type: "tool" } } } })).toBe(false);
+  expect(isIsolatedVoiceAgent({ ...agent, conversation_config: { agent: { prompt: { built_in_tools: { transfer_to_number: { phone: "fixture" } } } } } })).toBe(false);
+  expect(isIsolatedVoiceAgent({ ...agent, native_mcp_server_ids: ["external"] })).toBe(false);
 });
