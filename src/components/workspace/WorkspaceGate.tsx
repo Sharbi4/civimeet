@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Link } from "@tanstack/react-router";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { getDatabase } from "@/lib/database";
-import { lovable } from "@/integrations/lovable";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
