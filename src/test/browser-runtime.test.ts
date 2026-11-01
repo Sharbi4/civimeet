@@ -212,6 +212,39 @@ describe("provider configuration and URL handling", () => {
   ])("rejects unsafe target %s", (value) => {
     expect(() => approvedBrowserUrl(value, ["https://example.com"])).toThrow();
   });
+  it("shows Steel's real interactive viewer, bound to its own session", async () => {
+    // Shape observed live (2026-11-01): /v1/sessions/{id}/player/{opaque access segment}.
+    const debugUrl = `https://api.steel.dev/v1/sessions/${requestId}/player/AbC123-xyz_9.token`;
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(Response.json({ id: requestId, status: "live", debugUrl }));
+    vi.stubGlobal("fetch", fetcher);
+    const created = await steelProvider.create(requestId, true, null);
+    expect(created.viewer).toBe(debugUrl);
+    expect(safeSteelViewer(debugUrl, requestId)).toBe(debugUrl);
+    expect(() => safeSteelViewer(debugUrl, "99999999-9999-4999-8999-999999999999")).toThrow();
+    expect(() => safeSteelViewer(`${debugUrl}?apiKey=secret`)).toThrow();
+    expect(() => safeSteelViewer(`${debugUrl}/extra`)).toThrow();
+    expect(() =>
+      safeSteelViewer(`https://api.steel.dev:8443/v1/sessions/${requestId}/player`),
+    ).toThrow();
+  });
+  it("releases a new session whose viewer can't be shown", async () => {
+    const fetcher = vi.fn().mockImplementation(async (url: string) =>
+      String(url).endsWith("/release")
+        ? Response.json({})
+        : Response.json({
+            id: requestId,
+            status: "live",
+            debugUrl: "https://evil.invalid/player",
+          }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    await expect(steelProvider.create(requestId, true, null)).rejects.toThrow(/viewer address/);
+    expect(fetcher.mock.calls.map(([url]) => String(url))).toContain(
+      `https://api.steel.dev/v1/sessions/${requestId}/release`,
+    );
+  });
   it("does not accept an arbitrary iframe or debugging endpoint", () => {
     expect(() => safeSteelViewer("https://evil.invalid/viewer")).toThrow();
     expect(() => safeSteelViewer("wss://connect.steel.dev?apiKey=secret")).toThrow();

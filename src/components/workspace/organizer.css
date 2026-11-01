@@ -418,6 +418,17 @@
   color: var(--ow-muted);
   margin: 6px 0;
 }
+/* The agent browser sits above the conversation; together they fill the chat column. */
+.ow-chat-stack {
+  display: flex;
+  flex-direction: column;
+  height: max(calc(100dvh - 125px), 720px);
+}
+.ow-chat-stack > .ow-chat-thread {
+  height: auto;
+  min-height: 300px;
+  flex: 1 1 0;
+}
 .ow-messages {
   overflow: auto;
   flex: 1;
@@ -815,6 +826,14 @@
   .ow-chat-thread {
     height: calc(100dvh - 240px);
     min-height: 480px;
+  }
+  .ow-chat-stack {
+    height: auto;
+  }
+  .ow-chat-stack > .ow-chat-thread {
+    height: calc(100dvh - 240px);
+    min-height: 480px;
+    flex: none;
   }
   .ow-chat-thread > header {
     padding: 16px 18px;

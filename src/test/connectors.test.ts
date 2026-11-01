@@ -274,6 +274,47 @@ describe("connector commands", () => {
       event: "browser_sign_in_started",
     });
   });
+  it("retries the first browser connection once before giving up", async () => {
+    const page = { navigate: vi.fn(async () => {}) };
+    let attempts = 0;
+    const { deps: d } = deps({
+      page: vi.fn(async (_id: string, work: (p: SteelPage) => unknown) => {
+        attempts += 1;
+        if (attempts === 1) throw new Error("Browser connection failed.");
+        return work(page as unknown as SteelPage);
+      }) as never,
+    });
+    const response = await handleConnectorCommand(
+      request({ command: "browser_start", organizationId: org, connector: "facebook" }),
+      d,
+    );
+    expect(response.status).toBe(200);
+    expect(attempts).toBe(2);
+    expect(page.navigate).toHaveBeenCalledWith("https://www.facebook.com/login/");
+  });
+  it("closes a browser it couldn't hand over and says what went wrong", async () => {
+    const {
+      deps: d,
+      base,
+      finished,
+    } = deps({
+      page: vi.fn(async () => {
+        throw new Error("Browser connection failed.");
+      }) as never,
+    });
+    const response = await handleConnectorCommand(
+      request({ command: "browser_start", organizationId: org, connector: "facebook" }),
+      d,
+    );
+    const body = await response.json();
+    expect(response.status).toBe(502);
+    expect(body.error).toMatch(/couldn't load the sign-in page/);
+    expect(base.provider.release).toHaveBeenCalledWith("33333333-3333-4333-8333-333333333333");
+    expect(finished.at(-1)).toMatchObject({
+      status: "not_connected",
+      detail: "The agent browser could not open. Try again.",
+    });
+  });
   it("does not mark a connection live while the sign-in page is still showing", async () => {
     const page = {
       signInState: vi.fn(async () => ({

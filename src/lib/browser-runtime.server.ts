@@ -6,6 +6,7 @@ import {
   type BrowserCommand,
   type BrowserState,
   type BrowserWorkspace,
+  UnexpectedViewerError,
 } from "./browser-workspace";
 import {
   SteelProtocolError,
@@ -310,7 +311,8 @@ export async function handleBrowserCommand(
         error:
           error instanceof BrowserError ||
           error instanceof SteelRequestError ||
-          error instanceof SteelProtocolError
+          error instanceof SteelProtocolError ||
+          error instanceof UnexpectedViewerError
             ? error.message
             : "Browser action could not be verified. Stop the session before reconnecting.",
       },

@@ -7,7 +7,6 @@ import {
   Monitor,
   X,
   ArrowRight,
-  PanelRightOpen,
   Inbox,
   Search,
   Users,
@@ -24,6 +23,7 @@ import { OrganizationKnowledge } from "@/routes/knowledge";
 import { PlatformAgents } from "@/routes/platform-agents";
 import { DemoConnectors, LiveConnectors } from "./Connectors";
 import { AgentPanel, type PanelActivity, type PanelMemory } from "./AgentPanel";
+import { ChatBrowser } from "./ChatBrowser";
 import { DemoPlansProvider, LivePlansProvider, PlanCard } from "./AgentPlans";
 import { ChatActionsProvider, useChatActions } from "./ChatActions";
 import { parseChatIntent } from "@/lib/chat-intents";
@@ -557,14 +557,14 @@ function OrganizerWorkspace({
   const panelOpen = wide ? sideOpen : drawerOpen;
   const setPanelOpen = (open: boolean) => (wide ? setSideOpen(open) : setDrawerOpen(open));
   useEffect(() => {
-    // When the agent opens a page, bring its browser into view.
-    const show = () => (wide ? setSideOpen(true) : setDrawerOpen(true));
-    window.addEventListener("civimeet:browse", show);
-    window.addEventListener("civimeet:panel", show);
-    return () => {
-      window.removeEventListener("civimeet:browse", show);
-      window.removeEventListener("civimeet:panel", show);
+    // Approvals, activity and memory open the panel; the browser itself lives above the chat.
+    const show = (event: Event) => {
+      if ((event as CustomEvent<{ tab?: string }>).detail?.tab === "browser") return;
+      if (wide) setSideOpen(true);
+      else setDrawerOpen(true);
     };
+    window.addEventListener("civimeet:panel", show);
+    return () => window.removeEventListener("civimeet:panel", show);
   }, [wide]);
   const mentions = (text: string) =>
     platformName ? text.toLowerCase().includes(platformName.toLowerCase()) : true;
@@ -1036,16 +1036,19 @@ function OrganizerWorkspace({
                 <div
                   className={`grid min-h-0 ${wide && panelOpen ? "grid-cols-[minmax(0,1fr)_420px]" : ""}`}
                 >
-                  <div className="relative min-w-0">
-                    {!panelOpen && (
-                      <button
-                        type="button"
-                        onClick={() => setPanelOpen(true)}
-                        className="absolute right-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-lg border border-[#e4e9ec] bg-white px-3 py-1.5 text-[12px] font-medium text-[#142d40] shadow-sm hover:bg-slate-50"
-                      >
-                        <PanelRightOpen size={15} /> Agent panel
-                      </button>
-                    )}
+                  <div className="ow-chat-stack relative min-w-0">
+                    <ChatBrowser
+                      key={`browser:${thread}`}
+                      thread={thread}
+                      connector={
+                        isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
+                      }
+                      demo={demo}
+                      admin={admin}
+                      connected={data.connected}
+                      webAgentId={data.webAgentId}
+                      onShowPanel={panelOpen ? undefined : () => setPanelOpen(true)}
+                    />
                     {demo ? (
                       <DemoChat
                         key={thread}
@@ -1093,6 +1096,7 @@ function OrganizerWorkspace({
                         mainMemory={mainMemory}
                         admin={admin}
                         webAgentId={data.webAgentId}
+                        browserInChat
                         onReview={review}
                         onEdit={(item) => edit(item)}
                         onOpenConnections={() => navigate("connectors")}

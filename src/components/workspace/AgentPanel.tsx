@@ -47,6 +47,8 @@ type Props = {
   mainMemory: PanelMemory[];
   admin: boolean;
   webAgentId: string | null;
+  /** The browser is shown above the chat, so the panel keeps approvals, activity and memory. */
+  browserInChat?: boolean | undefined;
   onReview: (item: ReviewItem, decision: "approve" | "reject") => Promise<void>;
   onEdit: (item: ReviewItem) => void;
   onOpenConnections: () => void;
@@ -217,17 +219,23 @@ function PanelView({
   state,
   onTogglePause,
   browser,
+  browserInChat,
 }: Props & { state: AgentState; onTogglePause: () => Promise<void>; browser: ReactNode }) {
   const pending = approvals.filter((item) => item.status === "pending");
-  // Approvals first when something is waiting; otherwise the agent's browser.
-  const [tab, setTab] = useState<Tab>(pending.length ? "approvals" : "browser");
+  // Approvals first when something is waiting; otherwise the agent's browser (or its activity
+  // when the browser is already on screen above the chat).
+  const [tab, setTab] = useState<Tab>(
+    pending.length ? "approvals" : browserInChat ? "activity" : "browser",
+  );
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
-    const show = () => setTab("browser");
+    const show = () => {
+      if (!browserInChat) setTab("browser");
+    };
     const open = (event: Event) => {
       const next = (event as CustomEvent<{ tab?: Tab }>).detail?.tab;
-      if (next) setTab(next);
+      if (next && !(next === "browser" && browserInChat)) setTab(next);
     };
     window.addEventListener("civimeet:browse", show);
     window.addEventListener("civimeet:panel", open);
@@ -235,7 +243,7 @@ function PanelView({
       window.removeEventListener("civimeet:browse", show);
       window.removeEventListener("civimeet:panel", open);
     };
-  }, []);
+  }, [browserInChat]);
   // A sign-in or take-over started from chat shows here, whichever agent you're viewing.
   const actions = useChatActions();
   const session = actions?.liveSession ?? null;
@@ -258,12 +266,13 @@ function PanelView({
       setBusy("");
     }
   }
-  const tabs: [Tab, string, typeof ListChecks, number?][] = [
+  const allTabs: [Tab, string, typeof ListChecks, number?][] = [
     ["activity", "Activity", ListChecks],
     ["approvals", "Approvals", ShieldCheck, pending.length],
     ["browser", "Browser", Monitor],
     ["memory", "Memory", Brain],
   ];
+  const tabs = browserInChat ? allTabs.filter(([id]) => id !== "browser") : allTabs;
   return (
     <aside aria-label={`${label} panel`} className="flex h-full min-h-0 flex-col bg-white">
       <div className="flex items-start gap-3 border-b border-[#e4e9ec] px-5 pb-4 pt-5">
@@ -309,7 +318,7 @@ function PanelView({
         <div
           role="tablist"
           aria-label="Agent panel"
-          className="grid grid-cols-4 gap-1 rounded-xl bg-[#eef2f5] p-1"
+          className={`grid gap-1 rounded-xl bg-[#eef2f5] p-1 ${tabs.length === 3 ? "grid-cols-3" : "grid-cols-4"}`}
         >
           {tabs.map(([id, text, Icon, count]) => (
             <button
@@ -363,6 +372,7 @@ function PanelView({
           />
         )}
         {tab === "browser" &&
+          !browserInChat &&
           (actions?.agentRun && !session ? (
             <BrowserRun
               run={actions.agentRun}

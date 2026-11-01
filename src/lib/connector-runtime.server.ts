@@ -37,6 +37,7 @@ import {
   withSteelPage,
   type SteelPage,
 } from "./steel.server";
+import { UnexpectedViewerError } from "./browser-workspace";
 
 type Claim = {
   status: ConnectorStatus;
@@ -252,13 +253,51 @@ export async function handleConnectorCommand(
     const actor = await deps.authorize(token, input.organizationId);
     return json(await run(deps, actor, input, new URL(request.url).origin));
   } catch (error) {
-    const message =
+    const known =
       error instanceof ConnectorError ||
       error instanceof SteelRequestError ||
-      error instanceof SteelProtocolError
-        ? error.message
-        : "The connection could not be completed. Try again.";
+      error instanceof SteelProtocolError ||
+      error instanceof UnexpectedViewerError ||
+      error instanceof BrowserStepError;
+    // Logged without message text: unexpected errors can quote URLs that carry provider tokens.
+    if (!known)
+      console.error("connector command failed", {
+        name: error instanceof Error ? error.name : typeof error,
+      });
+    const message = known
+      ? (error as Error).message
+      : "The connection could not be completed. Try again.";
     return json({ error: message }, error instanceof ConnectorError ? error.status : 502);
+  }
+}
+
+/** A failure at a known step of opening the agent browser, with a message a person can act on. */
+class BrowserStepError extends Error {}
+async function openPage(deps: ConnectorDeps, sessionId: string, url: string) {
+  try {
+    await deps.page(sessionId, async (page) => {
+      try {
+        await page.navigate(url);
+      } catch {
+        // The person can still use the page while it finishes loading.
+      }
+    });
+  } catch {
+    // One retry: Steel can take a moment to accept the first browser connection.
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await deps.page(sessionId, async (page) => {
+        try {
+          await page.navigate(url);
+        } catch {
+          // Still usable while loading.
+        }
+      });
+    } catch {
+      throw new BrowserStepError(
+        "The agent browser started, but Civi couldn't load the sign-in page in it. Try again in a moment.",
+      );
+    }
   }
 }
 
@@ -330,17 +369,13 @@ async function run(deps: ConnectorDeps, actor: string, input: ConnectorCommand, 
       throw new ConnectorError(400, `${definition.name} does not support live sign-in.`);
     needBrowser();
     const claim = await deps.claim(actor, org, id, "browser_start", 60);
+    let opened: string | null = null;
     try {
       if (claim.providerSession) await deps.provider.release(claim.providerSession);
       const created = await deps.provider.create(deps.newSessionId(), true, claim.profileId);
+      opened = created.id;
       const expiresAt = new Date(Date.now() + SIGN_IN_WINDOW_MS).toISOString();
-      await deps.page(created.id, async (page) => {
-        try {
-          await page.navigate(definition.loginUrl!);
-        } catch {
-          // The person can still use the page while it finishes loading.
-        }
-      });
+      await openPage(deps, created.id, definition.loginUrl!);
       await finish({
         status: "awaiting_sign_in",
         method: "browser",
@@ -354,6 +389,8 @@ async function run(deps: ConnectorDeps, actor: string, input: ConnectorCommand, 
       });
       return { status: "awaiting_sign_in", viewer: created.viewer, expiresAt };
     } catch (error) {
+      // Close a browser that opened but couldn't be handed to the person.
+      if (opened) await deps.provider.release(opened).catch(() => {});
       await finish({
         status: fallbackStatus(claim),
         detail: "The agent browser could not open. Try again.",
@@ -376,17 +413,13 @@ async function run(deps: ConnectorDeps, actor: string, input: ConnectorCommand, 
         `Connect ${definition.name} first, then the agent can open it.`,
       );
     }
+    let opened: string | null = null;
     try {
       if (claim.providerSession) await deps.provider.release(claim.providerSession);
       const created = await deps.provider.create(deps.newSessionId(), true, claim.profileId);
+      opened = created.id;
       const expiresAt = new Date(Date.now() + SIGN_IN_WINDOW_MS).toISOString();
-      await deps.page(created.id, async (page) => {
-        try {
-          await page.navigate(`${new URL(definition.loginUrl!).origin}/`);
-        } catch {
-          // Still usable while the page finishes loading.
-        }
-      });
+      await openPage(deps, created.id, `${new URL(definition.loginUrl!).origin}/`);
       await finish({
         profileId: created.profileId ?? claim.profileId,
         providerSession: created.id,
@@ -397,6 +430,7 @@ async function run(deps: ConnectorDeps, actor: string, input: ConnectorCommand, 
       });
       return { status: "connected", viewer: created.viewer, expiresAt };
     } catch (error) {
+      if (opened) await deps.provider.release(opened).catch(() => {});
       await finish({}).catch(() => {});
       throw error;
     }

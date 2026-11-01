@@ -1147,6 +1147,7 @@ export function LiveBrowser({
   title,
   finishLabel = "I’m signed in",
   cancelLabel = "Cancel",
+  frameClassName = "block aspect-[16/10] w-full bg-slate-100",
 }: {
   name: string;
   viewer: { url: string; expiresAt: string };
@@ -1157,6 +1158,7 @@ export function LiveBrowser({
   title?: string | undefined;
   finishLabel?: string | undefined;
   cancelLabel?: string | undefined;
+  frameClassName?: string | undefined;
 }) {
   const [remaining, setRemaining] = useState(() => Date.parse(viewer.expiresAt) - Date.now());
   const fired = useRef(false);
@@ -1190,7 +1192,7 @@ export function LiveBrowser({
       <iframe
         title={`${name} sign-in in the agent browser`}
         src={viewer.url}
-        className="block aspect-[16/10] w-full bg-slate-100"
+        className={frameClassName}
         allow="clipboard-read; clipboard-write"
         referrerPolicy="no-referrer"
       />

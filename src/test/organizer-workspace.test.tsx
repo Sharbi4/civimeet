@@ -98,20 +98,31 @@ it("collapses the sidebar to icons and remembers the choice", async () => {
   window.localStorage.removeItem("civimeet.rail");
 });
 
-it("shows the agent panel beside the chat with approvals, browser control and stop", async () => {
+it("shows the agent browser above the chat and the agent panel beside it", async () => {
   await mount();
+  // The browser is on the chat screen itself, not behind a button.
+  const browser = screen.getByRole("region", { name: "Agent browser" });
+  for (const name of [/^Facebook/, /^Instagram/, /^LinkedIn/, /^Nextdoor/])
+    expect(within(browser).getByRole("button", { name })).toBeInTheDocument();
   // Below 1280px the panel is a drawer; open it the way a narrow-screen user would.
   const opener = screen.queryByRole("button", { name: "Agent panel" });
   if (opener) fireEvent.click(opener);
   const panel = screen.getByRole("complementary", { name: "Main Agent panel" });
   expect(within(panel).getByText("Waiting for you")).toBeInTheDocument();
   expect(within(panel).getAllByRole("button", { name: "Approve" }).length).toBeGreaterThan(0);
+  // One browser on screen: the panel keeps approvals, activity and memory.
+  expect(within(panel).queryByRole("tab", { name: "Browser" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Facebook Agent" }));
   const facebook = screen.getByRole("complementary", { name: "Facebook Agent panel" });
-  // With nothing waiting for approval, the panel opens on the agent's browser.
-  fireEvent.click(within(facebook).getByRole("tab", { name: "Browser" }));
-  fireEvent.click(within(facebook).getByRole("button", { name: "Take over" }));
-  expect(within(facebook).getByRole("button", { name: "Give back to agent" })).toBeInTheDocument();
+  const facebookBrowser = screen.getByRole("region", { name: "Agent browser" });
+  expect(
+    within(facebookBrowser).getAllByRole("button", { name: /^(Facebook|Instagram)/ }),
+  ).toHaveLength(1);
+  // Opening the account goes through the chat's own executor; the sample never opens a browser.
+  fireEvent.click(within(facebookBrowser).getByRole("button", { name: /^Facebook/ }));
+  expect(
+    await screen.findByText(/This is the sample workspace, so no real browser opens here/),
+  ).toBeInTheDocument();
   fireEvent.click(within(facebook).getByRole("button", { name: "Stop agent" }));
   expect(await within(facebook).findByRole("button", { name: "Resume agent" })).toBeInTheDocument();
   expect(within(facebook).getByText("Stopped")).toBeInTheDocument();

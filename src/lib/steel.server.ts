@@ -74,11 +74,15 @@ export const steelProvider = {
       );
     if (session.status !== "live")
       throw new SteelProtocolError("Steel created the session but did not report it as live.");
-    return {
-      id: session.id,
-      profileId: session.profileId ?? null,
-      viewer: interactive ? safeSteelViewer(session.debugUrl) : "",
-    };
+    let viewer = "";
+    try {
+      viewer = interactive ? safeSteelViewer(session.debugUrl, session.id) : "";
+    } catch (error) {
+      // Never leave a live browser running that nobody can see or stop.
+      await steelRequest(`/sessions/${session.id}/release`, "POST").catch(() => {});
+      throw error;
+    }
+    return { id: session.id, profileId: session.profileId ?? null, viewer };
   },
   async release(id: string) {
     try {
@@ -97,7 +101,7 @@ export const steelProvider = {
     const session = await steelRequest<SteelSession>(`/sessions/${id}`);
     return {
       live: session.status === "live",
-      viewer: interactive ? safeSteelViewer(session.debugUrl) : "",
+      viewer: interactive ? safeSteelViewer(session.debugUrl, id) : "",
     };
   },
   /** Best effort: a disconnected account's saved browser cookies should not outlive it. */
@@ -105,7 +109,9 @@ export const steelProvider = {
     try {
       await steelRequest(`/profiles/${profileId}`, "DELETE");
     } catch (error) {
-      if (error instanceof SteelRequestError && [404, 405].includes(error.status)) return;
+      // Steel answers 421 "No route defined" for profile deletion on this API version; the
+      // profile reference is still discarded on our side, so the agent can never reuse it.
+      if (error instanceof SteelRequestError && [404, 405, 421].includes(error.status)) return;
       throw error;
     }
   },

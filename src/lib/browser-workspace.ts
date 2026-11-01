@@ -75,17 +75,37 @@ export function approvedBrowserUrl(raw: string, origins: string[]): string {
   return url.href;
 }
 
-export function safeSteelViewer(raw: string): string {
-  const url = new URL(raw);
+export class UnexpectedViewerError extends Error {
+  constructor() {
+    super("Steel returned a browser viewer address Civi doesn't recognize, so it wasn't shown.");
+  }
+}
+/**
+ * Steel's interactive viewer: https://api.steel.dev/v1/sessions/{id}/player, followed (for
+ * interactive sessions) by one opaque access segment. Only this exact shape is ever framed, and
+ * when the session is known the address must belong to that session.
+ */
+export function safeSteelViewer(raw: string, sessionId?: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new UnexpectedViewerError();
+  }
+  const match = /^\/v1\/sessions\/([a-f0-9-]{8,64})\/player(?:\/[A-Za-z0-9._~-]{1,1024})?$/.exec(
+    url.pathname,
+  );
   if (
     url.protocol !== "https:" ||
     url.hostname !== "api.steel.dev" ||
-    !/^\/v1\/sessions\/[a-f0-9-]+\/player$/.test(url.pathname) ||
+    url.port ||
+    !match ||
+    (sessionId !== undefined && match[1] !== sessionId.toLowerCase()) ||
     url.username ||
     url.password ||
     url.search ||
     url.hash
   )
-    throw new Error("Unexpected browser viewer address.");
+    throw new UnexpectedViewerError();
   return url.href;
 }
