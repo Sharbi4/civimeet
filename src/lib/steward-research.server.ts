@@ -194,6 +194,14 @@ const defaults: Dependencies = {
       .eq("organization_id", input.organizationId)
       .maybeSingle();
     if (brief.error) throw new Error("Community brief could not be loaded");
+    if (
+      input.skillId === "community_presence" &&
+      (!brief.data?.area?.trim() || !brief.data?.mission?.trim())
+    )
+      throw new ResearchError(
+        409,
+        "Add your mission and service area in Identity before building your community presence.",
+      );
     if (brief.data) parts.push("Community brief: " + JSON.stringify(brief.data).slice(0, 3000));
     if (input.collectVendors) {
       const [needs, vendors] = await Promise.all([

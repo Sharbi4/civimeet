@@ -30,12 +30,22 @@ describe("community onboarding", () => {
     fireEvent.change(await screen.findByLabelText("Who is coordinating this community?"), {
       target: { value: "Demo coordinator" },
     });
-    fireEvent.change(screen.getByLabelText("Where do you serve?"), {
-      target: { value: "Demo area" },
-    });
-    fireEvent.change(screen.getByLabelText("What is your organization's mission?"), {
-      target: { value: "Help neighbors find resources." },
-    });
+    fireEvent.change(
+      screen.getByLabelText(
+        "Which city, neighborhoods, and service area should your agent focus on?",
+      ),
+      {
+        target: { value: "Demo area" },
+      },
+    );
+    fireEvent.change(
+      screen.getByLabelText(
+        "Who do you serve, what brings them together, and what is your mission?",
+      ),
+      {
+        target: { value: "Help neighbors find resources." },
+      },
+    );
     expect(screen.queryByLabelText("Facebook responsibilities")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.click(screen.getByLabelText("Facebook"));

@@ -7,10 +7,8 @@ import {
   Play,
   Search,
   ShieldCheck,
-  Handshake,
-  MapPin,
-  MailOpen,
 } from "lucide-react";
+import { AgentVision } from "@/components/product/AgentVision";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import {
   Dialog,
@@ -23,68 +21,6 @@ import { StewardMiniDemo } from "./HomeInteractive";
 import "./home-premium.css";
 import "./home-compact.css";
 
-function CommunityPossibilities() {
-  return (
-    <section className="cmc-moments cmc-wrap" aria-labelledby="cmc-moments-title">
-      <div className="cmc-moments-copy">
-        <p className="cmc-eyebrow">The groundwork for something good</p>
-        <h2 id="cmc-moments-title">Make room for the moments that matter.</h2>
-        <p>
-          A neighbor who feels welcome. A partner who shares your purpose. An idea that finally
-          brings everyone together.
-        </p>
-        <p>
-          CiviMeet helps turn the research, planning, and invitation drafts into a starting point
-          your team can build on.
-        </p>
-        <Link to="/demo" className="cmc-more">
-          Picture your next gathering <ArrowRight size={17} />
-        </Link>
-      </div>
-      <article className="cmc-moment-card" aria-label="Example community event plan">
-        <div className="cmc-moment-label">
-          <CalendarDays size={18} />
-          <span>One idea. A place to begin.</span>
-          <small>Example</small>
-        </div>
-        <h3>“Let’s bring the neighborhood together.”</h3>
-        <p>A good gathering starts long before the first hello.</p>
-        <ul>
-          <li>
-            <span aria-hidden="true">
-              <Handshake size={17} />
-            </span>
-            <div>
-              <strong>It starts with a local connection.</strong>
-              <p>CiviMeet researches nearby partners who could help bring your idea to life.</p>
-            </div>
-          </li>
-          <li>
-            <span aria-hidden="true">
-              <MapPin size={17} />
-            </span>
-            <div>
-              <strong>Then the gathering takes shape.</strong>
-              <p>A place to meet. A plan to build on. Your team adds what makes it yours.</p>
-            </div>
-          </li>
-          <li>
-            <span aria-hidden="true">
-              <MailOpen size={17} />
-            </span>
-            <div>
-              <strong>And a warm welcome begins.</strong>
-              <p>An invitation in your voice, ready for you to review and share.</p>
-            </div>
-          </li>
-        </ul>
-        <div className="cmc-moment-footer">
-          <ShieldCheck size={16} /> Your community. Your voice. Your final say.
-        </div>
-      </article>
-    </section>
-  );
-}
 export function CompactHome() {
   return (
     <SiteLayout>
@@ -93,13 +29,13 @@ export function CompactHome() {
           <div className="cmc-copy">
             <p className="cmc-eyebrow">Contribute. Connect. Meet Up.</p>
             <h1 id="home-title">
-              Bring people together.
+              Start a community.
               <br />
-              <span>Let AI do the groundwork.</span>
+              <span>Give it momentum.</span>
             </h1>
             <p className="cmc-intro">
-              Your AI community organizer finds local partners, drafts useful updates, and helps you
-              plan events—all in one workspace.
+              Meet the AI agent we’re building to grow your community: working in your connected
+              accounts, building your social presence, and bringing people together through events.
             </p>
             <p className="cmc-audience">
               For nonprofits, neighborhood groups, and membership organizations.
@@ -129,7 +65,7 @@ export function CompactHome() {
             </div>
             <div className="cmc-decision">
               <span>
-                <ShieldCheck size={15} /> AI prepares. Your team decides.
+                <ShieldCheck size={15} /> Your mission. Your accounts. Your approval.
               </span>
               <Link to="/pricing">Proposed plans from $250/month →</Link>
             </div>
@@ -166,26 +102,31 @@ export function CompactHome() {
           <article>
             <Search size={22} />
             <div>
-              <h2>Find the right local partners.</h2>
-              <p>Research vendors, venues, and resources with sources you can check.</p>
+              <h2>Become a familiar presence.</h2>
+              <p>
+                The vision: helpful posts, conversations, and outreach in your organization’s voice.
+              </p>
             </div>
           </article>
           <article>
             <CalendarDays size={22} />
             <div>
-              <h2>Turn an idea into a plan.</h2>
-              <p>Prepare gathering proposals, practical next steps, and follow-up.</p>
+              <h2>Turn connection into a gathering.</h2>
+              <p>
+                From vendor discovery to invitations and follow-through, bring the event work
+                together.
+              </p>
             </div>
           </article>
           <article>
             <MessageCircle size={22} />
             <div>
-              <h2>Give people a reason to join.</h2>
-              <p>Draft useful updates and invitations in your organization’s voice.</p>
+              <h2>Give your agent a direction.</h2>
+              <p>Set the mission, channels, and boundaries. Review the work from one workspace.</p>
             </div>
           </article>
         </section>
-        <CommunityPossibilities />
+        <AgentVision compact />
         <section className="cmc-answers cmc-wrap" aria-labelledby="home-questions">
           <div>
             <p className="cmc-eyebrow">Before your first gathering</p>

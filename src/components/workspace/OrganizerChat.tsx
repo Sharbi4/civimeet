@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, BookOpen } from "lucide-react";
+import { ArrowUp, BookOpen, Sprout } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
 import {
   threadLabels,
@@ -91,7 +91,7 @@ export function OrganizerChat({
     const timer = setInterval(() => void load(), 5000);
     return () => clearInterval(timer);
   }, [turns, load]);
-  async function send() {
+  async function send(question = message, presence = false) {
     if (busy || role === "viewer") return;
     setBusy(true);
     setError("");
@@ -112,13 +112,18 @@ export function OrganizerChat({
         body: JSON.stringify({
           organizationId,
           requestId: key,
-          question: message,
+          question,
           purpose: thread === "venue" ? "venues" : thread === "discover" ? purpose : "general",
           location,
           includeKnowledge: true,
           threadKey: thread,
-          skillId:
-            thread === "outreach" ? "attendance_outreach" : thread === "main" ? "auto" : undefined,
+          skillId: presence
+            ? "community_presence"
+            : thread === "outreach"
+              ? "attendance_outreach"
+              : thread === "main"
+                ? "auto"
+                : undefined,
         }),
       });
       const body = await response.json();
@@ -153,6 +158,37 @@ export function OrganizerChat({
         <p>Research and preparation, grounded in your organization’s knowledge.</p>
       </header>
       <OrganizerVoice key={`${organizationId}:${thread}`} thread={thread} />
+      {thread === "main" && (
+        <section
+          className="rounded-xl border border-blue-100 bg-blue-50/50 p-4"
+          aria-label="Community presence agent"
+        >
+          <h3 className="flex items-center gap-2 font-semibold">
+            <Sprout size={18} /> Your community-building agent
+          </h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Use your saved mission, location, and voice to discover relevant communities and prepare
+            genuinely useful posts, tips, and a plan for showing up.
+          </p>
+          <button
+            className="ow-link mt-3"
+            disabled={busy || running || role === "viewer"}
+            onClick={() => {
+              requestKey.current = null;
+              void send(
+                "Build our community presence using our saved organization brief. Find relevant local communities and prepare helpful contributions and a practical plan for the next week. Prioritize usefulness over promotion. Cite sources and clearly identify actions that need a connection or approval.",
+                true,
+              );
+            }}
+          >
+            Build our community presence
+          </button>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Set your community brief in Identity first. This runs research and creates drafts; it
+            does not join groups or publish.
+          </p>
+        </section>
+      )}
       {thread === "discover" && (
         <div className="ow-research-options">
           <label>
@@ -211,7 +247,12 @@ export function OrganizerChat({
                 <>
                   <ResearchAnswer result={t.result} />
                   {role !== "viewer" && (
-                    <button className="ow-link" onClick={() => { if (t.result) onDraft(t.result.answer); }}>
+                    <button
+                      className="ow-link"
+                      onClick={() => {
+                        if (t.result) onDraft(t.result.answer);
+                      }}
+                    >
                       Prepare a draft for review
                     </button>
                   )}

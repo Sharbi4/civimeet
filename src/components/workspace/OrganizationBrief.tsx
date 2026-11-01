@@ -126,7 +126,9 @@ export function OrganizationBrief({
                 ][step]
               }
             </h2>
-            <span className="text-sm text-muted-foreground">{step + 1} of 3</span>
+            <span className="text-sm text-muted-foreground">
+              {["Your community", "Your channels", "Your agent"][step]}
+            </span>
           </div>
           <form
             className="space-y-4"
@@ -139,8 +141,22 @@ export function OrganizationBrief({
             {step === 0 && (
               <>
                 {field("coordinator", "Who is coordinating this community?", 160)}
-                {field("area", "Where do you serve?", 200)}
-                {field("mission", "What is your organization's mission?", 2000, true)}
+                {field(
+                  "area",
+                  "Which city, neighborhoods, and service area should your agent focus on?",
+                  200,
+                )}
+                {field(
+                  "mission",
+                  "Who do you serve, what brings them together, and what is your mission?",
+                  2000,
+                  true,
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Include your audience, local priorities, and whether you are starting a new
+                  community or growing an existing one. These details guide your agent's research
+                  and contributions.
+                </p>
               </>
             )}
             {step === 1 && (
@@ -159,7 +175,8 @@ export function OrganizationBrief({
                         onChange={(e) => {
                           const actions = { ...draft.platform_actions };
                           if (e.target.checked)
-                            actions[key] = "Prepare useful community contributions for our review.";
+                            actions[key] =
+                              "Find mission-aligned local communities and prepare helpful, specific contributions for review. Listen and offer value before inviting people to our events.";
                           else delete actions[key];
                           setDraft({ ...draft, platform_actions: actions });
                         }}
@@ -187,7 +204,12 @@ export function OrganizationBrief({
             )}
             {step === 2 && (
               <>
-                {field("voice", "How should your agent sound and behave?", 500, true)}
+                {field(
+                  "voice",
+                  "How should your agent sound, help people, and represent your organization?",
+                  500,
+                  true,
+                )}
                 {field(
                   "event_goal",
                   "What would you like to bring people together for?",

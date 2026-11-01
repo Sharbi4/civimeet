@@ -41,6 +41,34 @@ function dependencies() {
   };
 }
 describe("Authenticated steward research", () => {
+  it("runs the presence skill with tenant context and saves its result without vendor collection", async () => {
+    const deps = dependencies();
+    const response = await handleStewardResearch(
+      request({
+        ...input,
+        skillId: "community_presence",
+        includeKnowledge: true,
+        threadKey: "main",
+      }),
+      deps,
+    );
+    expect(response.status).toBe(200);
+    expect(deps.authorize).toHaveBeenCalledWith("session", input.organizationId);
+    expect(deps.context).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: input.organizationId,
+        skillId: "community_presence",
+        includeKnowledge: true,
+      }),
+    );
+    expect(deps.research).toHaveBeenCalledWith(
+      expect.objectContaining({ purpose: "resources" }),
+      "Scoped organization context",
+      false,
+      "community_presence",
+    );
+    expect(deps.finish).toHaveBeenCalledWith("run", result, null);
+  });
   it("authenticates and reserves before spending, then saves real results", async () => {
     const deps = dependencies();
     const response = await handleStewardResearch(request(), deps);

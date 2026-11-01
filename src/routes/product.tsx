@@ -12,6 +12,7 @@ import {
   Search,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
+import { AgentVision } from "@/components/product/AgentVision";
 import { ProductDemo } from "@/components/product/ProductDemo";
 import "@/components/product/product.css";
 
@@ -110,12 +111,13 @@ function ProductPage() {
       <div className="cm-product" ref={root}>
         <section className="cm-hero cm-wrap">
           <p className="cm-eyebrow">Meet your AI Community Steward</p>
-          <h1>Your community deserves more than another management tool.</h1>
+          <h1>An AI agent built to grow a community.</h1>
           <div className="cm-hero-intro">
             <p>
-              CiviMeet brings community research, meaningful engagement, planning, and real-world
-              coordination into one intelligent workspace. Your AI Community Steward helps your
-              organization stay present, useful, and connected.
+              CiviMeet is building a community agent that works on your behalf through an authorized
+              browser: developing your social presence, building local relationships, organizing
+              events, and coordinating vendors within your approvals and budget. Start from your
+              first members or grow the community you already have.
             </p>
             <div className="cm-cta-stack">
               <a className="cm-button" href="#interactive-demo">
@@ -163,6 +165,7 @@ function ProductPage() {
             </div>
           </div>
         </section>
+        <AgentVision />
         <div className="cm-cycle cm-wrap" aria-label="Community stewardship cycle">
           <span>Contribute</span>
           <ArrowRight />
@@ -189,7 +192,7 @@ function ProductPage() {
         <section className="cm-capability cm-wrap cm-reveal">
           <div className="cm-cap-copy">
             <p className="cm-eyebrow">Be present</p>
-            <h2>A community presence that doesn’t start from scratch.</h2>
+            <h2>Start from zero. Become part of the community.</h2>
             <p>
               Be useful before you ask for attention. Bring your mission, community questions, and
               channel priorities into a workspace that remembers the context.
