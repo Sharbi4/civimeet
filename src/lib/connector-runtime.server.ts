@@ -362,46 +362,6 @@ async function run(deps: ConnectorDeps, actor: string, input: ConnectorCommand, 
     }
   }
 
-  if (input.command === "browser_open") {
-    // Watch or take over a connected account in the agent's own signed-in browser.
-    // The connection status is left as it is; closing the window saves the profile.
-    if (!definition.methods.includes("browser") && !definition.methods.includes("credentials"))
-      throw new ConnectorError(400, `${definition.name} has no agent browser.`);
-    needBrowser();
-    const claim = await deps.claim(actor, org, id, "browser_start", 60);
-    if (claim.status !== "connected" || !claim.profileId) {
-      await finish({});
-      throw new ConnectorError(
-        409,
-        `Connect ${definition.name} first, then the agent can open it.`,
-      );
-    }
-    try {
-      if (claim.providerSession) await deps.provider.release(claim.providerSession);
-      const created = await deps.provider.create(deps.newSessionId(), true, claim.profileId);
-      const expiresAt = new Date(Date.now() + SIGN_IN_WINDOW_MS).toISOString();
-      await deps.page(created.id, async (page) => {
-        try {
-          await page.navigate(`${new URL(definition.loginUrl!).origin}/`);
-        } catch {
-          // Still usable while the page finishes loading.
-        }
-      });
-      await finish({
-        profileId: created.profileId ?? claim.profileId,
-        providerSession: created.id,
-        humanActor: actor,
-        expiresAt,
-        event: "browser_sign_in_started",
-        message: `Opened ${definition.name} in the agent browser`,
-      });
-      return { status: "connected", viewer: created.viewer, expiresAt };
-    } catch (error) {
-      await finish({}).catch(() => {});
-      throw error;
-    }
-  }
-
   if (input.command === "browser_finish") {
     const claim = await deps.claim(actor, org, id, "browser_finish", 45);
     if (!claim.providerSession) {

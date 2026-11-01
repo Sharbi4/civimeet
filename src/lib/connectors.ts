@@ -370,7 +370,6 @@ export const connectorCommandSchema = z.discriminatedUnion("command", [
     .object({
       command: z.enum([
         "browser_start",
-        "browser_open",
         "browser_observe",
         "browser_finish",
         "browser_cancel",

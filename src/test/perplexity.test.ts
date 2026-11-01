@@ -45,7 +45,6 @@ describe("Perplexity research adapter", () => {
     const [url, init] = fetcher.mock.calls[0]!;
     expect(url).toBe("https://api.perplexity.ai/v1/agent");
     expect(JSON.parse(init!.body as string)).toMatchObject({
-      model: "openai/gpt-6-sol",
       effort: "fast",
       max_output_tokens: 2000,
       max_tool_calls: 3,
@@ -120,18 +119,20 @@ describe("Perplexity research adapter", () => {
 
 it("runs structured discovery with trusted skill instructions and returns readable summary", async () => {
   const local = { summary: "A sourced local partner brief.", vendors: [], plan: null };
-  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
-    Response.json({
-      ...completed,
-      output: [
-        {
-          type: "message",
-          role: "assistant",
-          content: [{ type: "output_text", text: JSON.stringify(local) }],
-        },
-      ],
-    }),
-  );
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(
+      Response.json({
+        ...completed,
+        output: [
+          {
+            type: "message",
+            role: "assistant",
+            content: [{ type: "output_text", text: JSON.stringify(local) }],
+          },
+        ],
+      }),
+    );
   const result = await researchCommunity(
     { ...input, purpose: "vendors" },
     {
@@ -147,13 +148,4 @@ it("runs structured discovery with trusted skill instructions and returns readab
   expect(JSON.parse(fetcher.mock.calls[0]![1]!.body as string).instructions).toContain(
     "SKILL: LOCAL PARTNER DISCOVERY",
   );
-});
-
-describe("Agent model", () => {
-  it("uses GPT-6 Sol by default and accepts a full model id override", async () => {
-    const { researchModel } = await import("@/lib/perplexity.server");
-    expect(researchModel({})).toBe("openai/gpt-6-sol");
-    expect(researchModel({ PERPLEXITY_MODEL: "openai/gpt-6.1-sol" })).toBe("openai/gpt-6.1-sol");
-    expect(researchModel({ PERPLEXITY_MODEL: "gpt 6; drop" })).toBe("openai/gpt-6-sol");
-  });
 });

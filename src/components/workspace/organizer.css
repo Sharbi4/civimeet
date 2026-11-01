@@ -1430,8 +1430,3 @@
     gap: 15px;
   }
 }
-
-/* The chat keeps its composer in view: only the message list scrolls. */
-.ow-chat-thread {
-  overflow: hidden;
-}
