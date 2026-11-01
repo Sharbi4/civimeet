@@ -33,6 +33,19 @@ Organizer Chat routes every message before anything reaches Perplexity (`src/lib
 
 Every action and its real outcome is stored in `organizer_chat_actions` and shown in the thread, and recent actions are given to Civi so the conversation continues after sign-in. Passwords never pass through chat or the model.
 
+## Computer use: Muse + Steel
+
+**Muse decides, Steel runs the browser, Civi enforces permissions** (`src/lib/muse.server.ts`, `src/lib/browser-agent.server.ts`, `src/lib/browser-agent-policy.ts`, `/api/agent/browser`).
+
+- One verified step per request: reconnect the platform's own Steel profile if needed → if the page is a sign-in or verification page, hand control to a person → screenshot (viewport, CSS-pixel scale) → Meta Responses API with the `computer` tool (`computer_call_output` + fresh screenshot each turn, chained with `previous_response_id`, instructions re-sent) → check every proposed action against what is actually under the cursor or focused → run allowed actions as CDP input events in the Steel session → record events.
+- CDP is what Playwright sends under the hood; Playwright itself can't run on the Cloudflare Workers runtime, so the existing Steel CDP connection is reused.
+- **Read-only mode** (the only mode): look, scroll, open links, tabs and menus within the platform, and type into search boxes. Posting, commenting, reacting, messaging, sharing, joining, following, submitting forms, typing elsewhere, drags, context menus, keyboard shortcuts and links that leave the platform are refused before they happen, and the model is told why. Social sites are only browsed through their own connection (never the public-web browser).
+- Meta `pending_safety_checks` stop the run until a person chooses **Allow and continue** (acknowledged on the next turn; Civi's own policy still applies) or **Stop**.
+- Step limit 12, one live run per platform, 40 runs per organization per day; pause, resume, stop, take control and hand back between steps; a failed step closes the browser and records the real error.
+- Runs and step events are stored (screenshots never are); a verified result is tied to the page the browser actually ended on and saved to the platform agent's memory; Civi sees the last 7 days of runs when asked what an agent did.
+- Model: `muse-wonder-1.0` first. **Live finding (2026-11-01):** on this Meta team the API rejects the `computer` tool for Muse Wonder (`400 Unsupported tool type: 'computer'`) while `muse-spark-1.3` accepts it, so a new run falls back to Spark 1.3 and records that in the run. Usage and cost (Standard pricing) are logged per run.
+- Key: `MUSE_API_KEY` (or `META_MODEL_API_KEY`), server-side only. **Blocker:** the Meta team returns `402 billing_not_configured` for every model call until billing is set up at dev.meta.ai/billing.
+
 ## What does not exist yet (do not assume a button means it works)
 
 - **Posting, commenting, joining groups, messaging, creating groups on any platform.** Plans can prepare and approve these, but no executor performs them. After approval the step says so plainly ("Approved. Automatic publishing isn't switched on yet").

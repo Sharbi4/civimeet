@@ -14,6 +14,8 @@ import {
 } from "./browser-agent-policy";
 import { getConnector } from "./connectors";
 import {
+  museModels,
+  type MuseModel,
   MuseError,
   museConfigured,
   museModel,
@@ -40,6 +42,7 @@ type Run = {
   connector: string;
   agent: string;
   objective: string;
+  model: string;
   status: "running" | "waiting_for_human" | "paused" | "succeeded" | "failed" | "cancelled";
   step_count: number;
   max_steps: number;
@@ -65,6 +68,7 @@ type Outcome = {
   currentUrl?: string;
   result?: Record<string, unknown>;
   usage?: Record<string, number>;
+  model?: string;
   providerSession?: string;
   profileId?: string;
   previousResponseId?: string;
@@ -653,21 +657,35 @@ async function step(
       const shot = await page.capture();
       const turn: MuseTurn =
         runtime.previous_response_id && runtime.pending_call
-          ? await deps.muse({
-              kind: "continue",
-              instructions,
-              previousResponseId: runtime.previous_response_id,
-              callId: runtime.pending_call.call_id,
-              screenshot: shot.dataUrl,
-              acknowledged: runtime.acknowledged_safety_checks ?? [],
-              note,
-            })
-          : await deps.muse({
-              kind: "start",
-              instructions,
-              task: `Task from the team: ${run.objective}`,
-              screenshot: shot.dataUrl,
-            });
+          ? await deps.muse(
+              {
+                kind: "continue",
+                instructions,
+                previousResponseId: runtime.previous_response_id,
+                callId: runtime.pending_call.call_id,
+                screenshot: shot.dataUrl,
+                acknowledged: runtime.acknowledged_safety_checks ?? [],
+                note,
+              },
+              {
+                model: (museModels as readonly string[]).includes(run.model)
+                  ? (run.model as MuseModel)
+                  : undefined,
+              },
+            )
+          : await deps.muse(
+              {
+                kind: "start",
+                instructions,
+                task: `Task from the team: ${run.objective}`,
+                screenshot: shot.dataUrl,
+              },
+              {
+                model: (museModels as readonly string[]).includes(run.model)
+                  ? (run.model as MuseModel)
+                  : undefined,
+              },
+            );
       const usage = addUsage(run.usage ?? {}, turn);
       if (!turn.call)
         return { turn, usage, url: before.url, title: before.title, done: true } as const;
@@ -696,6 +714,16 @@ async function step(
     return { status: "waiting_for_human", detail: result.human };
   }
   const turn = result.turn!;
+  // Meta may only offer computer use on Muse Spark for this account; say so, and keep the run on it.
+  const switched = turn.model !== run.model;
+  if (switched) {
+    base.model = turn.model;
+    events.push({
+      kind: "model",
+      step: stepNumber,
+      summary: `${run.model} doesn't accept computer use on this Meta account yet, so this run uses ${turn.model}.`,
+    });
+  }
   if ("done" in result && result.done) {
     const message = turn.message || "I finished, but didn't write a report.";
     if (/^NEED_HUMAN:/i.test(message)) {

@@ -45,6 +45,8 @@ export type MuseUsage = {
 };
 export type MuseTurn = {
   id: string;
+  /** The model that actually produced this turn. */
+  model: MuseModel;
   call: ComputerCall | null;
   message: string;
   usage: MuseUsage;
@@ -73,15 +75,24 @@ export function museConfigured(env: Record<string, string | undefined> = process
   return Boolean(museKey(env));
 }
 
+/** Meta rejects the computer tool for a model that doesn't offer computer use on this account. */
+export class ComputerToolUnsupported extends Error {}
 function errorFor(status: number, body: { error?: { code?: string | null; message?: string } }) {
   const code = body.error?.code ?? "";
+  if (status === 400 && /unsupported tool type:\s*'?computer'?/i.test(body.error?.message ?? ""))
+    return new ComputerToolUnsupported(
+      "This Muse model doesn't accept computer use on this account.",
+    );
   if (status === 401)
     return new MuseError(
       401,
       "Meta rejected the API key. Check MUSE_API_KEY in the server secrets.",
     );
   if (status === 402)
-    return new MuseError(402, "Meta Model API billing isn't set up for this account yet.");
+    return new MuseError(
+      402,
+      "Meta Model API billing isn't set up for this team yet. Resolve it at dev.meta.ai/billing, then try again.",
+    );
   if (status === 403)
     return new MuseError(403, "This Meta API key doesn't have access to computer use.");
   if (status === 404 && code === "model_not_found")
@@ -156,6 +167,7 @@ function parseTurn(raw: Record<string, unknown>, model: MuseModel): MuseTurn {
   const price = pricing[model];
   return {
     id: String(raw["id"] ?? ""),
+    model,
     call,
     message,
     usage: {
@@ -191,6 +203,8 @@ export async function museTurn(
     env?: Record<string, string | undefined>;
     fetcher?: typeof fetch;
     retries?: number;
+    /** Model for this run (a run stays on one model so its response chain is consistent). */
+    model?: MuseModel | undefined;
   } = {},
 ): Promise<MuseTurn> {
   const env = options.env ?? process.env;
@@ -200,7 +214,34 @@ export async function museTurn(
       503,
       "Muse Wonder isn't set up yet. Add MUSE_API_KEY to the server secrets.",
     );
-  const model = museModel(env);
+  const preferred = options.model ?? museModel(env);
+  try {
+    return await museRequest(request, preferred, key, options);
+  } catch (failure) {
+    // Muse Wonder is in preview; if Meta doesn't offer it computer use on this account yet, a new
+    // run falls back to Muse Spark 1.3 (documented for the same loop). The turn reports which
+    // model actually ran, so nothing is attributed to Wonder that Wonder didn't do.
+    if (
+      failure instanceof ComputerToolUnsupported &&
+      preferred === "muse-wonder-1.0" &&
+      request.kind === "start"
+    )
+      return museRequest(request, "muse-spark-1.3", key, options);
+    if (failure instanceof ComputerToolUnsupported)
+      throw new MuseError(
+        400,
+        `${preferred} doesn't accept computer use on this Meta account yet.`,
+      );
+    throw failure;
+  }
+}
+
+async function museRequest(
+  request: MuseRequest,
+  model: MuseModel,
+  key: string,
+  options: { fetcher?: typeof fetch; retries?: number },
+): Promise<MuseTurn> {
   const body =
     request.kind === "start"
       ? {
@@ -254,8 +295,12 @@ export async function museTurn(
     // Error bodies can echo submitted content; only their code is used, never logged.
     const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
     if (response.ok) return parseTurn(payload, model);
-    last = errorFor(response.status, payload as { error?: { code?: string | null } });
-    if (!last.retryable) throw last;
+    const failure = errorFor(
+      response.status,
+      payload as { error?: { code?: string | null; message?: string } },
+    );
+    if (failure instanceof ComputerToolUnsupported || !failure.retryable) throw failure;
+    last = failure;
     await new Promise((resolve) => setTimeout(resolve, Math.min(4000, 800 * 2 ** attempt)));
   }
   throw last ?? new MuseError(502, "Meta could not process this browser step.");

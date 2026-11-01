@@ -234,6 +234,37 @@ const defaults: Dependencies = {
           JSON.stringify(connections.data ?? []).slice(0, 800) +
           " (anything not listed is not connected yet; you can still start its sign-in).",
       );
+      // What the agents actually did in their browsers (verified run records, read-only).
+      let runs = db
+        .from("browser_agent_runs")
+        .select(
+          "connector,objective,status,status_detail,step_count,result,model,created_at,finished_at",
+        )
+        .eq("organization_id", input.organizationId)
+        .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString())
+        .order("created_at", { ascending: false })
+        .limit(6);
+      if (input.threadKey?.startsWith("platform_"))
+        runs = runs.eq("connector", input.threadKey.slice(9));
+      const runRows = await runs;
+      if (runRows.data?.length)
+        parts.push(
+          "Browser work by the agents in the last 7 days (only status succeeded counts as done; results are what the agent observed, read-only): " +
+            JSON.stringify(
+              runRows.data.map((row) => ({
+                ...row,
+                result: row.result
+                  ? {
+                      summary: String((row.result as { summary?: string }).summary ?? "").slice(
+                        0,
+                        600,
+                      ),
+                      url: (row.result as { url?: string }).url,
+                    }
+                  : null,
+              })),
+            ).slice(0, 3000),
+        );
       if (actions.data?.length)
         parts.push(
           "Actions already carried out in this conversation (real outcomes, newest first): " +
