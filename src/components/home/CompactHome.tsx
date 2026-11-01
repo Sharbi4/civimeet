@@ -7,6 +7,9 @@ import {
   Play,
   Search,
   ShieldCheck,
+  Handshake,
+  MapPin,
+  MailOpen,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import {
@@ -45,30 +48,36 @@ function CommunityPossibilities() {
           <small>Example</small>
         </div>
         <h3>“Let’s bring the neighborhood together.”</h3>
-        <p>From a first thought to a plan you can shape.</p>
-        <ol>
+        <p>A good gathering starts long before the first hello.</p>
+        <ul>
           <li>
-            <span>01</span>
+            <span aria-hidden="true">
+              <Handshake size={17} />
+            </span>
             <div>
-              <strong>Find your people</strong>
-              <p>Local partners and vendors, with sources.</p>
+              <strong>It starts with a local connection.</strong>
+              <p>CiviMeet researches nearby partners who could help bring your idea to life.</p>
             </div>
           </li>
           <li>
-            <span>02</span>
+            <span aria-hidden="true">
+              <MapPin size={17} />
+            </span>
             <div>
-              <strong>Give the idea a home</strong>
-              <p>Venue options and a gathering proposal.</p>
+              <strong>Then the gathering takes shape.</strong>
+              <p>A place to meet. A plan to build on. Your team adds what makes it yours.</p>
             </div>
           </li>
           <li>
-            <span>03</span>
+            <span aria-hidden="true">
+              <MailOpen size={17} />
+            </span>
             <div>
-              <strong>Make the invitation count</strong>
-              <p>A thoughtful draft, ready for your review.</p>
+              <strong>And a warm welcome begins.</strong>
+              <p>An invitation in your voice, ready for you to review and share.</p>
             </div>
           </li>
-        </ol>
+        </ul>
         <div className="cmc-moment-footer">
           <ShieldCheck size={16} /> Your community. Your voice. Your final say.
         </div>
