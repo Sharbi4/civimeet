@@ -7,23 +7,13 @@ existing authenticated `/api/research` endpoint with the `event_design` Perplexi
 skill. It uses the signed-in user's organization and JWT, and the existing
 organization-editor check, saved research history and ten-request daily limit.
 
-**The ElevenLabs voice session is not yet deployed or connected.** It needs a
-configured ElevenLabs agent, an agent ID, and a private signed-session flow.
-Do not describe live voice actions as available until those are tested.
+**Voice preparation is already integrated into Organizer Chat**, using `@elevenlabs/client`, the private `CiviMeet — Private Planning Assistant` agent, encrypted server-side `ELEVENLABS_AGENT_ID`, and a membership-checked `/api/organizer/voice` token endpoint. The agent has passed an isolation read-back and signed-in readiness check, but an actual microphone/audio conversation has **not** been verified. This agent is intentionally **tool-free** and cannot access organization research today. The adapter below is not yet registered as an ElevenLabs client tool. Do not claim voice-driven research is live until it passes an end-to-end test.
 
 ## Implementation checklist
 
-1. Configure a **private** ElevenLabs agent that clearly introduces itself as
-   CiviMeet's AI. Give it instructions to gather an event goal, place, timeline,
-   audience and constraints, without guessing missing facts. Never claim it
-   posted, booked, contacted a person, charged a card or completed research
-   when it only prepared a draft.
-2. In the ElevenLabs agent UI, define a **client tool** named exactly
-   `startPlanningResearch`, with `request` (required string) and `location`
-   (optional string). Set the tool to **block the conversation until the result
-   returns**; otherwise the agent may assume success early.
-3. Integrate `@elevenlabs/react` inside the authenticated organization workspace
-   with a `ConversationProvider`. Pass `clientTools` containing the adapter:
+1. **Reuse** the configured private **CiviMeet — Private Planning Assistant** agent unless it cannot support a narrowly scoped research tool safely. Do not create a duplicate by default. Its voice is Sarah; authentication is enabled, recording disabled, and zero-retention mode enabled. Keep explicit AI disclosure and no-unauthorized-action instructions.
+2. In ElevenLabs configure an **allowlisted client tool** named `startPlanningResearch` with `request` (required) and optional `location`. The agent's current isolation validator in `src/lib/organizer-voice.server.ts` rejects **every tool**. Carefully extend the validator to permit **only** this exact client-tool schema while still failing closed on server tools, arbitrary URLs, MCP, knowledge bases, workflows, and permission overrides. Update security tests. If isolation cannot be maintained, keep the voice agent tool-free and present a separate explicitly authorized research mode.
+3. The workspace already uses `@elevenlabs/client` in `src/components/workspace/OrganizerVoice.tsx` with `Conversation.startSession`, `clientTools: {}`, and membership-scoped `/api/organizer/voice`. Register the adapter in that **existing** session after permission checks; do not replace the voice implementation or switch SDKs unnecessarily:
 
    ```tsx
    const { db, organizationId, role } = useWorkspace();
@@ -31,17 +21,10 @@ Do not describe live voice actions as available until those are tested.
      organizationId,
      accessToken: async () => (await db.auth.getSession()).data.session?.access_token ?? null,
    });
-
-   // Register tools.startPlanningResearch with ConversationProvider clientTools.
-   // Never register it for a viewer role. Keep the organization ID in the
-   // app context, not in agent-supplied tool parameters.
+   // Pass tools as clientTools only for authorized organization editors.
    ```
 
-4. Implement an authenticated, organization-scoped server endpoint to request
-   an **ElevenLabs signed session URL/token**. Keep `ELEVENLABS_API_KEY` and
-   agent ID on the server; do not expose a public agent with sensitive client
-   tools. Use the official React SDK session flow after the signed session is
-   issued to an authorized editor.
+4. Retain the existing authenticated `/api/organizer/voice` WebRTC-token endpoint and `ELEVENLABS_API_KEY` server secret. Preserve its organization membership checks, explicit microphone consent, cancellation, organization/thread switch cleanup and private agent configuration validation. Do not expose token or JWT to the model; do not claim cryptographic binding of the token to the org where the provider does not document it.
 5. Run an actual voice session: say “Plan a neighborhood resource fair in Tucson
    next month.” Confirm it saves a sourced run to the selected organization's
    **Main Organizer Chat**, returns useful citations and never sends outreach
