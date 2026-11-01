@@ -58,130 +58,6 @@ export type Database = {
           },
         ]
       }
-      agent_plans: {
-        Row: {
-          created_at: string
-          created_by: string
-          goal: string
-          id: string
-          organization_id: string
-          source_run: string | null
-          status: string
-          thread_key: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          goal: string
-          id?: string
-          organization_id: string
-          source_run?: string | null
-          status?: string
-          thread_key?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          goal?: string
-          id?: string
-          organization_id?: string
-          source_run?: string | null
-          status?: string
-          thread_key?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agent_plans_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      agent_tasks: {
-        Row: {
-          agent: string
-          attempts: number
-          depends_on: number[]
-          detail: string
-          finished_at: string | null
-          id: string
-          input: Json
-          kind: string
-          lease_id: string | null
-          lease_until: string | null
-          level: string
-          organization_id: string
-          plan_id: string
-          position: number
-          result: Json | null
-          started_at: string | null
-          status: string
-          status_detail: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          agent: string
-          attempts?: number
-          depends_on?: number[]
-          detail?: string
-          finished_at?: string | null
-          id?: string
-          input?: Json
-          kind: string
-          lease_id?: string | null
-          lease_until?: string | null
-          level: string
-          organization_id: string
-          plan_id: string
-          position: number
-          result?: Json | null
-          started_at?: string | null
-          status?: string
-          status_detail?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          agent?: string
-          attempts?: number
-          depends_on?: number[]
-          detail?: string
-          finished_at?: string | null
-          id?: string
-          input?: Json
-          kind?: string
-          lease_id?: string | null
-          lease_until?: string | null
-          level?: string
-          organization_id?: string
-          plan_id?: string
-          position?: number
-          result?: Json | null
-          started_at?: string | null
-          status?: string
-          status_detail?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agent_tasks_organization_id_plan_id_fkey"
-            columns: ["organization_id", "plan_id"]
-            isOneToOne: false
-            referencedRelation: "agent_plans"
-            referencedColumns: ["organization_id", "id"]
-          },
-        ]
-      }
       agent_work_items: {
         Row: {
           agent_id: string
@@ -276,127 +152,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "browser_workspaces"
             referencedColumns: ["organization_id", "id"]
-          },
-        ]
-      }
-      browser_agent_events: {
-        Row: {
-          created_at: string
-          detail: Json
-          id: string
-          kind: string
-          organization_id: string
-          run_id: string
-          step: number
-          summary: string
-        }
-        Insert: {
-          created_at?: string
-          detail?: Json
-          id?: string
-          kind: string
-          organization_id: string
-          run_id: string
-          step?: number
-          summary: string
-        }
-        Update: {
-          created_at?: string
-          detail?: Json
-          id?: string
-          kind?: string
-          organization_id?: string
-          run_id?: string
-          step?: number
-          summary?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "browser_agent_events_organization_id_run_id_fkey"
-            columns: ["organization_id", "run_id"]
-            isOneToOne: false
-            referencedRelation: "browser_agent_runs"
-            referencedColumns: ["organization_id", "id"]
-          },
-        ]
-      }
-      browser_agent_runs: {
-        Row: {
-          agent: string
-          chat_action_id: string | null
-          connector: string
-          created_at: string
-          created_by: string
-          current_action: string
-          current_url: string
-          finished_at: string | null
-          id: string
-          max_steps: number
-          mode: string
-          model: string
-          objective: string
-          organization_id: string
-          plan_task_id: string | null
-          result: Json | null
-          status: string
-          status_detail: string
-          step_count: number
-          updated_at: string
-          usage: Json
-        }
-        Insert: {
-          agent?: string
-          chat_action_id?: string | null
-          connector: string
-          created_at?: string
-          created_by: string
-          current_action?: string
-          current_url?: string
-          finished_at?: string | null
-          id?: string
-          max_steps?: number
-          mode?: string
-          model: string
-          objective: string
-          organization_id: string
-          plan_task_id?: string | null
-          result?: Json | null
-          status?: string
-          status_detail?: string
-          step_count?: number
-          updated_at?: string
-          usage?: Json
-        }
-        Update: {
-          agent?: string
-          chat_action_id?: string | null
-          connector?: string
-          created_at?: string
-          created_by?: string
-          current_action?: string
-          current_url?: string
-          finished_at?: string | null
-          id?: string
-          max_steps?: number
-          mode?: string
-          model?: string
-          objective?: string
-          organization_id?: string
-          plan_task_id?: string | null
-          result?: Json | null
-          status?: string
-          status_detail?: string
-          step_count?: number
-          updated_at?: string
-          usage?: Json
-        }
-        Relationships: [
-          {
-            foreignKeyName: "browser_agent_runs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -1022,56 +777,6 @@ export type Database = {
           },
         ]
       }
-      organizer_chat_actions: {
-        Row: {
-          action: Json
-          actor_id: string
-          created_at: string
-          id: string
-          message: string
-          organization_id: string
-          reply: string
-          resume_goal: string
-          status: string
-          thread_key: string
-          updated_at: string
-        }
-        Insert: {
-          action: Json
-          actor_id: string
-          created_at?: string
-          id?: string
-          message: string
-          organization_id: string
-          reply?: string
-          resume_goal?: string
-          status?: string
-          thread_key: string
-          updated_at?: string
-        }
-        Update: {
-          action?: Json
-          actor_id?: string
-          created_at?: string
-          id?: string
-          message?: string
-          organization_id?: string
-          reply?: string
-          resume_goal?: string
-          status?: string
-          thread_key?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organizer_chat_actions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       platform_agents: {
         Row: {
           created_at: string
@@ -1460,20 +1165,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      claim_agent_task: {
-        Args: { actor: string; target_plan: string; workspace: string }
-        Returns: Json
-      }
       claim_agent_work: { Args: { agent_token: string }; Returns: Json }
-      claim_browser_agent_run: {
-        Args: {
-          actor: string
-          lease_seconds?: number
-          target_run: string
-          workspace: string
-        }
-        Returns: Json
-      }
       claim_browser_operation: {
         Args: {
           actor: string
@@ -1507,24 +1199,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      connector_browser_profile: {
-        Args: { target: string; workspace: string }
-        Returns: Json
-      }
-      control_agent_plan: {
-        Args: { action: string; target_plan: string }
-        Returns: undefined
-      }
-      create_agent_plan: {
-        Args: {
-          actor: string
-          plan: Json
-          source?: string
-          thread?: string
-          workspace: string
-        }
-        Returns: string
-      }
       create_vendor_workspace: {
         Args: { workspace_name: string }
         Returns: string
@@ -1537,10 +1211,6 @@ export type Database = {
         }
         Returns: string
       }
-      finish_agent_task: {
-        Args: { lease: string; outcome: Json; target_task: string }
-        Returns: undefined
-      }
       finish_agent_work: {
         Args: {
           agent_token: string
@@ -1548,15 +1218,6 @@ export type Database = {
           succeeded: boolean
           task_id: string
           task_lease: string
-        }
-        Returns: undefined
-      }
-      finish_browser_agent_step: {
-        Args: {
-          events?: Json
-          lease: string
-          outcome: Json
-          target_run: string
         }
         Returns: undefined
       }
@@ -1578,18 +1239,6 @@ export type Database = {
       }
       forget_connector: {
         Args: { target: string; workspace: string }
-        Returns: string
-      }
-      log_chat_action: {
-        Args: {
-          chat_action: Json
-          chat_message: string
-          goal?: string
-          outcome: string
-          outcome_reply: string
-          thread: string
-          workspace: string
-        }
         Returns: string
       }
       propose_event_payment: {
@@ -1650,7 +1299,6 @@ export type Database = {
         Args: { resolved: boolean; target_need: string }
         Returns: undefined
       }
-      retry_agent_task: { Args: { target_task: string }; Returns: undefined }
       review_community_event: {
         Args: {
           decision: string
@@ -1757,32 +1405,11 @@ export type Database = {
         Args: { is_selected: boolean; target_agent: string }
         Returns: undefined
       }
-      start_browser_agent_run: {
-        Args: {
-          actor: string
-          chat_action?: string
-          run_model: string
-          run_objective: string
-          steps?: number
-          target: string
-          task?: string
-          workspace: string
-        }
-        Returns: string
-      }
       store_connector_secret: {
         Args: { sealed: string; target: string; workspace: string }
         Returns: undefined
       }
       take_connector_oauth: { Args: { oauth_state: string }; Returns: Json }
-      update_chat_action: {
-        Args: { outcome: string; outcome_reply: string; target: string }
-        Returns: undefined
-      }
-      update_waiting_agent_task: {
-        Args: { outcome: Json; target_task: string }
-        Returns: undefined
-      }
     }
     Enums: {
       [_ in never]: never

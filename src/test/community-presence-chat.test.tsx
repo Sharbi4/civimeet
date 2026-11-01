@@ -55,3 +55,35 @@ it("does not allow a viewer to start agent work", async () => {
   fireEvent.click(start);
   expect(fetch).not.toHaveBeenCalled();
 });
+it("sends short messages with Enter and shows them in the thread right away", async () => {
+  let release: (value: Response) => void = () => {};
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => new Promise<Response>((resolve) => (release = resolve))),
+  );
+  render(<OrganizerChat thread="main" onDraft={vi.fn()} />);
+  await screen.findByText("Start with what your community needs.");
+  const box = screen.getByLabelText("Message your organizer");
+  fireEvent.change(box, { target: { value: "hi" } });
+  // Regression: short messages used to be blocked by a 10-character minimum.
+  expect(screen.getByRole("button", { name: "Send to organizer" })).toBeEnabled();
+  fireEvent.keyDown(box, { key: "Enter" });
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  expect(screen.getByText("hi")).toBeInTheDocument();
+  expect(screen.getByRole("status", { name: "Civi is replying" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Stop waiting" })).toBeInTheDocument();
+  expect(box).toHaveValue("");
+  expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0]![1]?.body))).toMatchObject({
+    question: "hi",
+    skillId: "auto",
+  });
+  release(Response.json({ run: { status: "completed" } }));
+});
+it("keeps Shift+Enter for a new line", async () => {
+  render(<OrganizerChat thread="main" onDraft={vi.fn()} />);
+  await screen.findByText("Start with what your community needs.");
+  const box = screen.getByLabelText("Message your organizer");
+  fireEvent.change(box, { target: { value: "hello" } });
+  fireEvent.keyDown(box, { key: "Enter", shiftKey: true });
+  expect(fetch).not.toHaveBeenCalled();
+});

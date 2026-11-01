@@ -417,6 +417,54 @@ describe("connector commands", () => {
   });
 });
 
+describe("taking over a connected account", () => {
+  it("opens the agent's signed-in browser without changing the connection status", async () => {
+    const page = { navigate: vi.fn(async () => {}) };
+    const {
+      deps: d,
+      finished,
+      base,
+    } = deps({
+      claim: vi.fn(async () => ({
+        status: "connected",
+        method: "credentials",
+        connectedAt: new Date().toISOString(),
+        profileId: "55555555-5555-4555-8555-555555555555",
+        providerSession: null,
+        humanActor: null,
+        expiresAt: null,
+        hasSecret: true,
+      })) as never,
+      page: vi.fn(async (_id: string, work: (p: SteelPage) => unknown) =>
+        work(page as unknown as SteelPage),
+      ) as never,
+    });
+    const body = await (
+      await handleConnectorCommand(
+        request({ command: "browser_open", organizationId: org, connector: "facebook" }),
+        d,
+      )
+    ).json();
+    expect(body).toMatchObject({ status: "connected", viewer });
+    expect(base.provider.create).toHaveBeenCalledWith(
+      expect.any(String),
+      true,
+      "55555555-5555-4555-8555-555555555555",
+    );
+    expect(page.navigate).toHaveBeenCalledWith("https://www.facebook.com/");
+    expect(finished.at(-1)).not.toHaveProperty("status");
+    expect(finished.at(-1)).toMatchObject({ humanActor: "admin-1" });
+  });
+  it("refuses to open an account that is not connected", async () => {
+    const { deps: d } = deps();
+    const response = await handleConnectorCommand(
+      request({ command: "browser_open", organizationId: org, connector: "facebook" }),
+      d,
+    );
+    expect(response.status).toBe(409);
+  });
+});
+
 describe("official sign-in return", () => {
   const callback = (query: string) =>
     new Request(`https://civimeet.com/api/connectors/oauth/callback?${query}`);
