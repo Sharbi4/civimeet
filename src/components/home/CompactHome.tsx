@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -21,76 +20,62 @@ import { StewardMiniDemo } from "./HomeInteractive";
 import "./home-premium.css";
 import "./home-compact.css";
 
-// BLS median hourly wage for U.S. meeting, convention and event planners (May 2025).
-// A scenario input is not a claim that CiviMeet has measured these savings.
-const PLANNER_HOURLY_WAGE = 29.41;
-
-export function PlanningTimeScenario() {
-  const [hoursPerEvent, setHoursPerEvent] = useState(5);
-  const [eventsPerMonth, setEventsPerMonth] = useState(2);
-  const hours = hoursPerEvent * eventsPerMonth;
-  const value = Math.round(hours * PLANNER_HOURLY_WAGE);
+function CommunityPossibilities() {
   return (
-    <section className="cmc-time cmc-wrap" aria-labelledby="cmc-time-title">
-      <div className="cmc-time-intro">
-        <p className="cmc-eyebrow">Time back for your mission</p>
-        <h2 id="cmc-time-title">What could fewer planning hours mean?</h2>
+    <section className="cmc-moments cmc-wrap" aria-labelledby="cmc-moments-title">
+      <div className="cmc-moments-copy">
+        <p className="cmc-eyebrow">The groundwork for something good</p>
+        <h2 id="cmc-moments-title">Make room for the moments that matter.</h2>
         <p>
-          CiviMeet helps prepare venue research, vendor comparisons, event plans and outreach
-          drafts. Explore the value of time your team <em>might</em> reclaim.
+          A neighbor who feels welcome. A partner who shares your purpose. An idea that finally
+          brings everyone together.
         </p>
-        <Link to="/product" className="cmc-more">
-          See how the organizer helps <ArrowRight size={16} />
+        <p>
+          CiviMeet helps turn the research, planning, and invitation drafts into a starting point
+          your team can build on.
+        </p>
+        <Link to="/demo" className="cmc-more">
+          Picture your next gathering <ArrowRight size={17} />
         </Link>
       </div>
-      <div className="cmc-time-card">
-        <div className="cmc-time-controls">
-          <label htmlFor="planning-hours">
-            Hours reclaimed per event <strong>{hoursPerEvent}</strong>
-          </label>
-          <input
-            id="planning-hours"
-            type="range"
-            min={1}
-            max={12}
-            value={hoursPerEvent}
-            onChange={(event) => setHoursPerEvent(Number(event.target.value))}
-          />
-          <label htmlFor="planning-events">
-            Events each month <strong>{eventsPerMonth}</strong>
-          </label>
-          <input
-            id="planning-events"
-            type="range"
-            min={1}
-            max={8}
-            value={eventsPerMonth}
-            onChange={(event) => setEventsPerMonth(Number(event.target.value))}
-          />
+      <article className="cmc-moment-card" aria-label="Example community event plan">
+        <div className="cmc-moment-label">
+          <CalendarDays size={18} />
+          <span>One idea. A place to begin.</span>
+          <small>Example</small>
         </div>
-        <div className="cmc-time-result" aria-live="polite">
-          <strong>{hours} hours</strong>
-          <span>potential staff time per month</span>
-          <strong>${value.toLocaleString("en-US")}</strong>
-          <span>equivalent labor value at $29.41/hour</span>
+        <h3>“Let’s bring the neighborhood together.”</h3>
+        <p>From a first thought to a plan you can shape.</p>
+        <ol>
+          <li>
+            <span>01</span>
+            <div>
+              <strong>Find your people</strong>
+              <p>Local partners and vendors, with sources.</p>
+            </div>
+          </li>
+          <li>
+            <span>02</span>
+            <div>
+              <strong>Give the idea a home</strong>
+              <p>Venue options and a gathering proposal.</p>
+            </div>
+          </li>
+          <li>
+            <span>03</span>
+            <div>
+              <strong>Make the invitation count</strong>
+              <p>A thoughtful draft, ready for your review.</p>
+            </div>
+          </li>
+        </ol>
+        <div className="cmc-moment-footer">
+          <ShieldCheck size={16} /> Your community. Your voice. Your final say.
         </div>
-        <p className="cmc-time-note">
-          Illustrative scenario, not measured CiviMeet savings or guaranteed cash savings. Assumes
-          the hours you select can be reclaimed. Labor benchmark:{" "}
-          <a
-            href="https://www.bls.gov/ooh/business-and-financial/meeting-convention-and-event-planners.htm"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            U.S. BLS, May 2025 median event-planner pay
-          </a>
-          . Does not deduct subscription or AI usage costs.
-        </p>
-      </div>
+      </article>
     </section>
   );
 }
-
 export function CompactHome() {
   return (
     <SiteLayout>
@@ -191,13 +176,13 @@ export function CompactHome() {
             </div>
           </article>
         </section>
-        <PlanningTimeScenario />
+        <CommunityPossibilities />
         <section className="cmc-answers cmc-wrap" aria-labelledby="home-questions">
           <div>
-            <p className="cmc-eyebrow">A few useful details</p>
+            <p className="cmc-eyebrow">Before your first gathering</p>
             <h2 id="home-questions">
-              Less admin. <br />
-              More community.
+              Big possibilities. <br />
+              Clear answers.
             </h2>
             <Link to="/product" className="cmc-more">
               Explore the full product <ArrowRight size={16} />
