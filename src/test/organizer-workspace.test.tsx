@@ -100,11 +100,15 @@ it("collapses the sidebar to icons and remembers the choice", async () => {
 
 it("shows the agent panel beside the chat with approvals, browser control and stop", async () => {
   await mount();
+  // Below 1280px the panel is a drawer; open it the way a narrow-screen user would.
+  const opener = screen.queryByRole("button", { name: "Agent panel" });
+  if (opener) fireEvent.click(opener);
   const panel = screen.getByRole("complementary", { name: "Main Agent panel" });
   expect(within(panel).getByText("Waiting for you")).toBeInTheDocument();
   expect(within(panel).getAllByRole("button", { name: "Approve" }).length).toBeGreaterThan(0);
   fireEvent.click(screen.getByRole("button", { name: "Facebook Agent" }));
   const facebook = screen.getByRole("complementary", { name: "Facebook Agent panel" });
+  // With nothing waiting for approval, the panel opens on the agent's browser.
   fireEvent.click(within(facebook).getByRole("tab", { name: "Browser" }));
   fireEvent.click(within(facebook).getByRole("button", { name: "Take over" }));
   expect(within(facebook).getByRole("button", { name: "Give back to agent" })).toBeInTheDocument();

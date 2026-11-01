@@ -216,7 +216,8 @@ function PanelView({
   browser,
 }: Props & { state: AgentState; onTogglePause: () => Promise<void>; browser: ReactNode }) {
   const pending = approvals.filter((item) => item.status === "pending");
-  const [tab, setTab] = useState<Tab>(pending.length ? "approvals" : "activity");
+  // Approvals first when something is waiting; otherwise the agent's browser.
+  const [tab, setTab] = useState<Tab>(pending.length ? "approvals" : "browser");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const status =

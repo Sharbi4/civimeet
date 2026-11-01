@@ -174,69 +174,70 @@ export function OrganizerChat({
       {!isPlatformThread(thread) && (
         <OrganizerVoice key={`${organizationId}:${thread}`} thread={thread} />
       )}
-      {thread === "main" && (
-        <section
-          className="rounded-xl border border-blue-100 bg-blue-50/50 p-4"
-          aria-label="Community presence agent"
-        >
-          <h3 className="flex items-center gap-2 font-semibold">
-            <Sprout size={18} /> Your community-building agent
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Use your saved mission, location, and voice to discover relevant communities and prepare
-            genuinely useful posts, tips, and a plan for showing up.
-          </p>
-          <button
-            className="ow-link mt-3"
-            disabled={busy || running || role === "viewer"}
-            onClick={() => {
-              requestKey.current = null;
-              void send(
-                "Build our community presence using our saved organization brief. Find relevant local communities and prepare helpful contributions and a practical plan for the next week. Prioritize usefulness over promotion. Cite sources and clearly identify actions that need a connection or approval.",
-                true,
-              );
-            }}
+      <div className="ow-messages" aria-live="polite">
+        {thread === "main" && (
+          <section
+            className="mb-5 rounded-xl border border-blue-100 bg-blue-50/50 p-4"
+            aria-label="Community presence agent"
           >
-            Build our community presence
-          </button>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Set your community brief in Identity first. This runs research and creates drafts; it
-            does not join groups or publish.
-          </p>
-        </section>
-      )}
-      {thread === "discover" && (
-        <div className="ow-research-options">
-          <label>
-            Local area
-            <input
-              value={location}
-              maxLength={160}
-              onChange={(e) => {
-                setLocation(e.target.value);
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Sprout size={18} /> Your community-building agent
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Use your saved mission, location, and voice to discover relevant communities and
+              prepare genuinely useful posts, tips, and a plan for showing up.
+            </p>
+            <button
+              className="ow-link mt-3"
+              disabled={busy || running || role === "viewer"}
+              onClick={() => {
                 requestKey.current = null;
-              }}
-              placeholder="City or service area"
-            />
-          </label>
-          <label>
-            Research
-            <select
-              value={purpose}
-              onChange={(e) => {
-                setPurpose(e.target.value);
-                requestKey.current = null;
+                void send(
+                  "Build our community presence using our saved organization brief. Find relevant local communities and prepare helpful contributions and a practical plan for the next week. Prioritize usefulness over promotion. Cite sources and clearly identify actions that need a connection or approval.",
+                  true,
+                );
               }}
             >
-              <option value="resources">Organizations & resources</option>
-              <option value="venues">Venues</option>
-              <option value="vendors">Vendors</option>
-              <option value="events">Events</option>
-            </select>
-          </label>
-        </div>
-      )}
-      <div className="ow-messages" aria-live="polite">
+              Build our community presence
+            </button>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Set your community brief in Identity first. This runs research and creates drafts; it
+              does not join groups or publish.
+            </p>
+          </section>
+        )}
+        {thread === "discover" && (
+          <div className="ow-research-options">
+            <label>
+              Local area
+              <input
+                value={location}
+                maxLength={160}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  requestKey.current = null;
+                }}
+                placeholder="City or service area"
+              />
+            </label>
+            <label>
+              Research
+              <select
+                value={purpose}
+                onChange={(e) => {
+                  setPurpose(e.target.value);
+                  requestKey.current = null;
+                }}
+              >
+                <option value="resources">Organizations & resources</option>
+                <option value="venues">Venues</option>
+                <option value="vendors">Vendors</option>
+                <option value="events">Events</option>
+              </select>
+            </label>
+          </div>
+        )}
+
         {!turns.length && (
           <div className="ow-empty">
             <BookOpen size={28} />
@@ -301,7 +302,7 @@ export function OrganizerChat({
         <textarea
           id="organizer-message"
           required
-          minLength={10}
+          minLength={2}
           maxLength={3000}
           value={message}
           disabled={busy || role === "viewer"}

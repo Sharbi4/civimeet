@@ -30,6 +30,16 @@ const responseSchema = z.object({
     .optional(),
 });
 
+/** The agent's model, served through Perplexity's agent API with live web search.
+ * Override with the PERPLEXITY_MODEL server secret (full id, e.g. "openai/gpt-6.1-sol"). */
+export const DEFAULT_RESEARCH_MODEL = "openai/gpt-6-sol";
+export function researchModel(env: Record<string, string | undefined> = process.env) {
+  const configured = env["PERPLEXITY_MODEL"]?.trim();
+  return configured && /^[a-z0-9-]+\/[a-z0-9.-]+$/i.test(configured)
+    ? configured
+    : DEFAULT_RESEARCH_MODEL;
+}
+
 export class ResearchError extends Error {
   constructor(
     public readonly status: number,
@@ -83,6 +93,7 @@ export async function researchCommunity(
         ? AbortSignal.any([options.signal, AbortSignal.timeout(90_000)])
         : AbortSignal.timeout(90_000),
       body: JSON.stringify({
+        model: researchModel(),
         effort: "fast",
         max_output_tokens: options.collectVendors ? 5000 : 2000,
         max_tool_calls: 3,

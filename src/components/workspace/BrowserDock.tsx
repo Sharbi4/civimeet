@@ -48,6 +48,14 @@ export function PlatformBrowser({ agentId }: { agentId: string }) {
     />
   ) : null;
 }
+/** Hide the floating browser dock while a screen shows the agent browser itself. */
+export function useInlineBrowser() {
+  const setInline = useContext(InlineBrowserScope)?.setInline;
+  useEffect(() => {
+    setInline?.(true);
+    return () => setInline?.(false);
+  }, [setInline]);
+}
 export function useBrowserScope(scope: Scope | null) {
   const register = useContext(BrowserScope);
   const { db, organizationId, name, userId, role } = scope ?? {};
@@ -59,7 +67,13 @@ export function useBrowserScope(scope: Scope | null) {
 export function BrowserWorkspaceProvider({ children }: { children: ReactNode }) {
   const [scope, setScope] = useState<Scope | null>(null);
   const [split, setSplit] = useState(false);
-  const [inline, setInline] = useState(false);
+  // Counted, so several inline browsers (or the workspace itself) can each hide the floating dock.
+  const [inlineCount, setInlineCount] = useState(0);
+  const setInline = useCallback(
+    (value: boolean) => setInlineCount((count) => Math.max(0, count + (value ? 1 : -1))),
+    [],
+  );
+  const inline = inlineCount > 0;
   const db = scope?.db;
   const userId = scope?.userId;
   useEffect(() => {

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
 import { OrganizerChat } from "./OrganizerChat";
-import { PlatformBrowser } from "./BrowserDock";
+import { PlatformBrowser, useInlineBrowser } from "./BrowserDock";
 import { LocalDiscoveryPanel } from "./LocalDiscoveryPanel";
 import { OrganizationBrief } from "./OrganizationBrief";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -210,6 +210,8 @@ const demoData: WorkspaceData = {
 
 export function LiveOrganizerWorkspace() {
   const { db, organizationId, role } = useWorkspace();
+  // The agent panel beside the chat replaces the floating browser dock here.
+  useInlineBrowser();
   const [data, setData] = useState(blank);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -523,7 +525,20 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
     })),
   ];
   // The agent panel beside the chat is scoped to whichever agent you're talking to.
-  const [panelOpen, setPanelOpen] = useState(true);
+  // Side by side on wide screens; a slide-over drawer below 1280px so it never covers the chat.
+  const [wide, setWide] = useState(true);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(min-width: 1280px)");
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  const [sideOpen, setSideOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const panelOpen = wide ? sideOpen : drawerOpen;
+  const setPanelOpen = (open: boolean) => (wide ? setSideOpen(open) : setDrawerOpen(open));
   const mentions = (text: string) =>
     platformName ? text.toLowerCase().includes(platformName.toLowerCase()) : true;
   const panelApprovals = data.approvals.filter(
@@ -964,7 +979,7 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
           )}
           {view === "chat" && (
             <div
-              className={`grid min-h-0 ${panelOpen ? "xl:grid-cols-[minmax(0,1fr)_420px]" : ""}`}
+              className={`grid min-h-0 ${wide && panelOpen ? "grid-cols-[minmax(0,1fr)_420px]" : ""}`}
             >
               <div className="relative min-w-0">
                 {!panelOpen && (
@@ -1002,7 +1017,13 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
                 )}
               </div>
               {panelOpen && (
-                <div className="border-l border-[#e4e9ec] xl:h-[calc(100dvh-125px)] xl:min-h-[540px]">
+                <div
+                  className={
+                    wide
+                      ? "h-[calc(100dvh-125px)] min-h-[540px] border-l border-[#e4e9ec]"
+                      : "fixed inset-y-0 right-0 z-50 w-[min(420px,100vw)] border-l border-[#e4e9ec] shadow-[-16px_0_40px_-20px_rgba(15,23,42,.35)]"
+                  }
+                >
                   <AgentPanel
                     key={thread}
                     demo={demo}
@@ -1022,6 +1043,14 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
                     onClose={() => setPanelOpen(false)}
                   />
                 </div>
+              )}
+              {panelOpen && !wide && (
+                <button
+                  type="button"
+                  aria-label="Close agent panel"
+                  onClick={() => setPanelOpen(false)}
+                  className="fixed inset-0 z-40 cursor-default bg-slate-900/20"
+                />
               )}
             </div>
           )}
