@@ -5,6 +5,11 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Your Community Organizer — CiviMeet" },
+      { name: "description", content: "Plan community gatherings with your CiviMeet organizer, scoped research, preparation-only voice and human approvals." },
+      { property: "og:title", content: "Your Community Organizer — CiviMeet" },
+      { property: "og:description", content: "Your organization’s workspace for community planning, research and reviewed drafts." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
     ],
   }),

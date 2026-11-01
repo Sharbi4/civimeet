@@ -34,6 +34,7 @@ import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
 import { Route as ApiAgentResearchRouteImport } from './routes/api.agent.research'
 import { Route as ApiAnalyticsAnalyzeRouteImport } from './routes/api.analytics.analyze'
 import { Route as ApiBrowserCommandRouteImport } from './routes/api.browser.command'
+import { Route as ApiOrganizerVoiceRouteImport } from './routes/api.organizer.voice'
 import { Route as ApiStewardResearchRouteImport } from './routes/api.steward.research'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
@@ -162,6 +163,11 @@ const ApiBrowserCommandRoute = ApiBrowserCommandRouteImport.update({
   path: '/api/browser/command',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOrganizerVoiceRoute = ApiOrganizerVoiceRouteImport.update({
+  id: '/api/organizer/voice',
+  path: '/api/organizer/voice',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStewardResearchRoute = ApiStewardResearchRouteImport.update({
   id: '/api/steward/research',
   path: '/api/steward/research',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/api/agent/research': typeof ApiAgentResearchRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
+  '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/api/agent/research': typeof ApiAgentResearchRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
+  '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/api/agent/research': typeof ApiAgentResearchRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
+  '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -290,6 +299,7 @@ export interface FileRouteTypes {
     | '/api/agent/research'
     | '/api/analytics/analyze'
     | '/api/browser/command'
+    | '/api/organizer/voice'
     | '/api/steward/research'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/api/agent/research'
     | '/api/analytics/analyze'
     | '/api/browser/command'
+    | '/api/organizer/voice'
     | '/api/steward/research'
     | '/lovable/email/transactional/preview'
   id:
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/api/agent/research'
     | '/api/analytics/analyze'
     | '/api/browser/command'
+    | '/api/organizer/voice'
     | '/api/steward/research'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
@@ -378,6 +390,7 @@ export interface RootRouteChildren {
   ApiAgentResearchRoute: typeof ApiAgentResearchRoute
   ApiAnalyticsAnalyzeRoute: typeof ApiAnalyticsAnalyzeRoute
   ApiBrowserCommandRoute: typeof ApiBrowserCommandRoute
+  ApiOrganizerVoiceRoute: typeof ApiOrganizerVoiceRoute
   ApiStewardResearchRoute: typeof ApiStewardResearchRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
@@ -559,6 +572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBrowserCommandRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/organizer/voice': {
+      id: '/api/organizer/voice'
+      path: '/api/organizer/voice'
+      fullPath: '/api/organizer/voice'
+      preLoaderRoute: typeof ApiOrganizerVoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/steward/research': {
       id: '/api/steward/research'
       path: '/api/steward/research'
@@ -602,6 +622,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentResearchRoute: ApiAgentResearchRoute,
   ApiAnalyticsAnalyzeRoute: ApiAnalyticsAnalyzeRoute,
   ApiBrowserCommandRoute: ApiBrowserCommandRoute,
+  ApiOrganizerVoiceRoute: ApiOrganizerVoiceRoute,
   ApiStewardResearchRoute: ApiStewardResearchRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
