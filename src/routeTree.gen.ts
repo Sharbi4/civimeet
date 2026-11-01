@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AgentRouteImport } from './routes/agent'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EventsRouteImport } from './routes/events'
+import { Route as GetStartedRouteImport } from './routes/get-started'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
 import { Route as PlatformAgentsRouteImport } from './routes/platform-agents'
@@ -27,8 +29,10 @@ import { Route as VendorsRouteImport } from './routes/vendors'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
 import { Route as ApiAgentResearchRouteImport } from './routes/api.agent.research'
+import { Route as ApiAnalyticsAnalyzeRouteImport } from './routes/api.analytics.analyze'
 import { Route as ApiBrowserCommandRouteImport } from './routes/api.browser.command'
 import { Route as ApiStewardResearchRouteImport } from './routes/api.steward.research'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,6 +47,11 @@ const AboutRoute = AboutRouteImport.update({
 const AgentRoute = AgentRouteImport.update({
   id: '/agent',
   path: '/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -63,6 +72,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const EventsRoute = EventsRouteImport.update({
   id: '/events',
   path: '/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GetStartedRoute = GetStartedRouteImport.update({
+  id: '/get-started',
+  path: '/get-started',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -120,6 +134,11 @@ const ApiAgentResearchRoute = ApiAgentResearchRouteImport.update({
   path: '/api/agent/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAnalyticsAnalyzeRoute = ApiAnalyticsAnalyzeRouteImport.update({
+  id: '/api/analytics/analyze',
+  path: '/api/analytics/analyze',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBrowserCommandRoute = ApiBrowserCommandRouteImport.update({
   id: '/api/browser/command',
   path: '/api/browser/command',
@@ -130,15 +149,23 @@ const ApiStewardResearchRoute = ApiStewardResearchRouteImport.update({
   path: '/api/steward/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/agent': typeof AgentRoute
+  '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/events': typeof EventsRoute
+  '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
   '/platform-agents': typeof PlatformAgentsRoute
@@ -150,17 +177,21 @@ export interface FileRoutesByFullPath {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/agent': typeof AgentRoute
+  '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/events': typeof EventsRoute
+  '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
   '/platform-agents': typeof PlatformAgentsRoute
@@ -172,18 +203,22 @@ export interface FileRoutesByTo {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/agent': typeof AgentRoute
+  '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/events': typeof EventsRoute
+  '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
   '/platform-agents': typeof PlatformAgentsRoute
@@ -195,8 +230,10 @@ export interface FileRoutesById {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -204,10 +241,12 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/agent'
+    | '/analytics'
     | '/auth'
     | '/contact'
     | '/dashboard'
     | '/events'
+    | '/get-started'
     | '/how-it-works'
     | '/knowledge'
     | '/platform-agents'
@@ -219,17 +258,21 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
+    | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/steward/research'
+    | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
     | '/agent'
+    | '/analytics'
     | '/auth'
     | '/contact'
     | '/dashboard'
     | '/events'
+    | '/get-started'
     | '/how-it-works'
     | '/knowledge'
     | '/platform-agents'
@@ -241,17 +284,21 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions'
     | '/api/agent/research'
+    | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/steward/research'
+    | '/lovable/email/transactional/preview'
   id:
     | '__root__'
     | '/'
     | '/about'
     | '/agent'
+    | '/analytics'
     | '/auth'
     | '/contact'
     | '/dashboard'
     | '/events'
+    | '/get-started'
     | '/how-it-works'
     | '/knowledge'
     | '/platform-agents'
@@ -263,18 +310,22 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
+    | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/steward/research'
+    | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AgentRoute: typeof AgentRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   EventsRoute: typeof EventsRoute
+  GetStartedRoute: typeof GetStartedRoute
   HowItWorksRoute: typeof HowItWorksRoute
   KnowledgeRoute: typeof KnowledgeRoute
   PlatformAgentsRoute: typeof PlatformAgentsRoute
@@ -286,8 +337,10 @@ export interface RootRouteChildren {
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
   ApiAgentResearchRoute: typeof ApiAgentResearchRoute
+  ApiAnalyticsAnalyzeRoute: typeof ApiAnalyticsAnalyzeRoute
   ApiBrowserCommandRoute: typeof ApiBrowserCommandRoute
   ApiStewardResearchRoute: typeof ApiStewardResearchRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -311,6 +364,13 @@ declare module '@tanstack/react-router' {
       path: '/agent'
       fullPath: '/agent'
       preLoaderRoute: typeof AgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -339,6 +399,13 @@ declare module '@tanstack/react-router' {
       path: '/events'
       fullPath: '/events'
       preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/get-started': {
+      id: '/get-started'
+      path: '/get-started'
+      fullPath: '/get-started'
+      preLoaderRoute: typeof GetStartedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works': {
@@ -418,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/analytics/analyze': {
+      id: '/api/analytics/analyze'
+      path: '/api/analytics/analyze'
+      fullPath: '/api/analytics/analyze'
+      preLoaderRoute: typeof ApiAnalyticsAnalyzeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/browser/command': {
       id: '/api/browser/command'
       path: '/api/browser/command'
@@ -432,6 +506,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStewardResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -439,10 +520,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AgentRoute: AgentRoute,
+  AnalyticsRoute: AnalyticsRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   EventsRoute: EventsRoute,
+  GetStartedRoute: GetStartedRoute,
   HowItWorksRoute: HowItWorksRoute,
   KnowledgeRoute: KnowledgeRoute,
   PlatformAgentsRoute: PlatformAgentsRoute,
@@ -454,8 +537,10 @@ const rootRouteChildren: RootRouteChildren = {
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
   ApiAgentResearchRoute: ApiAgentResearchRoute,
+  ApiAnalyticsAnalyzeRoute: ApiAnalyticsAnalyzeRoute,
   ApiBrowserCommandRoute: ApiBrowserCommandRoute,
   ApiStewardResearchRoute: ApiStewardResearchRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

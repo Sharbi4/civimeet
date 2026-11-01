@@ -1,6 +1,6 @@
 # CiviMeet
 
-AI community operations platform: Contribute → Connect → Convene.
+AI community operations platform: Contribute → Connect → Meet Up.
 
 The signed-in `/dashboard` brings community needs, contribution-first plans, exact-revision review, follow-up dates, saved Perplexity research, and organization activity together. See [steward workflow and configuration](docs/steward-dashboard.md) and the [research-informed implementation plan](docs/community-steward-plan.md).
 

@@ -295,7 +295,7 @@ function Dashboard() {
           </div>
         </div>
         <div className="relative mt-7 flex flex-wrap gap-2 text-xs text-blue-100">
-          {["01 / Contribute", "02 / Connect", "03 / Convene", "04 / Follow through"].map(
+          {["01 / Contribute", "02 / Connect", "03 / Meet Up", "04 / Follow through"].map(
             (stage) => (
               <span key={stage} className="rounded-full border border-blue-300/20 px-3 py-2">
                 {stage}
@@ -668,7 +668,7 @@ function Dashboard() {
                       [
                         ["contribution", "1. Contribute — what useful help will you offer?"],
                         ["connection", "2. Connect — what resource or relationship could help?"],
-                        ["gathering", "3. Convene — what interest would justify a gathering?"],
+                        ["gathering", "3. Meet Up — what shared interest could become an in-person gathering?"],
                         ["follow_up", "4. Follow through — what will you check back on?"],
                       ] as const
                     ).map(([key, label]) => (
@@ -716,7 +716,7 @@ function Dashboard() {
                       [
                         ["contribution", "Contribute"],
                         ["connection", "Connect"],
-                        ["gathering", "Convene"],
+                        ["gathering", "Meet Up"],
                         ["follow_up", "Follow through"],
                       ] as const
                     ).map(([key, label]) => (

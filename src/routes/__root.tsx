@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useLocation,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
@@ -14,6 +15,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import sofiaFont from "@/assets/sofia-pro-soft.woff2.asset.json";
 import { BrowserWorkspaceProvider } from "@/components/workspace/BrowserDock";
+import { getGoogleAnalyticsConfig } from "@/lib/google-analytics.functions";
+import { googleTagBootstrap, trackGooglePageView } from "@/lib/google-analytics";
 
 function NotFoundComponent() {
   return (
@@ -76,7 +79,12 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  loader: () => getGoogleAnalyticsConfig(),
+  head: ({ loaderData }) => ({
+    scripts: loaderData?.measurementId ? [
+      { children: googleTagBootstrap(loaderData.measurementId) },
+      { src: `https://www.googletagmanager.com/gtag/js?id=${loaderData.measurementId}`, async: true },
+    ] : [],
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
@@ -124,6 +132,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { measurementId } = Route.useLoaderData();
+  const pathname = useLocation({ select: (location) => location.pathname });
+
+  useEffect(() => {
+    if (measurementId) trackGooglePageView(measurementId, pathname);
+  }, [measurementId, pathname]);
 
   return (
     <QueryClientProvider client={queryClient}>

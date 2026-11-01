@@ -1,7 +1,7 @@
 export const stages = [
   { name: "Contribute", text: "Help organizations become consistently useful members of their communities." },
   { name: "Connect", text: "Support conversations, maintain engagement, and help communities develop stronger relationships." },
-  { name: "Convene", text: "Turn online participation into real-world events through venue research, vendor coordination, registration, and event logistics." },
+  { name: "Meet Up", text: "Plan a real-life gathering, from finding the right space and local vendors to organizing RSVPs and the details that bring people together." },
 ];
 
 export const features = [
