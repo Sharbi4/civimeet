@@ -243,6 +243,7 @@ export type Database = {
           created_at: string
           created_by: string
           event_date: string
+          geographic_area: string
           id: string
           organization_id: string
           outcome: string
@@ -261,6 +262,7 @@ export type Database = {
           created_at?: string
           created_by: string
           event_date: string
+          geographic_area?: string
           id?: string
           organization_id: string
           outcome?: string
@@ -279,6 +281,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           event_date?: string
+          geographic_area?: string
           id?: string
           organization_id?: string
           outcome?: string
@@ -354,6 +357,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          connector: string
+          created_at: string
+          id: string
+          message: string
+          organization_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          connector: string
+          created_at?: string
+          id?: string
+          message?: string
+          organization_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          connector?: string
+          created_at?: string
+          id?: string
+          message?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_events_organization_id_connector_fkey"
+            columns: ["organization_id", "connector"]
+            isOneToOne: false
+            referencedRelation: "organization_connectors"
+            referencedColumns: ["organization_id", "connector"]
           },
         ]
       }
@@ -495,6 +536,56 @@ export type Database = {
             foreignKeyName: "organization_briefs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_connectors: {
+        Row: {
+          account_label: string
+          connected_at: string | null
+          connected_by: string | null
+          connector: string
+          detail: string
+          last_checked_at: string | null
+          method: string
+          organization_id: string
+          settings: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_label?: string
+          connected_at?: string | null
+          connected_by?: string | null
+          connector: string
+          detail?: string
+          last_checked_at?: string | null
+          method?: string
+          organization_id: string
+          settings?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_label?: string
+          connected_at?: string | null
+          connected_by?: string | null
+          connector?: string
+          detail?: string
+          last_checked_at?: string | null
+          method?: string
+          organization_id?: string
+          settings?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_connectors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1063,6 +1154,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      begin_connector_oauth: {
+        Args: {
+          actor: string
+          callback: string
+          oauth_state: string
+          target: string
+          verifier: string
+          workspace: string
+        }
+        Returns: undefined
+      }
       claim_agent_work: { Args: { agent_token: string }; Returns: Json }
       claim_browser_operation: {
         Args: {
@@ -1070,6 +1172,16 @@ export type Database = {
           operation: string
           request_key: string
           target_agent: string
+          workspace: string
+        }
+        Returns: Json
+      }
+      claim_connector_operation: {
+        Args: {
+          actor: string
+          lease_seconds?: number
+          operation: string
+          target: string
           workspace: string
         }
         Returns: Json
@@ -1113,6 +1225,10 @@ export type Database = {
         Args: { request_key: string; result: Json; success: boolean }
         Returns: undefined
       }
+      finish_connector_operation: {
+        Args: { actor: string; result: Json; target: string; workspace: string }
+        Returns: undefined
+      }
       finish_steward_discovery: {
         Args: { failure?: string; research_result: Json; target_run: string }
         Returns: Json
@@ -1120,6 +1236,10 @@ export type Database = {
       finish_steward_research: {
         Args: { failure?: string; research_result?: Json; target_run: string }
         Returns: undefined
+      }
+      forget_connector: {
+        Args: { target: string; workspace: string }
+        Returns: string
       }
       propose_event_payment: {
         Args: {
@@ -1129,6 +1249,10 @@ export type Database = {
           target_event: string
           target_vendor: string
         }
+        Returns: string
+      }
+      read_connector_secret: {
+        Args: { target: string; workspace: string }
         Returns: string
       }
       recall_agent_context: {
@@ -1218,6 +1342,10 @@ export type Database = {
         }
         Returns: string
       }
+      save_connector_settings: {
+        Args: { next_settings: Json; target: string; workspace: string }
+        Returns: Json
+      }
       save_organization_brief: {
         Args: { brief: Json; workspace: string }
         Returns: undefined
@@ -1277,6 +1405,11 @@ export type Database = {
         Args: { is_selected: boolean; target_agent: string }
         Returns: undefined
       }
+      store_connector_secret: {
+        Args: { sealed: string; target: string; workspace: string }
+        Returns: undefined
+      }
+      take_connector_oauth: { Args: { oauth_state: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
