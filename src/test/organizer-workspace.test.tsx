@@ -30,7 +30,7 @@ it("opens all rail views, switches chats, and never calls live services from the
     "People",
     "Library",
     "Browser Sessions",
-    "Connectors",
+    "Connections",
     "Approvals",
     "Activity",
     "Dashboard",

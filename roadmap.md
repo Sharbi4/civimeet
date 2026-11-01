@@ -22,6 +22,8 @@
 - [x] Contribution-first team planning, exact-revision review, approval invalidation after edits, and recorded outcomes
 - [ ] AI-generated plans, steward onboarding/profile, and hosted recurring workflows
 - [x] Vendor directory, sourced discoveries, organization knowledge, private platform-agent memory and isolated work queues
-- [ ] Community management, venue directory, platform connectors and hosted agent workers
+- [x] Connections page: grouped list with brand logos and live status; live sign-in in the agent's Steel browser, encrypted saved logins with per-platform sign-in playbooks and security-check handoff, official OAuth (Google Calendar, Zoom, Facebook Pages, Instagram business, LinkedIn, Eventbrite); comment safety (approve each, daily cap, auto-pause, 14-day autopilot lock)
+- [ ] Register OAuth apps and add their secrets; verify saved-login playbooks against live platform sign-in pages
+- [ ] Community management, venue directory and hosted agent workers
 - [ ] Events wizard, RSVPs, Contacts, Communications, Approvals, Calendar
 - [ ] Analytics, Integrations, Settings, demo environment (labeled sample data)

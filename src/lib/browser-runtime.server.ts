@@ -119,7 +119,7 @@ const defaults = {
     });
     if (error) throw new Error("Browser state could not be saved.");
   },
-  provider: steelProvider,
+  provider: steelProvider as Pick<typeof steelProvider, "create" | "release" | "live">,
   page: withSteelPage,
   origins: browserOrigins,
   handoff: () => process.env["STEEL_HUMAN_HANDOFF_ENABLED"] === "true",

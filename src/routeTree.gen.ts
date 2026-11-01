@@ -28,6 +28,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProductRouteImport } from './routes/product'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VendorsRouteImport } from './routes/vendors'
+import { Route as ApiConnectorsRouteImport } from './routes/api.connectors'
 import { Route as ApiResearchRouteImport } from './routes/api.research'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
@@ -36,6 +37,7 @@ import { Route as ApiAnalyticsAnalyzeRouteImport } from './routes/api.analytics.
 import { Route as ApiBrowserCommandRouteImport } from './routes/api.browser.command'
 import { Route as ApiOrganizerVoiceRouteImport } from './routes/api.organizer.voice'
 import { Route as ApiStewardResearchRouteImport } from './routes/api.steward.research'
+import { Route as ApiConnectorsOauthCallbackRouteImport } from './routes/api.connectors.oauth.callback'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
@@ -133,6 +135,11 @@ const VendorsRoute = VendorsRouteImport.update({
   path: '/vendors',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiConnectorsRoute = ApiConnectorsRouteImport.update({
+  id: '/api/connectors',
+  path: '/api/connectors',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiResearchRoute = ApiResearchRouteImport.update({
   id: '/api/research',
   path: '/api/research',
@@ -173,6 +180,12 @@ const ApiStewardResearchRoute = ApiStewardResearchRouteImport.update({
   path: '/api/steward/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiConnectorsOauthCallbackRoute =
+  ApiConnectorsOauthCallbackRouteImport.update({
+    id: '/oauth/callback',
+    path: '/oauth/callback',
+    getParentRoute: () => ApiConnectorsRoute,
+  } as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
@@ -200,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/connectors': typeof ApiConnectorsRouteWithChildren
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
@@ -208,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
+  '/api/connectors/oauth/callback': typeof ApiConnectorsOauthCallbackRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
@@ -230,6 +245,7 @@ export interface FileRoutesByTo {
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/connectors': typeof ApiConnectorsRouteWithChildren
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
@@ -238,6 +254,7 @@ export interface FileRoutesByTo {
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
+  '/api/connectors/oauth/callback': typeof ApiConnectorsOauthCallbackRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
@@ -261,6 +278,7 @@ export interface FileRoutesById {
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/connectors': typeof ApiConnectorsRouteWithChildren
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
@@ -269,6 +287,7 @@ export interface FileRoutesById {
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
+  '/api/connectors/oauth/callback': typeof ApiConnectorsOauthCallbackRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
@@ -293,6 +312,7 @@ export interface FileRouteTypes {
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/connectors'
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
@@ -301,6 +321,7 @@ export interface FileRouteTypes {
     | '/api/browser/command'
     | '/api/organizer/voice'
     | '/api/steward/research'
+    | '/api/connectors/oauth/callback'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -323,6 +344,7 @@ export interface FileRouteTypes {
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/connectors'
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions'
@@ -331,6 +353,7 @@ export interface FileRouteTypes {
     | '/api/browser/command'
     | '/api/organizer/voice'
     | '/api/steward/research'
+    | '/api/connectors/oauth/callback'
     | '/lovable/email/transactional/preview'
   id:
     | '__root__'
@@ -353,6 +376,7 @@ export interface FileRouteTypes {
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/connectors'
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
@@ -361,6 +385,7 @@ export interface FileRouteTypes {
     | '/api/browser/command'
     | '/api/organizer/voice'
     | '/api/steward/research'
+    | '/api/connectors/oauth/callback'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
@@ -384,6 +409,7 @@ export interface RootRouteChildren {
   ProductRoute: typeof ProductRoute
   TermsRoute: typeof TermsRoute
   VendorsRoute: typeof VendorsRoute
+  ApiConnectorsRoute: typeof ApiConnectorsRouteWithChildren
   ApiResearchRoute: typeof ApiResearchRoute
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
@@ -530,6 +556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VendorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/connectors': {
+      id: '/api/connectors'
+      path: '/api/connectors'
+      fullPath: '/api/connectors'
+      preLoaderRoute: typeof ApiConnectorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/research': {
       id: '/api/research'
       path: '/api/research'
@@ -586,6 +619,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStewardResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/connectors/oauth/callback': {
+      id: '/api/connectors/oauth/callback'
+      path: '/oauth/callback'
+      fullPath: '/api/connectors/oauth/callback'
+      preLoaderRoute: typeof ApiConnectorsOauthCallbackRouteImport
+      parentRoute: typeof ApiConnectorsRoute
+    }
     '/lovable/email/transactional/preview': {
       id: '/lovable/email/transactional/preview'
       path: '/lovable/email/transactional/preview'
@@ -595,6 +635,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface ApiConnectorsRouteChildren {
+  ApiConnectorsOauthCallbackRoute: typeof ApiConnectorsOauthCallbackRoute
+}
+
+const ApiConnectorsRouteChildren: ApiConnectorsRouteChildren = {
+  ApiConnectorsOauthCallbackRoute: ApiConnectorsOauthCallbackRoute,
+}
+
+const ApiConnectorsRouteWithChildren = ApiConnectorsRoute._addFileChildren(
+  ApiConnectorsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -616,6 +668,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProductRoute: ProductRoute,
   TermsRoute: TermsRoute,
   VendorsRoute: VendorsRoute,
+  ApiConnectorsRoute: ApiConnectorsRouteWithChildren,
   ApiResearchRoute: ApiResearchRoute,
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,

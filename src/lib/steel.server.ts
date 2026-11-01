@@ -99,6 +99,15 @@ export const steelProvider = {
       viewer: interactive ? safeSteelViewer(session.debugUrl) : "",
     };
   },
+  /** Best effort: a disconnected account's saved browser cookies should not outlive it. */
+  async deleteProfile(profileId: string) {
+    try {
+      await steelRequest(`/profiles/${profileId}`, "DELETE");
+    } catch (error) {
+      if (error instanceof SteelRequestError && [404, 405].includes(error.status)) return;
+      throw error;
+    }
+  },
 };
 
 type CdpResult = {
@@ -113,6 +122,7 @@ type CdpResult = {
 export async function withSteelPage<T>(
   sessionId: string,
   work: (page: SteelPage) => Promise<T>,
+  timeoutMs = 25_000,
 ): Promise<T> {
   const socket = new WebSocket(
     `wss://connect.steel.dev?apiKey=${encodeURIComponent(process.env["STEEL_API_KEY"]!)}&sessionId=${encodeURIComponent(sessionId)}`,
@@ -129,7 +139,7 @@ export async function withSteelPage<T>(
   const deadline = setTimeout(() => {
     fail();
     socket.close();
-  }, 25_000);
+  }, timeoutMs);
   socket.addEventListener("message", (event) => {
     try {
       const message = JSON.parse(String(event.data));
@@ -228,6 +238,62 @@ export class SteelPage {
       yDistance: -500,
       speed: 600,
     });
+  }
+  private async evaluate(expression: string): Promise<unknown> {
+    const result = await this.send("Runtime.evaluate", { expression, returnByValue: true });
+    if (result.exceptionDetails) throw new Error("Browser page check failed.");
+    return result.result?.value;
+  }
+  // Selectors are fixed strings from CiviMeet's sign-in playbooks, never user input.
+  // The lookup also searches open shadow roots (Reddit and others render forms there).
+  private find(selectors: string, then: string) {
+    return `(() => { const stack = [document]; while (stack.length) { const root = stack.shift(); const el = root.querySelector(${JSON.stringify(selectors)}); if (el) { ${then} } for (const node of root.querySelectorAll("*")) if (node.shadowRoot) stack.push(node.shadowRoot); } return false; })()`;
+  }
+  async exists(selectors: string) {
+    return (await this.evaluate(this.find(selectors, "return true;"))) === true;
+  }
+  async waitFor(selectors: string, timeoutMs = 8_000) {
+    const end = Date.now() + timeoutMs;
+    while (Date.now() < end) {
+      if (await this.exists(selectors)) return true;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+    return false;
+  }
+  /** Focus a field and type into it. The value travels as keystrokes, never inside a script. */
+  async fill(selectors: string, value: string) {
+    const focused = await this.evaluate(
+      this.find(
+        selectors,
+        "el.focus(); if (typeof el.select === 'function') el.select(); return true;",
+      ),
+    );
+    if (focused !== true) return false;
+    await this.send("Input.insertText", { text: value });
+    return true;
+  }
+  async click(selectors: string) {
+    return (await this.evaluate(this.find(selectors, "el.click(); return true;"))) === true;
+  }
+  async pressEnter() {
+    const key = {
+      key: "Enter",
+      code: "Enter",
+      windowsVirtualKeyCode: 13,
+      nativeVirtualKeyCode: 13,
+    };
+    await this.send("Input.dispatchKeyEvent", { type: "keyDown", text: "\r", ...key });
+    await this.send("Input.dispatchKeyEvent", { type: "keyUp", ...key });
+  }
+  /** Where the page is and whether a password field is still showing. No content is read. */
+  async signInState(
+    challengeSelectors = "",
+  ): Promise<{ url: string; passwordField: boolean; challenge: boolean }> {
+    const url = await this.evaluate("location.href");
+    const passwordField = await this.exists('input[type="password"]');
+    const challenge = challengeSelectors ? await this.exists(challengeSelectors) : false;
+    if (typeof url !== "string") throw new Error("Could not read the browser location.");
+    return { url, passwordField, challenge };
   }
   async screenshot(): Promise<string> {
     const result = await this.send("Page.captureScreenshot", {

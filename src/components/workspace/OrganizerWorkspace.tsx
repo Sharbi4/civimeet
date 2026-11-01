@@ -7,7 +7,7 @@ import {
   CalendarDays,
   Users,
   BookOpen,
-  Plug,
+  Link2,
   CheckCircle,
   Activity,
   Monitor,
@@ -24,6 +24,7 @@ import { Events } from "@/routes/events";
 import { VendorDirectory } from "@/routes/vendors";
 import { OrganizationKnowledge } from "@/routes/knowledge";
 import { PlatformAgents } from "@/routes/platform-agents";
+import { DemoConnectors, LiveConnectors } from "./Connectors";
 import {
   demoApprovals,
   demoReplies,
@@ -53,7 +54,7 @@ const views = [
   ["discover", "Discover", Search],
   ["people", "People", Users],
   ["library", "Library", BookOpen],
-  ["connectors", "Connectors", Plug],
+  ["connectors", "Connections", Link2],
   ["approvals", "Approvals", CheckCircle],
   ["activity", "Activity", Activity],
 ] as const;
@@ -308,6 +309,11 @@ type Props = {
 };
 function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review, save }: Props) {
   const [view, setView] = useState<View>("dashboard");
+  useEffect(() => {
+    // Official sign-ins return to /dashboard?view=connectors.
+    const requested = new URLSearchParams(window.location.search).get("view");
+    if (requested && views.some(([id]) => id === requested)) setView(requested as View);
+  }, []);
   const [thread, setThread] = useState<OrganizerThread>("main");
   const [panel, setPanel] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
@@ -886,15 +892,18 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
             ))}
           {view === "connectors" &&
             (demo ? (
-              <SampleConnectors />
+              <DemoConnectors />
             ) : (
               <>
-                <h2>Connected platforms</h2>
-                <p className="ow-subtitle">
-                  Choosing a channel configures its research and drafts; it does not sign in or
-                  enable publishing. LinkedIn and Google Calendar integrations are planned.
-                </p>
-                <PlatformAgents />
+                <LiveConnectors />
+                <details className="mx-auto mt-10 max-w-[980px] rounded-2xl border border-slate-200 bg-white px-5 py-4">
+                  <summary className="cursor-pointer text-[14px] font-medium text-slate-700">
+                    Agent playbooks and memory per platform
+                  </summary>
+                  <div className="mt-4">
+                    <PlatformAgents />
+                  </div>
+                </details>
               </>
             ))}
           {view === "approvals" && (
@@ -1236,41 +1245,6 @@ function SamplePeople() {
               <b>{t}</b>
               <small>Contact details not supplied · no messages sent</small>
             </span>
-          </article>
-        ))}
-      </div>
-    </>
-  );
-}
-function SampleConnectors() {
-  return (
-    <>
-      <h2>Connectors</h2>
-      <p className="ow-subtitle">
-        Sample setup · no account is connected. Production capabilities are verified per platform.
-      </p>
-      <div className="ow-three">
-        {[
-          "Facebook",
-          "Instagram",
-          "LinkedIn",
-          "Google Calendar",
-          "Eventbrite",
-          "X",
-          "Reddit",
-          "Nextdoor",
-        ].map((p) => (
-          <article key={p} className="ow-card">
-            <Plug size={22} />
-            <h3>{p}</h3>
-            <span>Not connected</span>
-            <details>
-              <summary>Permissions & availability</summary>
-              <p>
-                Research and draft preparation only. Login, background sync, sending, and publishing
-                are not enabled in this demo.
-              </p>
-            </details>
           </article>
         ))}
       </div>
