@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Link } from "@tanstack/react-router";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { getDatabase } from "@/lib/database";
-import { lovable } from "@/integrations/lovable";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,11 +21,9 @@ export function useWorkspace() {
 
 export function WorkspaceGate({
   children,
-  initialSignup = false,
   compact = false,
 }: {
   children: ReactNode;
-  initialSignup?: boolean;
   compact?: boolean;
 }) {
   const [db, setDb] = useState<SupabaseClient | null>(null);
@@ -36,10 +33,8 @@ export function WorkspaceGate({
   const [organizationId, setOrganizationId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [signup, setSignup] = useState(initialSignup);
   const [name, setName] = useState("");
   const [reload, setReload] = useState(0);
 
@@ -114,17 +109,9 @@ export function WorkspaceGate({
     if (!db) return;
     setLoading(true);
     setError("");
-    setNotice("");
     try {
-      const { data, error: failure } = signup
-        ? await db.auth.signUp({
-            email,
-            password,
-            options: { emailRedirectTo: `${window.location.origin}/auth` },
-          })
-        : await db.auth.signInWithPassword({ email, password });
+      const { error: failure } = await db.auth.signInWithPassword({ email, password });
       if (failure) throw failure;
-      if (!data.session) setNotice("Check your email to confirm your account, then sign in.");
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Could not sign in.");
     } finally {
@@ -205,29 +192,7 @@ export function WorkspaceGate({
                 void authenticate();
               }}
             >
-              <h2 className="text-xl font-semibold">
-                {signup ? "Create your account" : "Sign in to your organization"}
-              </h2>
-              <div className="grid gap-2">
-                {(["google", "lovable"] as const).map((provider) => (
-                  <Button
-                    key={provider}
-                    type="button"
-                    variant="outline"
-                    disabled={loading}
-                    onClick={async () => {
-                      setError("");
-                      const result = await lovable.auth.signInWithOAuth(provider, {
-                        redirect_uri: `${window.location.origin}/auth`,
-                      });
-                      if (result.error) setError(result.error.message);
-                    }}
-                  >
-                    Continue with {provider === "google" ? "Google" : "Lovable"}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-center text-xs text-muted-foreground">or use email</p>
+              <h2 className="text-xl font-semibold">Sign in to your organization</h2>
               <div className="space-y-2">
                 <Label htmlFor="workspace-email">Email</Label>
                 <Input
@@ -246,22 +211,14 @@ export function WorkspaceGate({
                   type="password"
                   minLength={8}
                   required
-                  autoComplete={signup ? "new-password" : "current-password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
               <Button disabled={loading} type="submit">
-                {loading ? "Please wait…" : signup ? "Create account" : "Sign in"}
+                {loading ? "Please wait…" : "Sign in"}
               </Button>
-              <Button type="button" variant="link" onClick={() => setSignup(!signup)}>
-                {signup ? "Already have an account?" : "Create an account"}
-              </Button>
-              {notice && (
-                <p role="status" className="text-sm">
-                  {notice}
-                </p>
-              )}
             </form>
           ) : loading ? (
             <p role="status">Loading organization…</p>

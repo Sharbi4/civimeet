@@ -455,7 +455,7 @@ function ProductPage() {
             consistent follow-through. CiviMeet brings that work into one intelligent workspace.
           </p>
           <div className="cm-final-actions">
-            <Link className="cm-button" to="/auth" search={{ mode: "signup" }}>
+            <Link className="cm-button" to="/auth">
               Experience CiviMeet <ArrowRight size={18} />
             </Link>
             <Link className="cm-text-link" to="/dashboard">
