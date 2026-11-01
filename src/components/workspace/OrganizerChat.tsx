@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, BookOpen, CalendarPlus, Monitor, Sprout } from "lucide-react";
 import { requestAgentBrowse } from "./BrowserDock";
 import { PlanCard } from "./AgentPlans";
+import { openAgentPanel, useChatActions, type ChatActionRecord } from "./ChatActions";
+import { parseChatIntent } from "@/lib/chat-intents";
+import { getConnector } from "@/lib/connectors";
 import { missingEventDetails, type EventDraft } from "@/lib/civi";
 import { useWorkspace } from "./WorkspaceGate";
 import {
@@ -170,6 +173,80 @@ function EventDraftCard({
     </div>
   );
 }
+const actionTone: Record<ChatActionRecord["status"], [string, string]> = {
+  started: ["Working on it", "bg-blue-50 text-blue-700"],
+  needs_user: ["Waiting for you", "bg-amber-50 text-amber-800"],
+  succeeded: ["Done", "bg-emerald-50 text-emerald-700"],
+  failed: ["Didn’t work", "bg-red-50 text-red-700"],
+};
+/** An instruction Civi carried out with a tool, with its real outcome and next step. */
+export function ActionTurn({
+  action,
+  busy,
+  onContinue,
+  onRetry,
+}: {
+  action: ChatActionRecord;
+  busy: boolean;
+  onContinue: (text: string) => void;
+  onRetry: () => void;
+}) {
+  const intent = action.action;
+  const platform = "platform" in intent ? intent.platform : undefined;
+  const name = platform && platform !== "all" ? (getConnector(platform)?.name ?? platform) : "";
+  const [label, tone] = actionTone[action.status];
+  const connected =
+    intent.type === "connect_platform" &&
+    action.status === "succeeded" &&
+    /^You're connected/.test(action.reply);
+  const link = "rounded-md px-2 py-1 text-[12px] font-medium text-[#0640d4] hover:bg-[#edf3ff]";
+  return (
+    <article>
+      {intent.source !== "civi" && <div className="ow-user-message">{action.message}</div>}
+      <div className="ow-agent-message">
+        <strong className="flex items-center gap-2">
+          Civi
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}>
+            {label}
+          </span>
+        </strong>
+        {action.status === "started" && !action.reply ? (
+          <Typing />
+        ) : (
+          <p className="whitespace-pre-wrap">{action.reply}</p>
+        )}
+        <div className="mt-1 flex flex-wrap gap-1">
+          {action.status === "needs_user" && intent.type === "connect_platform" && (
+            <button type="button" className={link} onClick={() => openAgentPanel("browser")}>
+              Show the browser
+            </button>
+          )}
+          {connected && (
+            <button
+              type="button"
+              className={link}
+              disabled={busy}
+              onClick={() =>
+                onContinue(
+                  action.resume_goal ||
+                    `Look for local communities related to our mission on ${name}.`,
+                )
+              }
+            >
+              Yes, go ahead
+            </button>
+          )}
+          {action.status === "failed" && intent.type === "connect_platform" && (
+            <button type="button" className={link} disabled={busy} onClick={onRetry}>
+              Try again
+            </button>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export function OrganizerChat({
   thread,
   platformName,
@@ -203,6 +280,28 @@ export function OrganizerChat({
       controller.current?.abort();
     };
   }, []);
+  // Instructions carried out with tools, shown in the thread next to Civi's replies.
+  const actions = useChatActions();
+  const [actionRows, setActionRows] = useState<ChatActionRecord[]>([]);
+  const actionsVersion = actions?.version ?? 0;
+  useEffect(() => {
+    if (!actions || thread === "discover") return;
+    let active = true;
+    void db
+      .from("organizer_chat_actions")
+      .select("id,thread_key,message,action,status,reply,resume_goal,created_at")
+      .eq("organization_id", organizationId)
+      .eq("thread_key", thread)
+      .order("created_at", { ascending: false })
+      .limit(30)
+      .then((r: { data: ChatActionRecord[] | null }) => {
+        if (active && r.data) setActionRows([...r.data].reverse());
+      });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, organizationId, thread, actionsVersion, Boolean(actions)]);
   const load = useCallback(async () => {
     let query = db
       .from("steward_research_runs")
@@ -244,6 +343,22 @@ export function OrganizerChat({
   async function send(question = message, options: SendOptions = {}) {
     const text = question.trim();
     if (busy || role === "viewer" || text.length < 2) return;
+    // Instructions a tool can carry out run directly; only conversation and research go to Perplexity.
+    const intent =
+      actions && thread !== "discover" && !options.skillId && !options.presence
+        ? parseChatIntent(text)
+        : null;
+    if (intent && actions) {
+      setMessage("");
+      setBusy(true);
+      setError("");
+      try {
+        await actions.run(intent, text, thread);
+      } finally {
+        if (alive.current) setBusy(false);
+      }
+      return;
+    }
     setBusy(true);
     setError("");
     const key = requestKey.current ?? crypto.randomUUID();
@@ -398,6 +513,29 @@ export function OrganizerChat({
     }
   }
   const latestDraftTurn = [...turns].reverse().find((turn) => turn.result?.eventDraft)?.id;
+  // When Civi asks for a tool in its reply, run it once (the result is recorded as an action).
+  useEffect(() => {
+    if (!actions || role === "viewer") return;
+    const latest = turns.at(-1);
+    const action = latest?.result?.action;
+    if (!latest || !action || Date.now() - Date.parse(latest.created_at) > 5 * 60_000) return;
+    const key = `civimeet.civi-action:${latest.id}`;
+    if (window.localStorage.getItem(key)) return;
+    window.localStorage.setItem(key, "1");
+    void actions.run(action, latest.input.question, thread, "civi");
+  }, [turns, actions, role, thread]);
+  const entries = [
+    ...turns.map((turn) => ({
+      at: turn.created_at,
+      turn,
+      action: null as ChatActionRecord | null,
+    })),
+    ...actionRows.map((action) => ({
+      at: action.created_at,
+      turn: null as OrganizerTurn | null,
+      action,
+    })),
+  ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
   const browse =
     thread === "main" || thread === "discover"
       ? (url: string, title: string) =>
@@ -500,55 +638,70 @@ export function OrganizerChat({
             )}
           </div>
         )}
-        {turns.map((t) => (
-          <article key={t.id}>
-            {t.input.eventId && (
-              <p className="text-xs text-muted-foreground">Event research · {t.input.location}</p>
-            )}
-            <div className="ow-user-message">{t.input.question}</div>
-            <div className="ow-agent-message">
-              <strong>Civi</strong>
-              {t.status === "running" ? (
-                <Typing />
-              ) : t.result ? (
-                <>
-                  <ResearchAnswer result={t.result} onBrowse={browse} />
-                  {t.result.plan && "id" in t.result.plan && <PlanCard planId={t.result.plan.id} />}
-                  {t.result.plan && "error" in t.result.plan && (
-                    <p
-                      role="alert"
-                      className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-900"
-                    >
-                      {t.result.plan.error}
-                    </p>
-                  )}
-                  {t.result.eventDraft && t.id === latestDraftTurn && (
-                    <EventDraftCard
-                      draft={t.result.eventDraft}
-                      created={created[t.id] ?? null}
-                      busy={creating}
-                      canCreate={role !== "viewer" && !busy}
-                      onCreate={() => void createEvent(t.id, t.result!.eventDraft!)}
-                      onOpenEvents={onOpenEvents}
-                    />
-                  )}
-                  {role !== "viewer" && onDraft && t.result.skill?.id !== "conversation" && (
-                    <button
-                      className="ow-link"
-                      onClick={() => {
-                        if (t.result) onDraft(t.result.answer);
-                      }}
-                    >
-                      Prepare a draft for review
-                    </button>
-                  )}
-                </>
-              ) : (
-                <p role="alert">{t.error ?? "Research did not complete."}</p>
+        {entries.map(({ turn: t, action }) =>
+          action ? (
+            <ActionTurn
+              key={action.id}
+              action={action}
+              busy={busy}
+              onContinue={(text) => {
+                requestKey.current = null;
+                void send(text);
+              }}
+              onRetry={() => actions && void actions.run(action.action, action.message, thread)}
+            />
+          ) : t ? (
+            <article key={t.id}>
+              {t.input.eventId && (
+                <p className="text-xs text-muted-foreground">Event research · {t.input.location}</p>
               )}
-            </div>
-          </article>
-        ))}
+              <div className="ow-user-message">{t.input.question}</div>
+              <div className="ow-agent-message">
+                <strong>Civi</strong>
+                {t.status === "running" ? (
+                  <Typing />
+                ) : t.result ? (
+                  <>
+                    <ResearchAnswer result={t.result} onBrowse={browse} />
+                    {t.result.plan && "id" in t.result.plan && (
+                      <PlanCard planId={t.result.plan.id} />
+                    )}
+                    {t.result.plan && "error" in t.result.plan && (
+                      <p
+                        role="alert"
+                        className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-900"
+                      >
+                        {t.result.plan.error}
+                      </p>
+                    )}
+                    {t.result.eventDraft && t.id === latestDraftTurn && (
+                      <EventDraftCard
+                        draft={t.result.eventDraft}
+                        created={created[t.id] ?? null}
+                        busy={creating}
+                        canCreate={role !== "viewer" && !busy}
+                        onCreate={() => void createEvent(t.id, t.result!.eventDraft!)}
+                        onOpenEvents={onOpenEvents}
+                      />
+                    )}
+                    {role !== "viewer" && onDraft && t.result.skill?.id !== "conversation" && (
+                      <button
+                        className="ow-link"
+                        onClick={() => {
+                          if (t.result) onDraft(t.result.answer);
+                        }}
+                      >
+                        Prepare a draft for review
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p role="alert">{t.error ?? "Research did not complete."}</p>
+                )}
+              </div>
+            </article>
+          ) : null,
+        )}
       </div>
       {error && (
         <p role="alert" className="ow-error">

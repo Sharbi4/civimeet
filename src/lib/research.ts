@@ -1,3 +1,4 @@
+import type { ChatIntent } from "./chat-intents";
 import type { EventDraft, ProposedPlan } from "./civi";
 import type { StewardSkillId } from "./steward-skills";
 import type { LocalDiscovery } from "./local-discovery";
@@ -15,6 +16,8 @@ export type ResearchResult = {
   eventDraft?: EventDraft;
   /** A plan Civi proposed in conversation (before the server creates it). */
   proposedPlan?: ProposedPlan;
+  /** A tool Civi asked the app to run (validated; the app reports the real outcome). */
+  action?: ChatIntent;
   /** The plan the server created from this reply. */
   plan?: { id: string; title: string } | { error: string };
   localDiscovery?: LocalDiscovery;

@@ -136,3 +136,16 @@ it("shows a goal unfolding as a plan with honest step states and plan controls",
   fireEvent.click(within(plan).getAllByRole("button", { name: "Review in Approvals" })[0]!);
   expect(screen.getByRole("heading", { level: 1, name: "Approvals" })).toBeInTheDocument();
 });
+
+it("carries out tool instructions in the sample workspace without touching real accounts", async () => {
+  const net = vi.spyOn(globalThis, "fetch");
+  await mount();
+  const box = screen.getByLabelText("Message your organizer");
+  fireEvent.change(box, { target: { value: "Open Facebook and let me log in" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add sample note" }));
+  expect(
+    await screen.findByText(/This is the sample workspace, so no real browser opens here/),
+  ).toBeInTheDocument();
+  expect(net).not.toHaveBeenCalled();
+  net.mockRestore();
+});

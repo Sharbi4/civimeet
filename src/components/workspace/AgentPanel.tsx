@@ -18,6 +18,7 @@ import { useWorkspace } from "./WorkspaceGate";
 import { PlatformBrowser } from "./BrowserDock";
 import { LiveBrowser, connectorRequest } from "./Connectors";
 import { PlanSummary } from "./AgentPlans";
+import { useChatActions } from "./ChatActions";
 import type { ReviewItem } from "@/lib/organizer";
 
 export type PanelActivity = {
@@ -223,9 +224,20 @@ function PanelView({
   const [error, setError] = useState("");
   useEffect(() => {
     const show = () => setTab("browser");
+    const open = (event: Event) => {
+      const next = (event as CustomEvent<{ tab?: Tab }>).detail?.tab;
+      if (next) setTab(next);
+    };
     window.addEventListener("civimeet:browse", show);
-    return () => window.removeEventListener("civimeet:browse", show);
+    window.addEventListener("civimeet:panel", open);
+    return () => {
+      window.removeEventListener("civimeet:browse", show);
+      window.removeEventListener("civimeet:panel", open);
+    };
   }, []);
+  // A sign-in or take-over started from chat shows here, whichever agent you're viewing.
+  const actions = useChatActions();
+  const session = actions?.liveSession ?? null;
   const status =
     state.status === "connected"
       ? { text: "Connected", dot: "bg-emerald-500" }
@@ -349,7 +361,25 @@ function PanelView({
             onEdit={onEdit}
           />
         )}
-        {tab === "browser" && browser}
+        {tab === "browser" &&
+          (session && actions ? (
+            <LiveBrowser
+              name={session.name}
+              viewer={{ url: session.viewer, expiresAt: session.expiresAt }}
+              busy={actions.busy}
+              title={
+                session.mode === "sign_in"
+                  ? `${session.name} sign-in`
+                  : `${session.name} · you’re in control`
+              }
+              onFinish={session.mode === "sign_in" ? () => void actions.finishSignIn() : undefined}
+              cancelLabel={session.mode === "sign_in" ? "Cancel" : "Give back to agent"}
+              onCancel={() => void actions.closeSession()}
+              onExpired={() => void actions.sessionExpired()}
+            />
+          ) : (
+            browser
+          ))}
         {tab === "memory" && <MemoryList items={state.memory} label={label} />}
       </div>
     </aside>

@@ -1,4 +1,5 @@
 import { stewardSkills, type StewardSkillId } from "./steward-skills";
+import { extractChatAction, toolManifest } from "./chat-intents";
 import { localDiscoveryInstructions, parseLocalDiscovery } from "./local-discovery";
 import {
   civiPersona,
@@ -122,6 +123,7 @@ export async function researchCommunity(
             ? [
                 civiPersona,
                 conversationRules,
+                toolManifest,
                 planRules,
                 "Do not disclose secrets, profile private individuals, send messages, make commitments, or claim actions were performed. Only research public information.",
               ].join(" ")
@@ -192,7 +194,8 @@ export async function researchCommunity(
     .join("\n\n")
     .trim();
   if (!answer) throw new ResearchError(502, "Perplexity returned no research answer. Try again.");
-  const planned = conversation ? extractPlan(answer) : null;
+  const acted = conversation ? extractChatAction(answer) : null;
+  const planned = conversation ? extractPlan(acted!.answer) : null;
   const conversed = conversation ? extractEventDraft(planned!.answer) : null;
   if (conversed && !conversed.answer)
     conversed.answer = conversed.eventDraft ? "Got it. Tell me a little more." : answer;
@@ -234,6 +237,7 @@ export async function researchCommunity(
     answer: localDiscovery?.summary ?? conversed?.answer ?? answer,
     ...(conversed?.eventDraft ? { eventDraft: conversed.eventDraft } : {}),
     ...(planned?.plan ? { proposedPlan: planned.plan } : {}),
+    ...(acted?.action ? { action: acted.action } : {}),
     sources,
     model: payload.model,
     researchedAt: new Date().toISOString(),

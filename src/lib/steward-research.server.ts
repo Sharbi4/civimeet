@@ -213,6 +213,34 @@ const defaults: Dependencies = {
     const platform = input.threadKey?.startsWith("platform_") ? input.threadKey.slice(9) : null;
     if (input.threadKey === "main") parts.push("Your role: " + mainAgentRole);
     if (input.threadKey === "main" || input.threadKey?.startsWith("platform_")) {
+      // Which tools are available right now, and what Civi already did in this conversation.
+      const [connections, actions] = await Promise.all([
+        db
+          .from("organization_connectors")
+          .select("connector,status")
+          .eq("organization_id", input.organizationId),
+        db
+          .from("organizer_chat_actions")
+          .select("message,action,status,reply,resume_goal,created_at")
+          .eq("organization_id", input.organizationId)
+          .eq("thread_key", input.threadKey)
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
+      parts.push(
+        "Tool availability: agent browser " +
+          (process.env["STEEL_API_KEY"] ? "available" : "not configured on this deployment") +
+          "; account connections " +
+          JSON.stringify(connections.data ?? []).slice(0, 800) +
+          " (anything not listed is not connected yet; you can still start its sign-in).",
+      );
+      if (actions.data?.length)
+        parts.push(
+          "Actions already carried out in this conversation (real outcomes, newest first): " +
+            JSON.stringify(actions.data).slice(0, 2000),
+        );
+    }
+    if (input.threadKey === "main" || input.threadKey?.startsWith("platform_")) {
       // Real task state, so status questions are answered from what actually happened.
       const plans = await db
         .from("agent_plans")
