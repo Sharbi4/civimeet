@@ -11,6 +11,8 @@
 
 ## Rules
 
+- Organizer voice uses a dedicated authenticated raw HTTP endpoint and request-time ElevenLabs agent isolation checks; it never exposes organization memory, approval actions or outbound tools to hosted agents. Why: conversation credentials grant provider access, not application authorization.
+
 - App-email templates use the managed server-only sender, fixed owner recipients, and no local email queues; /lovable/ handlers authenticate themselves and bypass application redirects. Why: delivery and suppression belong to the managed email service.
 
 - Contact and Get Started share a validated public demo-request server action with private, idempotent database inserts; ordinary workspace members cannot read website leads. Why: public acquisition leads belong to the site owner, not customer organizations.
