@@ -585,6 +585,107 @@ export type Database = {
         }
         Relationships: []
       }
+      organizer_approval_history: {
+        Row: {
+          action: string
+          actor_id: string
+          approval_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          snapshot: Json
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          approval_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          snapshot: Json
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          approval_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizer_approval_history_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "organizer_approvals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizer_approval_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizer_approvals: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          destination: string
+          id: string
+          kind: string
+          organization_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          revision: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          destination: string
+          id?: string
+          kind: string
+          organization_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          destination?: string
+          id?: string
+          kind?: string
+          organization_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizer_approvals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_agents: {
         Row: {
           created_at: string
@@ -1012,6 +1113,10 @@ export type Database = {
         Args: { request_key: string; result: Json; success: boolean }
         Returns: undefined
       }
+      finish_steward_discovery: {
+        Args: { failure?: string; research_result: Json; target_run: string }
+        Returns: Json
+      }
       finish_steward_research: {
         Args: { failure?: string; research_result?: Json; target_run: string }
         Returns: undefined
@@ -1083,6 +1188,10 @@ export type Database = {
         Args: { decision: string; target_payment: string }
         Returns: undefined
       }
+      review_organizer_approval: {
+        Args: { decision: string; expected_revision: number; target: string }
+        Returns: undefined
+      }
       review_steward_plan: {
         Args: {
           decision: string
@@ -1118,6 +1227,15 @@ export type Database = {
           entry_content: string
           entry_source?: string
           entry_title: string
+          workspace: string
+        }
+        Returns: string
+      }
+      save_organizer_approval: {
+        Args: {
+          draft: Json
+          expected_revision?: number
+          target?: string
           workspace: string
         }
         Returns: string
