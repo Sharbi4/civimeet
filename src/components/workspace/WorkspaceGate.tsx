@@ -109,17 +109,9 @@ export function WorkspaceGate({
     if (!db) return;
     setLoading(true);
     setError("");
-    setNotice("");
     try {
-      const { data, error: failure } = signup
-        ? await db.auth.signUp({
-            email,
-            password,
-            options: { emailRedirectTo: `${window.location.origin}/auth` },
-          })
-        : await db.auth.signInWithPassword({ email, password });
+      const { error: failure } = await db.auth.signInWithPassword({ email, password });
       if (failure) throw failure;
-      if (!data.session) setNotice("Check your email to confirm your account, then sign in.");
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Could not sign in.");
     } finally {
