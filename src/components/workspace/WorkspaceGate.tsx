@@ -21,11 +21,9 @@ export function useWorkspace() {
 
 export function WorkspaceGate({
   children,
-  initialSignup = false,
   compact = false,
 }: {
   children: ReactNode;
-  initialSignup?: boolean;
   compact?: boolean;
 }) {
   const [db, setDb] = useState<SupabaseClient | null>(null);
@@ -35,10 +33,8 @@ export function WorkspaceGate({
   const [organizationId, setOrganizationId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [signup, setSignup] = useState(initialSignup);
   const [name, setName] = useState("");
   const [reload, setReload] = useState(0);
 
