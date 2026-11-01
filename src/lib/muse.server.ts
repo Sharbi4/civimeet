@@ -83,6 +83,11 @@ function errorFor(status: number, body: { error?: { code?: string | null; messag
     return new ComputerToolUnsupported(
       "This Muse model doesn't accept computer use on this account.",
     );
+  if (status === 400 && /safety check must be acknowledged/i.test(body.error?.message ?? ""))
+    return new MuseError(
+      400,
+      "Meta won't continue until a person decides on the flagged step. Start the task again.",
+    );
   if (status === 401)
     return new MuseError(
       401,

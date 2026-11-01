@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-start/server-only", () => ({}));
-import { allowedUrl, checkAction, isSignInPage } from "@/lib/browser-agent-policy";
+import { allowedUrl, checkAction, isSignInPage, safetyCheckText } from "@/lib/browser-agent-policy";
 import { handleAgentBrowser, type AgentBrowserDeps } from "@/lib/browser-agent.server";
 import { museTurn, type MuseRequest } from "@/lib/muse.server";
 import type { SteelPage } from "@/lib/steel.server";
@@ -224,6 +224,30 @@ describe("Muse client", () => {
         fetcher: reply({ error: { code: "invalid_api_key" } }, 401) as never,
       }),
     ).rejects.toThrow("Meta rejected the API key");
+  });
+  it("explains Meta's refusal to continue without a safety decision", async () => {
+    await expect(
+      museTurn(start, {
+        env,
+        fetcher: reply(
+          {
+            error: {
+              type: "invalid_request_error",
+              code: null,
+              message: "Every pending computer safety check must be acknowledged exactly once",
+            },
+          },
+          400,
+        ) as never,
+      }),
+    ).rejects.toThrow("until a person decides");
+  });
+  it("puts Meta's safety codes in plain words", () => {
+    expect(safetyCheckText({ code: "computer_action_requires_confirmation", message: null })).toBe(
+      "Meta asks a person to confirm this action before it runs.",
+    );
+    expect(safetyCheckText({ code: "some_new_code", message: null })).toContain("some new code");
+    expect(safetyCheckText({ code: null, message: "Check this" })).toBe("Check this");
   });
   it("retries busy responses a bounded number of times", async () => {
     const fetcher = reply({ error: { code: "service_overloaded" } }, 503);
@@ -504,6 +528,166 @@ describe("computer-use executor", () => {
       pendingSafetyChecks: [{ id: "csc_1" }],
       acknowledgedSafetyChecks: null,
     });
+  });
+  it("shows what the agent wants to do, and Civi's verdict, when Meta asks for confirmation", async () => {
+    // Shape seen live from muse-spark-1.3: a benign click flagged computer_action_requires_confirmation.
+    const page = fakePage({
+      url: "https://www.facebook.com/",
+      point: {
+        tag: "a",
+        role: "",
+        type: "",
+        text: "Tucson Community Alliance",
+        href: "https://www.facebook.com/tca",
+        editable: false,
+        composer: false,
+      },
+    });
+    const { deps, finished } = harness({
+      page,
+      turns: [
+        {
+          id: "resp_7",
+          model: "muse-spark-1.3",
+          message: "I'll open the Page.",
+          usage,
+          call: {
+            call_id: "call_7",
+            pending_safety_checks: [
+              { id: "csc_7", code: "computer_action_requires_confirmation", message: null },
+            ],
+            actions: [{ type: "click", x: 640, y: 431, button: "left" }],
+          },
+        },
+      ],
+      run: { model: "muse-spark-1.3" },
+    });
+    const body = await (await handleAgentBrowser(request({ command: "step", runId }), deps)).json();
+    expect(page.clickAt).not.toHaveBeenCalled();
+    expect(body).toMatchObject({
+      status: "waiting_for_human",
+      proposed: [{ summary: "Click at 640, 431 (“Tucson Community Alliance”)", allowed: true }],
+      screenshot: shot,
+    });
+    expect(body.detail).toContain("confirm this action");
+    expect(finished[0]!.events.map((event) => event.kind)).toEqual(["model", "safety_check"]);
+  });
+  it("marks proposed actions that Civi's read-only policy would refuse anyway", async () => {
+    const page = fakePage({
+      url: "https://www.facebook.com/tca",
+      point: {
+        tag: "button",
+        role: "button",
+        type: "",
+        text: "Post",
+        href: "",
+        editable: false,
+        composer: false,
+      },
+    });
+    const { deps } = harness({
+      page,
+      turns: [
+        {
+          id: "resp_8",
+          message: "",
+          usage,
+          call: {
+            call_id: "call_8",
+            pending_safety_checks: [{ id: "csc_8", code: "malicious_instructions", message: null }],
+            actions: [{ type: "click", x: 900, y: 120, button: "left" }],
+          },
+        },
+      ],
+    });
+    const body = await (await handleAgentBrowser(request({ command: "step", runId }), deps)).json();
+    expect(body.proposed[0]).toMatchObject({ allowed: false });
+    expect(page.clickAt).not.toHaveBeenCalled();
+  });
+  it("on Allow, runs the flagged actions through the policy and acknowledges each check exactly once", async () => {
+    const checks = [{ id: "csc_9", code: "computer_action_requires_confirmation", message: null }];
+    const page = fakePage({
+      url: "https://www.facebook.com/",
+      point: {
+        tag: "a",
+        role: "",
+        type: "",
+        text: "Events",
+        href: "https://www.facebook.com/events",
+        editable: false,
+        composer: false,
+      },
+    });
+    const waiting = {
+      run: { status: "waiting_for_human", step_count: 2, model: "muse-spark-1.3" },
+      runtime: {
+        previous_response_id: "resp_9",
+        pending_call: { call_id: "call_9", actions: [{ type: "click", x: 50, y: 60 }] },
+        pending_safety_checks: checks,
+      },
+    };
+    const approved = harness({ page, ...waiting });
+    const body = await (
+      await handleAgentBrowser(request({ command: "approve_safety", runId }), approved.deps)
+    ).json();
+    expect(body.status).toBe("running");
+    expect(page.clickAt).toHaveBeenCalledWith(50, 60, "left", 1);
+    expect(approved.raw.muse).not.toHaveBeenCalled();
+    expect(approved.finished[0]!.outcome).toMatchObject({
+      status: "running",
+      pendingSafetyChecks: null,
+      acknowledgedSafetyChecks: checks,
+      pendingCall: { call_id: "call_9", actions: [] },
+    });
+
+    // The next step sends the acknowledgement with the fresh screenshot, then clears it.
+    const next = harness({
+      page,
+      run: { step_count: 2, model: "muse-spark-1.3" },
+      runtime: {
+        previous_response_id: "resp_9",
+        pending_call: { call_id: "call_9", actions: [] },
+        acknowledged_safety_checks: checks,
+      },
+      turns: [
+        {
+          id: "resp_10",
+          model: "muse-spark-1.3",
+          message: "",
+          usage,
+          call: {
+            call_id: "call_10",
+            pending_safety_checks: [],
+            actions: [{ type: "scroll", x: 600, y: 400, scroll_x: 0, scroll_y: 400 }],
+          },
+        },
+      ],
+    });
+    await handleAgentBrowser(request({ command: "step", runId }), next.deps);
+    expect((next.raw.muse.mock.calls[0] as unknown[])[0]).toMatchObject({
+      kind: "continue",
+      callId: "call_9",
+      acknowledged: checks,
+    });
+    expect(next.finished[0]!.outcome).toMatchObject({ acknowledgedSafetyChecks: null });
+  });
+  it("on Stop, ends the run without acknowledging anything or calling Muse", async () => {
+    const { deps, raw, finished, page } = harness({
+      run: { status: "waiting_for_human" },
+      runtime: {
+        previous_response_id: "resp_11",
+        pending_call: { call_id: "call_11", actions: [{ type: "click", x: 1, y: 1 }] },
+        pending_safety_checks: [{ id: "csc_11", code: null, message: "Review" }],
+      },
+    });
+    const body = await (
+      await handleAgentBrowser(request({ command: "decline_safety", runId }), deps)
+    ).json();
+    expect(body.status).toBe("cancelled");
+    expect(raw.muse).not.toHaveBeenCalled();
+    expect(page.clickAt).not.toHaveBeenCalled();
+    expect(raw.provider.release).toHaveBeenCalled();
+    expect(finished[0]!.outcome).toMatchObject({ status: "cancelled", pendingSafetyChecks: null });
   });
   it("hands sign-in and verification pages to a person without calling Muse", async () => {
     const { deps, raw } = harness({

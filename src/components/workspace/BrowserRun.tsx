@@ -1,4 +1,5 @@
 import { Eye, Hand, Pause, Play, ShieldAlert, Square } from "lucide-react";
+import { safetyCheckText } from "@/lib/browser-agent-policy";
 import { BrandLogo } from "./BrandLogo";
 import type { AgentRun } from "./ChatActions";
 
@@ -73,13 +74,33 @@ export function BrowserRun({
       {run.safetyChecks.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
           <p className="!mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-amber-900">
-            <ShieldAlert size={15} /> Meta flagged the next step for review
+            <ShieldAlert size={15} /> Meta wants a person to confirm the next step
           </p>
           <ul className="!mb-2 list-disc pl-5 text-[12px] text-amber-900">
             {run.safetyChecks.map((check) => (
-              <li key={check.id}>{check.message ?? check.code ?? "Review this action"}</li>
+              <li key={check.id}>{safetyCheckText(check)}</li>
             ))}
           </ul>
+          {run.proposed.length > 0 && (
+            <div className="!mb-2 rounded-lg bg-white/70 px-2.5 py-2">
+              <p className="!mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-amber-800">
+                The agent wants to
+              </p>
+              <ul className="!mb-0 space-y-0.5 text-[12px] text-[#142d40]">
+                {run.proposed.map((action, index) => (
+                  <li key={`${index}-${action.summary}`}>
+                    {action.summary}
+                    {!action.allowed && (
+                      <span className="text-red-700">
+                        {" "}
+                        · Civi will block this{action.reason ? `: ${action.reason}` : ""}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <p className="!mb-2 text-[12px] text-amber-800">
             Allowing it still keeps Civi read-only: actions that would post, send or change anything
             stay blocked.

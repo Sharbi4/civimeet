@@ -7,6 +7,7 @@ import {
   browserConnectorFor,
   checkAction,
   describeAction,
+  safetyCheckText,
   isSignInPage,
   keyDefinition,
   platformHome,
@@ -263,6 +264,36 @@ function addUsage(total: Record<string, number>, turn: MuseTurn) {
   };
 }
 
+/** Check one proposed action against what is actually under the cursor or focused right now. */
+async function assess(page: SteelPage, connector: string, action: ComputerAction) {
+  const needsPoint = action.type === "click" || action.type === "double_click";
+  const point = needsPoint ? await page.inspectPoint(action.x, action.y) : null;
+  const focus =
+    action.type === "type" || action.type === "keypress" ? await page.activeElement() : null;
+  const decision = checkAction(action, { connector, point, focus });
+  const label = describeAction(action) + (point?.text ? ` (“${point.text.slice(0, 60)}”)` : "");
+  return { decision, label };
+}
+
+export type ProposedAction = { summary: string; allowed: boolean; reason?: string };
+/** What the model wants to do, and whether Civi's read-only policy would let it, without doing it. */
+async function previewActions(
+  page: SteelPage,
+  connector: string,
+  actions: ComputerAction[],
+): Promise<ProposedAction[]> {
+  const preview: ProposedAction[] = [];
+  for (const action of actions.slice(0, 6)) {
+    const { decision, label } = await assess(page, connector, action);
+    preview.push(
+      decision.allowed
+        ? { summary: label, allowed: true }
+        : { summary: label, allowed: false, reason: decision.reason },
+    );
+  }
+  return preview;
+}
+
 /** Run a batch of model actions, checking each against the page before it happens. */
 async function runActions(
   page: SteelPage,
@@ -274,12 +305,7 @@ async function runActions(
   let note: string | undefined;
   let human: string | undefined;
   for (const action of actions) {
-    const needsPoint = action.type === "click" || action.type === "double_click";
-    const point = needsPoint ? await page.inspectPoint(action.x, action.y) : null;
-    const focus =
-      action.type === "type" || action.type === "keypress" ? await page.activeElement() : null;
-    const decision = checkAction(action, { connector, point, focus });
-    const label = describeAction(action) + (point?.text ? ` (“${point.text.slice(0, 60)}”)` : "");
+    const { decision, label } = await assess(page, connector, action);
     if (!decision.allowed) {
       events.push({ kind: "blocked", step, summary: `Blocked: ${label}. ${decision.reason}` });
       note = `The app blocked your last action (${label}): ${decision.reason} Continue in read-only mode without it, or finish with your report.`;
@@ -690,7 +716,14 @@ async function step(
       if (!turn.call)
         return { turn, usage, url: before.url, title: before.title, done: true } as const;
       if (turn.call.pending_safety_checks.length)
-        return { turn, usage, url: before.url, safety: turn.call.pending_safety_checks } as const;
+        return {
+          turn,
+          usage,
+          url: before.url,
+          safety: turn.call.pending_safety_checks,
+          proposed: await previewActions(page, run.connector, turn.call.actions),
+          screenshot: shot.dataUrl,
+        } as const;
       const executed = await runActions(page, run.connector, turn.call.actions, stepNumber);
       await new Promise((resolve) => setTimeout(resolve, 600));
       const after = await page.location();
@@ -780,10 +813,17 @@ async function step(
     return { status: "succeeded", result: evidence };
   }
   if ("safety" in result && result.safety) {
+    const proposed = result.proposed ?? [];
     const detail = `Meta flagged the next action for review: ${result.safety
-      .map((check) => check.message ?? check.code ?? check.id)
-      .join("; ")
+      .map(safetyCheckText)
+      .join(" ")
       .slice(0, 600)}`;
+    const plan = proposed.length
+      ? ` Proposed: ${proposed
+          .map((action) => `${action.summary}${action.allowed ? "" : " (Civi would block this)"}`)
+          .join("; ")
+          .slice(0, 300)}`
+      : "";
     await finish(
       {
         ...base,
@@ -798,9 +838,22 @@ async function step(
         currentUrl: safePath(result.url),
         steps: 1,
       },
-      [...events, { kind: "safety_check", step: stepNumber, summary: detail.slice(0, 450) }],
+      [
+        ...events,
+        ...(turn.message
+          ? [{ kind: "model", step: stepNumber, summary: turn.message.slice(0, 400) }]
+          : []),
+        { kind: "safety_check", step: stepNumber, summary: `${detail}${plan}`.slice(0, 450) },
+      ],
     );
-    return { status: "waiting_for_human", detail, safetyChecks: result.safety };
+    return {
+      status: "waiting_for_human",
+      detail,
+      safetyChecks: result.safety,
+      proposed,
+      url: safePath(result.url),
+      ...(result.screenshot ? { screenshot: result.screenshot } : {}),
+    };
   }
   const executed =
     "executed" in result ? result.executed! : { events: [], note: undefined, human: undefined };

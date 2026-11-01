@@ -58,6 +58,8 @@ export type AgentRun = {
   screenshot: string | null;
   viewer: string | null;
   safetyChecks: { id: string; code: string | null; message: string | null }[];
+  /** What the agent wants to do while Meta waits for a person, with Civi's own verdict. */
+  proposed: { summary: string; allowed: boolean; reason?: string }[];
   events: { id: string; kind: string; summary: string; created_at: string }[];
   actionId: string | null;
   result: { summary?: string; url?: string; title?: string } | null;
@@ -308,6 +310,7 @@ export function ChatActionsProvider({
           screenshot: null,
           viewer: null,
           safetyChecks: [],
+          proposed: [],
           events: [],
           actionId,
           result: null,
@@ -369,6 +372,11 @@ export function ChatActionsProvider({
           : status === "running"
             ? []
             : current.safetyChecks,
+        proposed: Array.isArray(payload["proposed"])
+          ? (payload["proposed"] as AgentRun["proposed"])
+          : status === "running"
+            ? []
+            : current.proposed,
         result: (payload["result"] as AgentRun["result"]) ?? current.result,
         events: await loadEvents(current.id),
       };
