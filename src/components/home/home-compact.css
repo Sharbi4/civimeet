@@ -1,0 +1,447 @@
+.cm-compact {
+  background: #fcfcfa;
+  color: #15231e;
+  line-height: 1.55;
+}
+.cmc-wrap {
+  max-width: 1184px;
+  margin: auto;
+  padding-left: 32px;
+  padding-right: 32px;
+}
+.cmc-hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 52px;
+  align-items: center;
+  padding-top: 54px;
+  padding-bottom: 48px;
+}
+.cmc-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #064cff;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+.cmc-copy h1 {
+  font-size: clamp(38px, 4.4vw, 57px);
+  line-height: 1.06;
+  letter-spacing: -0.045em;
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 0 0 22px;
+}
+.cmc-copy h1 span {
+  color: #064cff;
+}
+.cmc-intro {
+  font-size: 17px;
+  line-height: 1.6;
+  color: #526259;
+  max-width: 480px;
+}
+.cmc-audience {
+  font-size: 12px;
+  color: #65746b;
+  margin-top: 16px;
+  max-width: 390px;
+}
+.cmc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 22px;
+  margin: 25px 0 17px;
+}
+.cmc-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 15px;
+  padding: 13px 20px;
+  background: #064cff;
+  color: white;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.cmc-primary:hover {
+  background: #003bcd;
+}
+.cmc-demo-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 10px 0;
+}
+.cmc-decision {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 8px;
+  font-size: 11px;
+  color: #56675b;
+}
+.cmc-decision span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cmc-decision a {
+  color: #52645a;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.cmc-visual {
+  height: 380px;
+  position: relative;
+  border-radius: 12px;
+  background: #e7edde;
+}
+.cmc-visual > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 38% center;
+  border-radius: inherit;
+}
+.cmc-preview {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+  right: 18px;
+  background: #fffffff7;
+  border: 1px solid white;
+  border-radius: 9px;
+  padding: 16px 18px;
+  box-shadow: 0 12px 30px #142d2220;
+  backdrop-filter: blur(8px);
+}
+.cmc-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.cmc-preview-head strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.cmc-preview-head span {
+  margin-left: auto;
+  color: #62716a;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  background: #eff3eb;
+  padding: 3px 6px;
+  border-radius: 3px;
+}
+.cmc-preview p {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  color: #4e6155;
+  margin-top: 7px;
+}
+.cmc-preview p svg {
+  color: #064cff;
+}
+.cmc-outcomes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 35px;
+  border-top: 1px solid #e1e7dd;
+  border-bottom: 1px solid #e1e7dd;
+  padding-top: 27px;
+  padding-bottom: 27px;
+}
+.cmc-outcomes article {
+  display: flex;
+  gap: 13px;
+}
+.cmc-outcomes article > svg {
+  flex-shrink: 0;
+  color: #064cff;
+  margin-top: 2px;
+}
+.cmc-outcomes h2 {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  margin: 0 0 8px;
+}
+.cmc-outcomes p {
+  font-size: 13px;
+  color: #637168;
+  line-height: 1.5;
+}
+.cmc-answers {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 70px;
+  padding-top: 38px;
+  padding-bottom: 33px;
+}
+.cmc-answers h2 {
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+  margin: 0 0 18px;
+}
+.cmc-answers .cmc-eyebrow {
+  margin-bottom: 10px;
+}
+.cmc-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #064cff;
+}
+.cmc-faq details {
+  border-bottom: 1px solid #dfe5dc;
+}
+.cmc-faq summary {
+  padding: 15px 24px 15px 0;
+  font-size: 14px;
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+}
+.cmc-faq summary::-webkit-details-marker {
+  display: none;
+}
+.cmc-faq summary:after {
+  content: "+";
+  position: absolute;
+  right: 2px;
+  top: 12px;
+  font-size: 20px;
+  color: #66776a;
+}
+.cmc-faq details[open] summary:after {
+  content: "−";
+}
+.cmc-faq details p {
+  font-size: 13px;
+  color: #657266;
+  line-height: 1.6;
+  padding-bottom: 14px;
+}
+.cmc-faq details > a {
+  display: inline-block;
+  font-size: 12px;
+  color: #064cff;
+  margin-bottom: 15px;
+}
+.cmc-credit {
+  font-size: 9px;
+  color: #74816f;
+  padding-bottom: 18px;
+}
+.cm-compact :is(a, button, summary):focus-visible {
+  outline: 3px solid #064cff;
+  outline-offset: 4px;
+}
+.cm-quick-demo {
+  width: calc(100vw - 32px) !important;
+  max-width: 1000px !important;
+  max-height: 90dvh;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  padding: 30px !important;
+  border-radius: 12px !important;
+}
+.cm-quick-demo > h2 {
+  font-size: 24px !important;
+  max-width: 85%;
+}
+.cm-quick-demo > p {
+  font-size: 13px;
+}
+.cm-quick-demo .cmh-demo {
+  margin-top: 8px;
+}
+.cm-quick-demo .cmh-panel-body {
+  padding: 25px;
+}
+.cm-quick-demo .cmh-panel-body h3 {
+  font-size: 24px;
+}
+.cm-quick-demo .cmh-demo-more {
+  font-size: 12px;
+}
+.cm-quick-demo .cmh-task {
+  font-size: 12px;
+}
+.cm-quick-demo .cm-text-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #064cff;
+}
+@media (max-width: 900px) {
+  .cmc-hero {
+    gap: 27px;
+    padding-top: 38px;
+  }
+  .cmc-copy h1 {
+    font-size: 44px;
+  }
+  .cmc-visual {
+    height: 390px;
+  }
+  .cmc-preview {
+    padding: 13px;
+    left: 12px;
+    right: 12px;
+  }
+  .cmc-preview-head {
+    flex-wrap: wrap;
+  }
+  .cmc-preview-head strong {
+    font-size: 12px;
+  }
+  .cmc-outcomes {
+    gap: 22px;
+  }
+  .cmc-answers {
+    gap: 35px;
+  }
+}
+@media (max-width: 700px) {
+  .cmc-wrap {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .cmc-hero {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding-top: 32px;
+    padding-bottom: 25px;
+  }
+  .cmc-copy h1 {
+    font-size: 43px;
+    max-width: 550px;
+    margin-bottom: 18px;
+  }
+  .cmc-intro {
+    font-size: 16px;
+  }
+  .cmc-audience {
+    font-size: 11px;
+    margin-top: 12px;
+  }
+  .cmc-actions {
+    gap: 18px;
+    margin: 20px 0 14px;
+  }
+  .cmc-primary {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  .cmc-demo-button {
+    font-size: 12px;
+  }
+  .cmc-decision {
+    font-size: 10px;
+    gap: 6px;
+  }
+  .cmc-visual {
+    height: 245px;
+  }
+  .cmc-visual > img {
+    object-position: center 35%;
+  }
+  .cmc-preview {
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
+    padding: 12px 15px;
+  }
+  .cmc-preview-head {
+    flex-wrap: nowrap;
+    margin-bottom: 7px;
+  }
+  .cmc-preview-head strong {
+    font-size: 12px;
+  }
+  .cmc-preview-head > img {
+    width: 23px;
+    height: 23px;
+  }
+  .cmc-preview p {
+    font-size: 10px;
+    margin-top: 5px;
+  }
+  .cmc-preview p:nth-last-child(2) {
+    display: none;
+  }
+  .cmc-outcomes {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding-top: 22px;
+    padding-bottom: 22px;
+  }
+  .cmc-outcomes h2 {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .cmc-outcomes p {
+    font-size: 12px;
+  }
+  .cmc-answers {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding-top: 26px;
+    padding-bottom: 24px;
+  }
+  .cmc-answers h2 {
+    font-size: 27px;
+    margin-bottom: 10px;
+  }
+  .cmc-answers h2 br {
+    display: none;
+  }
+  .cmc-answers h2 br:after {
+    content: " ";
+  }
+  .cmc-answers > div:first-child {
+    position: relative;
+  }
+  .cmc-faq summary {
+    font-size: 13px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+  .cmc-credit {
+    font-size: 8px;
+    padding-bottom: 15px;
+  }
+  .cm-quick-demo {
+    padding: 22px 16px !important;
+  }
+  .cm-quick-demo > h2 {
+    font-size: 21px !important;
+  }
+  .cm-quick-demo .cmh-panel-body {
+    padding: 18px;
+  }
+  .cm-quick-demo .cmh-panel-body h3 {
+    font-size: 21px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-compact *,
+  .cm-quick-demo * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
