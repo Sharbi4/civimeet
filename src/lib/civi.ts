@@ -142,3 +142,72 @@ export const platformRoles: Record<string, { role: string; goal: string; manner:
 };
 export const mainAgentRole =
   "Community director: understand the organization's goals, plan the work, coordinate the platform agents and keep priorities straight.";
+
+/** Step types the runner can carry out (or honestly report as blocked). */
+export const planStepKinds = [
+  "research",
+  "find_venues",
+  "find_vendors",
+  "draft_content",
+  "create_event",
+  "connect_platform",
+  "platform_action",
+] as const;
+export type PlanStepKind = (typeof planStepKinds)[number];
+
+export const planRules = [
+  "PLANS. When the team gives you a goal that takes several steps (build or grow a community, launch a group or page, find partners or volunteers, plan an event) and you know enough to begin, start the work: say in a sentence or two what you're starting now and what will need their approval, then end the reply with one line exactly like",
+  '<civi_plan>{"title":"Short plan name","goal":"The goal in one sentence","steps":[{"title":"Research single-parent communities in Tucson","kind":"research","agent":"main","detail":"What exactly to find"},{"title":"Draft the group name, description and rules","kind":"draft_content","agent":"facebook","detail":"...","dependsOn":[1],"input":{"destination":"New Facebook group","channel":"post"}}]}</civi_plan>',
+  "Use 2 to 7 steps, in order. Allowed kinds: research (local communities, needs, organizations), find_venues, find_vendors, draft_content (posts, group descriptions, invitations, outreach messages; the draft goes to Approvals and is never published by this step), create_event (only when date, location, attendance and purpose are known; put them in input.event with the same fields as event_details), connect_platform (input.platform when an account must be connected first), platform_action (input.platform and input.action such as create_group, publish_post, comment or message; these always wait for approval). agent is main or the platform (facebook, instagram, linkedin, nextdoor, reddit, x, eventbrite). dependsOn lists earlier step numbers a step needs (publishing depends on its draft and on the connection).",
+  "Do not propose a plan while essential details are missing; ask first. Never claim a step is done. Don't include a plan when the team is only chatting or asking a question.",
+].join(" ");
+
+const planStepSchema = z.object({
+  title: z.string().trim().min(3).max(200),
+  kind: z.enum(planStepKinds),
+  agent: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^(main|[a-z][a-z0-9_]{1,39})$/)
+    .catch("main"),
+  detail: z.string().trim().max(2000).catch(""),
+  dependsOn: z.array(z.number().int().min(1).max(12)).max(8).catch([]),
+  input: z
+    .object({
+      platform: z
+        .string()
+        .regex(/^[a-z][a-z0-9_]{1,39}$/)
+        .optional()
+        .catch(undefined),
+      action: z.string().max(40).optional().catch(undefined),
+      destination: z.string().max(300).optional().catch(undefined),
+      channel: z.enum(["post", "message"]).optional().catch(undefined),
+      event: eventDraftSchema.partial().optional().catch(undefined),
+    })
+    .catch({}),
+});
+export const planSchema = z.object({
+  title: z.string().trim().min(3).max(200),
+  goal: z.string().trim().min(3).max(2000),
+  steps: z.array(planStepSchema).min(1).max(8),
+});
+export type ProposedPlan = z.infer<typeof planSchema>;
+
+/** Pull a proposed plan out of a reply. The line is never shown to people. */
+export function extractPlan(answer: string): { answer: string; plan?: ProposedPlan } {
+  const pattern = /<civi_plan>\s*([\s\S]*?)\s*<\/civi_plan>/gi;
+  const last = [...answer.matchAll(pattern)].at(-1)?.[1];
+  const cleaned = answer.replace(pattern, "").trim();
+  if (!last) return { answer: cleaned };
+  try {
+    const parsed = planSchema.safeParse(JSON.parse(last));
+    return parsed.success ? { answer: cleaned, plan: parsed.data } : { answer: cleaned };
+  } catch {
+    return { answer: cleaned };
+  }
+}
+
+/** Draft-writing instructions for draft_content steps. */
+export const draftRules =
+  "DRAFT MODE. Write exactly the requested piece in the organization's voice, ready for a person to review: no preamble, no notes about yourself, no placeholders like [Name] unless the detail is genuinely unknown (then use a short bracketed note). Use only facts from the provided context or sources. It will be reviewed before anything is published.";

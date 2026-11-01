@@ -120,3 +120,19 @@ it("shows the agent panel beside the chat with approvals, browser control and st
   fireEvent.click(within(facebook).getByRole("button", { name: "Hide agent panel" }));
   expect(screen.getByRole("button", { name: "Agent panel" })).toBeInTheDocument();
 });
+
+it("shows a goal unfolding as a plan with honest step states and plan controls", async () => {
+  await mount();
+  const plan = screen.getByRole("region", { name: "Plan: Tucson single parents community" });
+  expect(within(plan).getByText("2 of 5 steps done")).toBeInTheDocument();
+  expect(
+    within(plan).getByText("Draft ready for your review in Approvals. Not published."),
+  ).toBeInTheDocument();
+  expect(within(plan).getByText("Needs your approval")).toBeInTheDocument();
+  expect(within(plan).getByText("Waiting on step 3")).toBeInTheDocument();
+  fireEvent.click(within(plan).getByRole("button", { name: "Pause plan" }));
+  expect(await within(plan).findByRole("button", { name: "Resume plan" })).toBeInTheDocument();
+  expect(within(plan).getAllByText("Paused").length).toBeGreaterThan(0);
+  fireEvent.click(within(plan).getAllByRole("button", { name: "Review in Approvals" })[0]!);
+  expect(screen.getByRole("heading", { level: 1, name: "Approvals" })).toBeInTheDocument();
+});

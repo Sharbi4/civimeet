@@ -24,6 +24,7 @@ import { OrganizationKnowledge } from "@/routes/knowledge";
 import { PlatformAgents } from "@/routes/platform-agents";
 import { DemoConnectors, LiveConnectors } from "./Connectors";
 import { AgentPanel, type PanelActivity, type PanelMemory } from "./AgentPanel";
+import { DemoPlansProvider, LivePlansProvider, PlanCard } from "./AgentPlans";
 import {
   WorkspaceRail,
   railViews,
@@ -732,677 +733,687 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
       {!data.activity.length && <p>Your organization’s recorded actions will appear here.</p>}
     </div>
   );
+  const PlansProvider = demo ? DemoPlansProvider : LivePlansProvider;
   return (
-    <div className="ow-app">
-      <WorkspaceRail
-        view={view}
-        onNavigate={navigate}
-        expanded={railOpen}
-        onToggle={toggleRail}
-        organization={data.name}
-        area={data.area}
-        pending={pending.length}
-        chats={chats}
-        topics={topics}
-        activeChat={thread}
-        onChat={(id) => {
-          setThread(id as ChatThread);
-          setChatSeed("");
-          navigate("chat");
-        }}
-        recent={recent}
-        onArtifact={openArtifact}
-        onIdentity={() => setPanel("Identity")}
-        footer={{
-          title: demo ? "Sample administrator" : role === "organizer" ? "Editor" : role,
-          detail: demo ? "Demo workspace" : "Organization workspace",
-        }}
-      />
-      <div className="ow-body">
-        <header className="ow-top">
-          <div>
-            <span className="ow-kicker">Contribute. Connect. Meet Up.</span>
-            <h1>{views.find((v) => v[0] === view)?.[1]}</h1>
-          </div>
-          <div className="ow-search">
-            <input
-              type="search"
-              aria-label="Search workspace"
-              placeholder="Search chats, events, people…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setSearch("");
-              }}
-            />
-            {search.trim() && (
-              <div className="ow-search-results">
-                {views
-                  .filter((v) => v[1].toLowerCase().includes(search.toLowerCase()))
-                  .map(([id, label]) => (
-                    <button
-                      key={id}
-                      onClick={() => {
-                        navigate(id);
-                        setSearch("");
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                {data.tasks
-                  .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-                  .map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        openChat(`${t.title}: ${t.follow_up}`);
-                        setSearch("");
-                      }}
-                    >
-                      {t.title}
-                    </button>
-                  ))}
-                {data.events
-                  .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-                  .map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        navigate("events");
-                        setSearch("");
-                      }}
-                    >
-                      {t.title}
-                    </button>
-                  ))}
-                {!views.some((v) => v[1].toLowerCase().includes(search.toLowerCase())) &&
-                  !data.tasks.some((t) => t.title.toLowerCase().includes(search.toLowerCase())) &&
-                  !data.events.some((t) =>
-                    t.title.toLowerCase().includes(search.toLowerCase()),
-                  ) && <p>No matching views or loaded plans.</p>}
-              </div>
-            )}
-          </div>
-          <div className="ow-top-actions">
-            <button onClick={() => navigate("browser")}>Watch browser</button>
-            <button onClick={() => navigate("chat")}>Ask organizer</button>
-          </div>
-          <button
-            className="ow-identity"
-            onClick={() => setPanel(panel ? null : "Identity")}
-            aria-label="Open organizer details"
-          >
-            <img src="/brand/civimeet-mark.svg" alt="" />
-            <span>
-              {data.name}
-              <small>Community organizer</small>
-            </span>
-          </button>
-        </header>
-        {demo && (
-          <div className="ow-demo-banner">
-            <strong>Demo / Sample data</strong>
-            <span>No live accounts, messages, bookings, or payments. Changes reset on reload.</span>
-            <Link to="/dashboard">Open your workspace →</Link>
-          </div>
-        )}
-        {loading && (
-          <p role="status" className="ow-notice">
-            Loading your organization…
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="ow-notice">
-            {error} <button onClick={() => void refresh()}>Refresh</button>
-          </p>
-        )}
-        {notice && (
-          <p role="status" className="ow-notice">
-            {notice}
-          </p>
-        )}
-        <main className={`ow-main ${view === "chat" ? "ow-main-chat" : ""}`}>
-          {view === "dashboard" && (
-            <>
-              <div className="ow-welcome">
-                <div>
-                  <span className="ow-supervision-status">
-                    {demo
-                      ? "Sample organizer · waiting for your review"
-                      : `${pending.length} drafts awaiting review`}
-                  </span>
-                  <h2>
-                    {demo
-                      ? "Your Resource Fair starts with a good plan."
-                      : "Bring people together. Let AI do the groundwork."}
-                  </h2>
-                  <p>
-                    {demo
-                      ? "Neighborhood Resource Fair · Tucson · next month"
-                      : "Your organizer prepares the groundwork. You decide what happens next."}
-                  </p>
-                </div>
-                <button className="ow-primary" onClick={() => navigate("chat")}>
-                  Talk to your organizer <ArrowRight size={16} />
-                </button>
-              </div>
-              <div className="ow-dashboard-grid">
-                <section>
-                  <div className="ow-section-title">
-                    <h2>
-                      Needs your review <span>{pending.length}</span>
-                    </h2>
-                    <button onClick={() => navigate("approvals")}>View all approvals</button>
-                  </div>
-                  {approvalCards(pending.slice(0, 3))}
-                </section>
-                <aside className="ow-card ow-event-focus">
-                  <span>{demo ? "Sample event" : "Event in focus"}</span>
-                  <h3>{data.events[0]?.title ?? "Your next community gathering"}</h3>
-                  <p>{data.events[0]?.event_date ?? "Start with a goal and a proposed date."}</p>
-                  <p>
-                    {data.events[0]?.venue ??
-                      "Your organizer can help compare venues and local partners."}
-                  </p>
-                  {demo && <p>142 RSVPs · 87% plan complete · sample figures</p>}
-                  <button onClick={() => navigate(data.events.length ? "events" : "chat")}>
-                    {data.events.length ? "Open event plan →" : "Plan a gathering →"}
-                  </button>
-                  <hr className="my-5" />
-                  <h3>Human review comes first.</h3>
-                  <p>
-                    Your organizer prepares. You review posts, outreach, bookings, and payments
-                    before any external action.
-                  </p>
-                </aside>
-              </div>
-              <div className="ow-stats">
-                {(demo
-                  ? [
-                      ["142", "RSVPs"],
-                      ["18", "Partners"],
-                      ["87%", "Plan complete"],
-                    ]
-                  : [
-                      [String(data.events.length), "Event plans"],
-                      [String(data.vendorCount), "Saved vendors"],
-                      [
-                        String(data.tasks.filter((t) => t.status === "completed").length),
-                        "Completed plans",
-                      ],
-                    ]
-                ).map(([n, l]) => (
-                  <div key={l}>
-                    <strong>{n}</strong>
-                    <span>
-                      {l}
-                      {demo ? " · sample" : ""}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="ow-two">
-                <section className="ow-card">
-                  <h2>Next steps</h2>
-                  {!demo && (
-                    <Link to="/planning" className="ow-link">
-                      Manage community needs and plans →
-                    </Link>
-                  )}
-                  {tasks}
-                </section>
-                <section className="ow-card">
-                  <h2>Browser sessions</h2>
-                  {data.sessions.length ? (
-                    data.sessions.map((s) => (
+    <PlansProvider
+      navigate={navigate}
+      approvalsKey={data.approvals.map((a) => `${a.id}:${a.status}`).join(",")}
+    >
+      <div className="ow-app">
+        <WorkspaceRail
+          view={view}
+          onNavigate={navigate}
+          expanded={railOpen}
+          onToggle={toggleRail}
+          organization={data.name}
+          area={data.area}
+          pending={pending.length}
+          chats={chats}
+          topics={topics}
+          activeChat={thread}
+          onChat={(id) => {
+            setThread(id as ChatThread);
+            setChatSeed("");
+            navigate("chat");
+          }}
+          recent={recent}
+          onArtifact={openArtifact}
+          onIdentity={() => setPanel("Identity")}
+          footer={{
+            title: demo ? "Sample administrator" : role === "organizer" ? "Editor" : role,
+            detail: demo ? "Demo workspace" : "Organization workspace",
+          }}
+        />
+        <div className="ow-body">
+          <header className="ow-top">
+            <div>
+              <span className="ow-kicker">Contribute. Connect. Meet Up.</span>
+              <h1>{views.find((v) => v[0] === view)?.[1]}</h1>
+            </div>
+            <div className="ow-search">
+              <input
+                type="search"
+                aria-label="Search workspace"
+                placeholder="Search chats, events, people…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setSearch("");
+                }}
+              />
+              {search.trim() && (
+                <div className="ow-search-results">
+                  {views
+                    .filter((v) => v[1].toLowerCase().includes(search.toLowerCase()))
+                    .map(([id, label]) => (
                       <button
-                        className="ow-session-link"
-                        key={s.id}
-                        onClick={() => navigate("browser")}
+                        key={id}
+                        onClick={() => {
+                          navigate(id);
+                          setSearch("");
+                        }}
                       >
-                        <Monitor size={18} />
-                        <span>
-                          <b>{s.task}</b>
-                          <small>
-                            {s.state.replaceAll("_", " ")}
-                            {demo ? " · sample" : ""}
-                          </small>
-                        </span>
-                        <ArrowRight size={16} />
+                        {label}
                       </button>
-                    ))
-                  ) : (
-                    <p>No browser sessions yet. Open a supported website from Browser Sessions.</p>
-                  )}
-                </section>
-              </div>
-              <details className="ow-recent">
-                <summary>Recent activity</summary>
-                {activity}
-              </details>
-            </>
-          )}
-          {view === "chat" && (
-            <div
-              className={`grid min-h-0 ${wide && panelOpen ? "grid-cols-[minmax(0,1fr)_420px]" : ""}`}
-            >
-              <div className="relative min-w-0">
-                {!panelOpen && (
-                  <button
-                    type="button"
-                    onClick={() => setPanelOpen(true)}
-                    className="absolute right-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-lg border border-[#e4e9ec] bg-white px-3 py-1.5 text-[12px] font-medium text-[#142d40] shadow-sm hover:bg-slate-50"
-                  >
-                    <PanelRightOpen size={15} /> Agent panel
-                  </button>
-                )}
-                {demo ? (
-                  <DemoChat
-                    key={thread}
-                    thread={thread}
-                    platformName={platformName}
-                    initialMessage={chatSeed}
-                    onDraft={(c) => edit(undefined, c)}
-                    sent={sampleNotes[thread] ?? []}
-                    onSend={(message) =>
-                      setSampleNotes((notes) => ({
-                        ...notes,
-                        [thread]: [...(notes[thread] ?? []), message],
-                      }))
-                    }
-                  />
-                ) : (
-                  <OrganizerChat
-                    key={`${thread}:${chatSeed}`}
-                    thread={thread}
-                    platformName={platformName}
-                    initialMessage={chatSeed}
-                    onDraft={(c) => edit(undefined, c)}
-                    onOpenEvents={() => navigate("events")}
-                  />
-                )}
-              </div>
-              {panelOpen && (
-                <div
-                  className={
-                    wide
-                      ? "h-[calc(100dvh-125px)] min-h-[540px] border-l border-[#e4e9ec]"
-                      : "fixed inset-y-0 right-0 z-50 w-[min(420px,100vw)] border-l border-[#e4e9ec] shadow-[-16px_0_40px_-20px_rgba(15,23,42,.35)]"
-                  }
-                >
-                  <AgentPanel
-                    key={thread}
-                    demo={demo}
-                    label={chatLabel(thread, platformName)}
-                    connector={
-                      isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
-                    }
-                    platformName={platformName}
-                    approvals={panelApprovals}
-                    activity={panelActivity}
-                    mainMemory={mainMemory}
-                    admin={admin}
-                    webAgentId={data.webAgentId}
-                    onReview={review}
-                    onEdit={(item) => edit(item)}
-                    onOpenConnections={() => navigate("connectors")}
-                    onClose={() => setPanelOpen(false)}
-                  />
+                    ))}
+                  {data.tasks
+                    .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
+                    .map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          openChat(`${t.title}: ${t.follow_up}`);
+                          setSearch("");
+                        }}
+                      >
+                        {t.title}
+                      </button>
+                    ))}
+                  {data.events
+                    .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
+                    .map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          navigate("events");
+                          setSearch("");
+                        }}
+                      >
+                        {t.title}
+                      </button>
+                    ))}
+                  {!views.some((v) => v[1].toLowerCase().includes(search.toLowerCase())) &&
+                    !data.tasks.some((t) => t.title.toLowerCase().includes(search.toLowerCase())) &&
+                    !data.events.some((t) =>
+                      t.title.toLowerCase().includes(search.toLowerCase()),
+                    ) && <p>No matching views or loaded plans.</p>}
                 </div>
-              )}
-              {panelOpen && !wide && (
-                <button
-                  type="button"
-                  aria-label="Close agent panel"
-                  onClick={() => setPanelOpen(false)}
-                  className="fixed inset-0 z-40 cursor-default bg-slate-900/20"
-                />
               )}
             </div>
+            <div className="ow-top-actions">
+              <button onClick={() => navigate("browser")}>Watch browser</button>
+              <button onClick={() => navigate("chat")}>Ask organizer</button>
+            </div>
+            <button
+              className="ow-identity"
+              onClick={() => setPanel(panel ? null : "Identity")}
+              aria-label="Open organizer details"
+            >
+              <img src="/brand/civimeet-mark.svg" alt="" />
+              <span>
+                {data.name}
+                <small>Community organizer</small>
+              </span>
+            </button>
+          </header>
+          {demo && (
+            <div className="ow-demo-banner">
+              <strong>Demo / Sample data</strong>
+              <span>
+                No live accounts, messages, bookings, or payments. Changes reset on reload.
+              </span>
+              <Link to="/dashboard">Open your workspace →</Link>
+            </div>
           )}
-          {view === "search" && (
-            <SearchView items={searchItems}>
-              {demo ? (
-                <SampleDiscover />
-              ) : (
-                <>
-                  <OrganizerChat thread="discover" onDraft={(c) => edit(undefined, c)} />
-                  <details className="ow-recent">
-                    <summary>Save local partners and prepare a plan</summary>
-                    <LocalDiscoveryPanel />
-                  </details>
-                </>
-              )}
-            </SearchView>
+          {loading && (
+            <p role="status" className="ow-notice">
+              Loading your organization…
+            </p>
           )}
-          {view === "feed" && <FeedView entries={feed} demo={demo} onDiscuss={openChat} />}
-          {view === "ideas" && (
-            <IdeasView
-              ideas={data.tasks
-                .filter((t) => t.status !== "completed")
-                .map((t) => ({
-                  id: t.id,
-                  title: t.title,
-                  contribution: t.contribution || t.follow_up,
-                  gathering: t.gathering ?? "",
-                  followUpOn: t.follow_up_on,
-                  status: t.status,
-                }))}
-              demo={demo}
-              onDevelop={openChat}
-              onEvent={() => navigate("events")}
-            />
+          {error && (
+            <p role="alert" className="ow-notice">
+              {error} <button onClick={() => void refresh()}>Refresh</button>
+            </p>
           )}
-          {view === "goals" && (
-            <GoalsView
-              mission={data.mission}
-              goal={data.goal}
-              area={data.area}
-              stats={
-                demo
-                  ? [
-                      ["142", "RSVPs"],
-                      ["18", "Partners"],
-                      ["87%", "Plan complete"],
-                      [String(platformChats.length), "Platforms live"],
-                    ]
-                  : [
-                      [String(data.events.length), "Event plans"],
-                      [String(data.vendorCount), "Saved vendors"],
-                      [String(platformChats.length), "Platforms live"],
-                      [String(pending.length), "Awaiting review"],
-                    ]
-              }
-              needs={data.needs}
-              demo={demo}
-              onEdit={() => setPanel("Identity")}
-              onDiscuss={openChat}
-            />
+          {notice && (
+            <p role="status" className="ow-notice">
+              {notice}
+            </p>
           )}
-          {view === "events" &&
-            (demo ? (
+          <main className={`ow-main ${view === "chat" ? "ow-main-chat" : ""}`}>
+            {view === "dashboard" && (
               <>
-                <h2>Neighborhood Resource Fair</h2>
-                <p>Tucson · next month · sample event</p>
-                <div className="ow-two">
-                  <div className="ow-card">
-                    <h3>Event plan</h3>
-                    <p>Venue: to be confirmed</p>
-                    <p>142 sample RSVPs · 18 sample partners</p>
-                    <SampleChecklist />
-                  </div>
-                  <div className="ow-card">
-                    <h3>Timeline & volunteers</h3>
+                <div className="ow-welcome">
+                  <div>
+                    <span className="ow-supervision-status">
+                      {demo
+                        ? "Sample organizer · waiting for your review"
+                        : `${pending.length} drafts awaiting review`}
+                    </span>
+                    <h2>
+                      {demo
+                        ? "Your Resource Fair starts with a good plan."
+                        : "Bring people together. Let AI do the groundwork."}
+                    </h2>
                     <p>
-                      Confirm venue → invite partners → open RSVPs → brief volunteers → follow up.
+                      {demo
+                        ? "Neighborhood Resource Fair · Tucson · next month"
+                        : "Your organizer prepares the groundwork. You decide what happens next."}
                     </p>
-                    <button
-                      onClick={() => {
-                        setThread("volunteers");
-                        navigate("chat");
-                      }}
-                    >
-                      Plan volunteer roles
-                    </button>
                   </div>
+                  <button className="ow-primary" onClick={() => navigate("chat")}>
+                    Talk to your organizer <ArrowRight size={16} />
+                  </button>
                 </div>
-              </>
-            ) : (
-              <Events />
-            ))}
-          {view === "people" &&
-            (demo ? (
-              <SamplePeople />
-            ) : (
-              <>
-                <h2>People & local partners</h2>
-                <p className="ow-subtitle">
-                  Your saved vendor contacts and research history. Partner and volunteer records are
-                  not yet imported.
-                </p>
-                <VendorDirectory />
-              </>
-            ))}
-          {view === "library" && (
-            <AgentLibrary work={agentWork} demo={demo} onOpen={openArtifact} />
-          )}
-          {view === "library" &&
-            (demo ? (
-              <div className="ow-card">
-                <h2>Organization library · sample</h2>
-                {[
-                  "Community mission & voice",
-                  "Resource Fair planning checklist",
-                  "Venue comparison template",
-                ].map((t) => (
-                  <details key={t}>
-                    <summary>{t}</summary>
+                <div className="ow-dashboard-grid">
+                  <section>
+                    <div className="ow-section-title">
+                      <h2>
+                        Needs your review <span>{pending.length}</span>
+                      </h2>
+                      <button onClick={() => navigate("approvals")}>View all approvals</button>
+                    </div>
+                    {approvalCards(pending.slice(0, 3))}
+                  </section>
+                  <aside className="ow-card ow-event-focus">
+                    <span>{demo ? "Sample event" : "Event in focus"}</span>
+                    <h3>{data.events[0]?.title ?? "Your next community gathering"}</h3>
+                    <p>{data.events[0]?.event_date ?? "Start with a goal and a proposed date."}</p>
                     <p>
-                      {t === "Community mission & voice"
-                        ? demoData.mission
-                        : "Capture source, date checked, accessibility, contact details, and open questions. These are illustrative notes."}
+                      {data.events[0]?.venue ??
+                        "Your organizer can help compare venues and local partners."}
                     </p>
-                  </details>
-                ))}
-              </div>
-            ) : (
-              <OrganizationKnowledge />
-            ))}
-          {view === "browser" &&
-            (demo ? (
-              <DemoBrowser onReview={() => navigate("approvals")} />
-            ) : data.webAgentId ? (
-              <>
-                <h2>Supervised browser</h2>
-                <p className="ow-subtitle">
-                  Supported public websites only. Account login, manual takeover, and publishing
-                  remain unavailable until verified.
-                </p>
-                <PlatformBrowser agentId={data.webAgentId} />
-              </>
-            ) : (
-              <Empty
-                title="Choose your public-web organizer"
-                text="Enable the public-web agent in Connectors to use supervised browser research."
-                action={<button onClick={() => navigate("connectors")}>Open connectors</button>}
-              />
-            ))}
-          {view === "connectors" &&
-            (demo ? (
-              <DemoConnectors />
-            ) : (
-              <>
-                <LiveConnectors />
-                <details className="mx-auto mt-10 max-w-[980px] rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                  <summary className="cursor-pointer text-[14px] font-medium text-slate-700">
-                    Agent playbooks and memory per platform
-                  </summary>
-                  <div className="mt-4">
-                    <PlatformAgents />
-                  </div>
+                    {demo && <p>142 RSVPs · 87% plan complete · sample figures</p>}
+                    <button onClick={() => navigate(data.events.length ? "events" : "chat")}>
+                      {data.events.length ? "Open event plan →" : "Plan a gathering →"}
+                    </button>
+                    <hr className="my-5" />
+                    <h3>Human review comes first.</h3>
+                    <p>
+                      Your organizer prepares. You review posts, outreach, bookings, and payments
+                      before any external action.
+                    </p>
+                  </aside>
+                </div>
+                <div className="ow-stats">
+                  {(demo
+                    ? [
+                        ["142", "RSVPs"],
+                        ["18", "Partners"],
+                        ["87%", "Plan complete"],
+                      ]
+                    : [
+                        [String(data.events.length), "Event plans"],
+                        [String(data.vendorCount), "Saved vendors"],
+                        [
+                          String(data.tasks.filter((t) => t.status === "completed").length),
+                          "Completed plans",
+                        ],
+                      ]
+                  ).map(([n, l]) => (
+                    <div key={l}>
+                      <strong>{n}</strong>
+                      <span>
+                        {l}
+                        {demo ? " · sample" : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="ow-two">
+                  <section className="ow-card">
+                    <h2>Next steps</h2>
+                    {!demo && (
+                      <Link to="/planning" className="ow-link">
+                        Manage community needs and plans →
+                      </Link>
+                    )}
+                    {tasks}
+                  </section>
+                  <section className="ow-card">
+                    <h2>Browser sessions</h2>
+                    {data.sessions.length ? (
+                      data.sessions.map((s) => (
+                        <button
+                          className="ow-session-link"
+                          key={s.id}
+                          onClick={() => navigate("browser")}
+                        >
+                          <Monitor size={18} />
+                          <span>
+                            <b>{s.task}</b>
+                            <small>
+                              {s.state.replaceAll("_", " ")}
+                              {demo ? " · sample" : ""}
+                            </small>
+                          </span>
+                          <ArrowRight size={16} />
+                        </button>
+                      ))
+                    ) : (
+                      <p>
+                        No browser sessions yet. Open a supported website from Browser Sessions.
+                      </p>
+                    )}
+                  </section>
+                </div>
+                <details className="ow-recent">
+                  <summary>Recent activity</summary>
+                  {activity}
                 </details>
               </>
-            ))}
-          {view === "approvals" && (
-            <>
-              <div className="ow-section-title">
-                <div>
-                  <h2>Review before anything leaves your workspace</h2>
-                  <p>
-                    Approval records a decision about this exact draft. Publishing, booking, and
-                    payment execution are not enabled.
-                  </p>
+            )}
+            {view === "chat" && (
+              <div
+                className={`grid min-h-0 ${wide && panelOpen ? "grid-cols-[minmax(0,1fr)_420px]" : ""}`}
+              >
+                <div className="relative min-w-0">
+                  {!panelOpen && (
+                    <button
+                      type="button"
+                      onClick={() => setPanelOpen(true)}
+                      className="absolute right-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-lg border border-[#e4e9ec] bg-white px-3 py-1.5 text-[12px] font-medium text-[#142d40] shadow-sm hover:bg-slate-50"
+                    >
+                      <PanelRightOpen size={15} /> Agent panel
+                    </button>
+                  )}
+                  {demo ? (
+                    <DemoChat
+                      key={thread}
+                      thread={thread}
+                      platformName={platformName}
+                      initialMessage={chatSeed}
+                      onDraft={(c) => edit(undefined, c)}
+                      sent={sampleNotes[thread] ?? []}
+                      onSend={(message) =>
+                        setSampleNotes((notes) => ({
+                          ...notes,
+                          [thread]: [...(notes[thread] ?? []), message],
+                        }))
+                      }
+                    />
+                  ) : (
+                    <OrganizerChat
+                      key={`${thread}:${chatSeed}`}
+                      thread={thread}
+                      platformName={platformName}
+                      initialMessage={chatSeed}
+                      onDraft={(c) => edit(undefined, c)}
+                      onOpenEvents={() => navigate("events")}
+                    />
+                  )}
                 </div>
-                <button disabled={!editor} onClick={() => edit()}>
-                  New draft
-                </button>
+                {panelOpen && (
+                  <div
+                    className={
+                      wide
+                        ? "h-[calc(100dvh-125px)] min-h-[540px] border-l border-[#e4e9ec]"
+                        : "fixed inset-y-0 right-0 z-50 w-[min(420px,100vw)] border-l border-[#e4e9ec] shadow-[-16px_0_40px_-20px_rgba(15,23,42,.35)]"
+                    }
+                  >
+                    <AgentPanel
+                      key={thread}
+                      demo={demo}
+                      label={chatLabel(thread, platformName)}
+                      connector={
+                        isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
+                      }
+                      platformName={platformName}
+                      approvals={panelApprovals}
+                      activity={panelActivity}
+                      mainMemory={mainMemory}
+                      admin={admin}
+                      webAgentId={data.webAgentId}
+                      onReview={review}
+                      onEdit={(item) => edit(item)}
+                      onOpenConnections={() => navigate("connectors")}
+                      onClose={() => setPanelOpen(false)}
+                    />
+                  </div>
+                )}
+                {panelOpen && !wide && (
+                  <button
+                    type="button"
+                    aria-label="Close agent panel"
+                    onClick={() => setPanelOpen(false)}
+                    className="fixed inset-0 z-40 cursor-default bg-slate-900/20"
+                  />
+                )}
               </div>
-              {!admin && (
-                <p className="ow-notice">
-                  Only an organization owner or administrator can approve or reject.
-                </p>
-              )}
-              {approvalCards(pending)}
-              {!demo && (
-                <p className="ow-subtitle">
-                  Event budgets and payment proposals retain their separate reviews in{" "}
-                  <button className="ow-link" onClick={() => navigate("events")}>
-                    Events
+            )}
+            {view === "search" && (
+              <SearchView items={searchItems}>
+                {demo ? (
+                  <SampleDiscover />
+                ) : (
+                  <>
+                    <OrganizerChat thread="discover" onDraft={(c) => edit(undefined, c)} />
+                    <details className="ow-recent">
+                      <summary>Save local partners and prepare a plan</summary>
+                      <LocalDiscoveryPanel />
+                    </details>
+                  </>
+                )}
+              </SearchView>
+            )}
+            {view === "feed" && <FeedView entries={feed} demo={demo} onDiscuss={openChat} />}
+            {view === "ideas" && (
+              <IdeasView
+                ideas={data.tasks
+                  .filter((t) => t.status !== "completed")
+                  .map((t) => ({
+                    id: t.id,
+                    title: t.title,
+                    contribution: t.contribution || t.follow_up,
+                    gathering: t.gathering ?? "",
+                    followUpOn: t.follow_up_on,
+                    status: t.status,
+                  }))}
+                demo={demo}
+                onDevelop={openChat}
+                onEvent={() => navigate("events")}
+              />
+            )}
+            {view === "goals" && (
+              <GoalsView
+                mission={data.mission}
+                goal={data.goal}
+                area={data.area}
+                stats={
+                  demo
+                    ? [
+                        ["142", "RSVPs"],
+                        ["18", "Partners"],
+                        ["87%", "Plan complete"],
+                        [String(platformChats.length), "Platforms live"],
+                      ]
+                    : [
+                        [String(data.events.length), "Event plans"],
+                        [String(data.vendorCount), "Saved vendors"],
+                        [String(platformChats.length), "Platforms live"],
+                        [String(pending.length), "Awaiting review"],
+                      ]
+                }
+                needs={data.needs}
+                demo={demo}
+                onEdit={() => setPanel("Identity")}
+                onDiscuss={openChat}
+              />
+            )}
+            {view === "events" &&
+              (demo ? (
+                <>
+                  <h2>Neighborhood Resource Fair</h2>
+                  <p>Tucson · next month · sample event</p>
+                  <div className="ow-two">
+                    <div className="ow-card">
+                      <h3>Event plan</h3>
+                      <p>Venue: to be confirmed</p>
+                      <p>142 sample RSVPs · 18 sample partners</p>
+                      <SampleChecklist />
+                    </div>
+                    <div className="ow-card">
+                      <h3>Timeline & volunteers</h3>
+                      <p>
+                        Confirm venue → invite partners → open RSVPs → brief volunteers → follow up.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setThread("volunteers");
+                          navigate("chat");
+                        }}
+                      >
+                        Plan volunteer roles
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <Events />
+              ))}
+            {view === "people" &&
+              (demo ? (
+                <SamplePeople />
+              ) : (
+                <>
+                  <h2>People & local partners</h2>
+                  <p className="ow-subtitle">
+                    Your saved vendor contacts and research history. Partner and volunteer records
+                    are not yet imported.
+                  </p>
+                  <VendorDirectory />
+                </>
+              ))}
+            {view === "library" && (
+              <AgentLibrary work={agentWork} demo={demo} onOpen={openArtifact} />
+            )}
+            {view === "library" &&
+              (demo ? (
+                <div className="ow-card">
+                  <h2>Organization library · sample</h2>
+                  {[
+                    "Community mission & voice",
+                    "Resource Fair planning checklist",
+                    "Venue comparison template",
+                  ].map((t) => (
+                    <details key={t}>
+                      <summary>{t}</summary>
+                      <p>
+                        {t === "Community mission & voice"
+                          ? demoData.mission
+                          : "Capture source, date checked, accessibility, contact details, and open questions. These are illustrative notes."}
+                      </p>
+                    </details>
+                  ))}
+                </div>
+              ) : (
+                <OrganizationKnowledge />
+              ))}
+            {view === "browser" &&
+              (demo ? (
+                <DemoBrowser onReview={() => navigate("approvals")} />
+              ) : data.webAgentId ? (
+                <>
+                  <h2>Supervised browser</h2>
+                  <p className="ow-subtitle">
+                    Supported public websites only. Account login, manual takeover, and publishing
+                    remain unavailable until verified.
+                  </p>
+                  <PlatformBrowser agentId={data.webAgentId} />
+                </>
+              ) : (
+                <Empty
+                  title="Choose your public-web organizer"
+                  text="Enable the public-web agent in Connectors to use supervised browser research."
+                  action={<button onClick={() => navigate("connectors")}>Open connectors</button>}
+                />
+              ))}
+            {view === "connectors" &&
+              (demo ? (
+                <DemoConnectors />
+              ) : (
+                <>
+                  <LiveConnectors />
+                  <details className="mx-auto mt-10 max-w-[980px] rounded-2xl border border-slate-200 bg-white px-5 py-4">
+                    <summary className="cursor-pointer text-[14px] font-medium text-slate-700">
+                      Agent playbooks and memory per platform
+                    </summary>
+                    <div className="mt-4">
+                      <PlatformAgents />
+                    </div>
+                  </details>
+                </>
+              ))}
+            {view === "approvals" && (
+              <>
+                <div className="ow-section-title">
+                  <div>
+                    <h2>Review before anything leaves your workspace</h2>
+                    <p>
+                      Approval records a decision about this exact draft. Publishing, booking, and
+                      payment execution are not enabled.
+                    </p>
+                  </div>
+                  <button disabled={!editor} onClick={() => edit()}>
+                    New draft
                   </button>
-                  .
+                </div>
+                {!admin && (
+                  <p className="ow-notice">
+                    Only an organization owner or administrator can approve or reject.
+                  </p>
+                )}
+                {approvalCards(pending)}
+                {!demo && (
+                  <p className="ow-subtitle">
+                    Event budgets and payment proposals retain their separate reviews in{" "}
+                    <button className="ow-link" onClick={() => navigate("events")}>
+                      Events
+                    </button>
+                    .
+                  </p>
+                )}
+                <button className="ow-link" onClick={() => setShowHistory(!showHistory)}>
+                  {showHistory ? "Hide" : "Show"} review history
+                </button>
+                {showHistory && approvalCards(data.approvals.filter((a) => a.status !== "pending"))}
+              </>
+            )}
+            {view === "activity" && (
+              <>
+                <h2>Organization activity</h2>
+                <p className="ow-subtitle">
+                  Recorded actions and approval decisions. Most recent 100 entries.
                 </p>
-              )}
-              <button className="ow-link" onClick={() => setShowHistory(!showHistory)}>
-                {showHistory ? "Hide" : "Show"} review history
+                {activity}
+              </>
+            )}
+          </main>
+        </div>
+        {panel && (
+          <aside className="ow-panel" aria-label="Organizer details">
+            <div className="ow-panel-head">
+              <h2>Your organizer</h2>
+              <button aria-label="Close organizer details" onClick={() => setPanel(null)}>
+                <X size={20} />
               </button>
-              {showHistory && approvalCards(data.approvals.filter((a) => a.status !== "pending"))}
-            </>
-          )}
-          {view === "activity" && (
-            <>
-              <h2>Organization activity</h2>
-              <p className="ow-subtitle">
-                Recorded actions and approval decisions. Most recent 100 entries.
-              </p>
-              {activity}
-            </>
-          )}
-        </main>
-      </div>
-      {panel && (
-        <aside className="ow-panel" aria-label="Organizer details">
-          <div className="ow-panel-head">
-            <h2>Your organizer</h2>
-            <button aria-label="Close organizer details" onClick={() => setPanel(null)}>
-              <X size={20} />
-            </button>
-          </div>
-          <div className="ow-panel-tabs">
-            {["Activity", "Approvals", "Upcoming", "Identity"].map((t) => (
-              <button aria-pressed={panel === t} key={t} onClick={() => setPanel(t)}>
-                {t}
-              </button>
-            ))}
-          </div>
-          {panel === "Activity" ? (
-            activity
-          ) : panel === "Approvals" ? (
-            <>
-              <p>{pending.length} pending drafts</p>
-              <button
-                onClick={() => {
-                  navigate("approvals");
-                  setPanel(null);
+            </div>
+            <div className="ow-panel-tabs">
+              {["Activity", "Approvals", "Upcoming", "Identity"].map((t) => (
+                <button aria-pressed={panel === t} key={t} onClick={() => setPanel(t)}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            {panel === "Activity" ? (
+              activity
+            ) : panel === "Approvals" ? (
+              <>
+                <p>{pending.length} pending drafts</p>
+                <button
+                  onClick={() => {
+                    navigate("approvals");
+                    setPanel(null);
+                  }}
+                >
+                  Review queue
+                </button>
+              </>
+            ) : panel === "Upcoming" ? (
+              tasks
+            ) : (
+              <>
+                <h3>{data.name}</h3>
+                <p>{data.mission}</p>
+                <p>{data.area}</p>
+                <p>
+                  Research & prepare: editors
+                  <br />
+                  Approve: administrators
+                  <br />
+                  Publish / message / spend: unavailable
+                </p>
+                {!demo && (
+                  <OrganizationBrief
+                    next="research"
+                    onNext={() => {
+                      setPanel(null);
+                      navigate("search");
+                    }}
+                  />
+                )}
+              </>
+            )}
+          </aside>
+        )}
+        {draft && (
+          <Dialog
+            open
+            onOpenChange={(open) => {
+              if (!open) setDraft(null);
+            }}
+          >
+            <DialogContent className="ow-edit ow-dialog">
+              <DialogTitle>{editing ? "Edit draft" : "Prepare for review"}</DialogTitle>
+              <DialogDescription>
+                Edits require a fresh approval. No external action is performed.
+              </DialogDescription>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void act(async () => {
+                    await save(draft, editing);
+                    setDraft(null);
+                    navigate("approvals");
+                  }, "Draft saved for review.");
                 }}
               >
-                Review queue
-              </button>
-            </>
-          ) : panel === "Upcoming" ? (
-            tasks
-          ) : (
-            <>
-              <h3>{data.name}</h3>
-              <p>{data.mission}</p>
-              <p>{data.area}</p>
-              <p>
-                Research & prepare: editors
-                <br />
-                Approve: administrators
-                <br />
-                Publish / message / spend: unavailable
-              </p>
-              {!demo && (
-                <OrganizationBrief
-                  next="research"
-                  onNext={() => {
-                    setPanel(null);
-                    navigate("search");
-                  }}
-                />
-              )}
-            </>
-          )}
-        </aside>
-      )}
-      {draft && (
-        <Dialog
-          open
-          onOpenChange={(open) => {
-            if (!open) setDraft(null);
-          }}
-        >
-          <DialogContent className="ow-edit ow-dialog">
-            <DialogTitle>{editing ? "Edit draft" : "Prepare for review"}</DialogTitle>
-            <DialogDescription>
-              Edits require a fresh approval. No external action is performed.
-            </DialogDescription>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void act(async () => {
-                  await save(draft, editing);
-                  setDraft(null);
-                  navigate("approvals");
-                }, "Draft saved for review.");
-              }}
-            >
-              <label>
-                Title
-                <input
-                  required
-                  minLength={3}
-                  maxLength={200}
-                  value={draft.title}
-                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                />
-              </label>
-              <label>
-                Action
-                <select
-                  value={draft.kind}
-                  onChange={(e) => setDraft({ ...draft, kind: e.target.value })}
-                >
-                  {["post", "message", "booking", "payment"].map((k) => (
-                    <option key={k}>{k}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Exact destination or recipient
-                <input
-                  required
-                  minLength={3}
-                  maxLength={500}
-                  value={draft.destination}
-                  onChange={(e) => setDraft({ ...draft, destination: e.target.value })}
-                />
-              </label>
-              <label>
-                Draft to review
-                <textarea
-                  required
-                  minLength={10}
-                  maxLength={10000}
-                  rows={7}
-                  value={draft.content}
-                  onChange={(e) => setDraft({ ...draft, content: e.target.value })}
-                />
-              </label>
-              <div className="ow-buttons">
-                <button type="submit" disabled={busy}>
-                  Save for review
-                </button>
-                <button type="button" onClick={() => setDraft(null)}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+                <label>
+                  Title
+                  <input
+                    required
+                    minLength={3}
+                    maxLength={200}
+                    value={draft.title}
+                    onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Action
+                  <select
+                    value={draft.kind}
+                    onChange={(e) => setDraft({ ...draft, kind: e.target.value })}
+                  >
+                    {["post", "message", "booking", "payment"].map((k) => (
+                      <option key={k}>{k}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Exact destination or recipient
+                  <input
+                    required
+                    minLength={3}
+                    maxLength={500}
+                    value={draft.destination}
+                    onChange={(e) => setDraft({ ...draft, destination: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Draft to review
+                  <textarea
+                    required
+                    minLength={10}
+                    maxLength={10000}
+                    rows={7}
+                    value={draft.content}
+                    onChange={(e) => setDraft({ ...draft, content: e.target.value })}
+                  />
+                </label>
+                <div className="ow-buttons">
+                  <button type="submit" disabled={busy}>
+                    Save for review
+                  </button>
+                  <button type="button" onClick={() => setDraft(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+    </PlansProvider>
   );
 }
 function Empty({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
@@ -1456,6 +1467,23 @@ function DemoChat({
             Prepare a sample draft for review
           </button>
         </article>
+        {thread === "main" && (
+          <>
+            <div className="ow-user-message">
+              We also want to start a community for single parents in Tucson with monthly meetups.
+              Start from scratch.
+            </div>
+            <article className="ow-agent-message">
+              <strong>Civi · sample organizer</strong>
+              <p className="whitespace-pre-wrap">
+                Let’s build it. I’m researching the single-parent groups already active in Tucson
+                and drafting a name, description and rules for a new Facebook group. Creating the
+                group and publishing anything will wait for your approval.
+              </p>
+              <PlanCard planId="sample-plan" />
+            </article>
+          </>
+        )}
         {sent.map((s, i) => (
           <article key={i}>
             <div className="ow-user-message">{s}</div>

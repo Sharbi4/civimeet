@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, BookOpen, CalendarPlus, Monitor, Sprout } from "lucide-react";
 import { requestAgentBrowse } from "./BrowserDock";
+import { PlanCard } from "./AgentPlans";
 import { missingEventDetails, type EventDraft } from "@/lib/civi";
 import { useWorkspace } from "./WorkspaceGate";
 import {
@@ -512,6 +513,15 @@ export function OrganizerChat({
               ) : t.result ? (
                 <>
                   <ResearchAnswer result={t.result} onBrowse={browse} />
+                  {t.result.plan && "id" in t.result.plan && <PlanCard planId={t.result.plan.id} />}
+                  {t.result.plan && "error" in t.result.plan && (
+                    <p
+                      role="alert"
+                      className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-900"
+                    >
+                      {t.result.plan.error}
+                    </p>
+                  )}
                   {t.result.eventDraft && t.id === latestDraftTurn && (
                     <EventDraftCard
                       draft={t.result.eventDraft}

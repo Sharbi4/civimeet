@@ -9,7 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { researchInputSchema, type ResearchInput, type ResearchResult } from "./research";
 import { researchCommunity, ResearchError } from "./perplexity.server";
-import { mainAgentRole, platformRoles } from "./civi";
+import { mainAgentRole, platformRoles, type ProposedPlan } from "./civi";
 
 const inputSchema = researchInputSchema.extend({
   threadKey: z
@@ -48,6 +48,13 @@ type Dependencies = {
   }>;
   reserve: (actor: string, input: Submission) => Promise<{ started: boolean; run: Run }>;
   context: (input: Submission) => Promise<string>;
+  /** Turn a plan Civi proposed in chat into durable tasks for the runner. */
+  createPlan?: (
+    actor: string,
+    input: Submission,
+    runId: string,
+    plan: ProposedPlan,
+  ) => Promise<string>;
   /** Persist what a platform agent learned so its next conversation starts from it. */
   remember?: (input: Submission, runId: string, result: ResearchResult) => Promise<void>;
   research: (
@@ -205,6 +212,21 @@ const defaults: Dependencies = {
     }
     const platform = input.threadKey?.startsWith("platform_") ? input.threadKey.slice(9) : null;
     if (input.threadKey === "main") parts.push("Your role: " + mainAgentRole);
+    if (input.threadKey === "main" || input.threadKey?.startsWith("platform_")) {
+      // Real task state, so status questions are answered from what actually happened.
+      const plans = await db
+        .from("agent_plans")
+        .select("id,title,status,agent_tasks(position,title,agent,status,status_detail)")
+        .eq("organization_id", input.organizationId)
+        .in("status", ["active", "paused"])
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (!plans.error && plans.data?.length)
+        parts.push(
+          "Current plans and real step status (only report these as done if status is done): " +
+            JSON.stringify(plans.data).slice(0, 3000),
+        );
+    }
     if (platform && platformRoles[platform]) {
       const role = platformRoles[platform];
       parts.push(
@@ -342,6 +364,21 @@ const defaults: Dependencies = {
       );
     }
     return parts.join("\n");
+  },
+  async createPlan(actor, input, runId, plan) {
+    const { data, error } = await database().rpc("create_agent_plan", {
+      actor,
+      workspace: input.organizationId,
+      plan,
+      source: runId,
+      thread: input.threadKey?.startsWith("platform_") ? input.threadKey : "main",
+    });
+    if (error || !data)
+      throw new ResearchError(
+        409,
+        error?.message.includes("Five plans") ? error.message : "The plan could not be started.",
+      );
+    return String(data);
   },
   async remember(input, runId, result) {
     const platform = input.threadKey?.startsWith("platform_") ? input.threadKey.slice(9) : null;
@@ -500,6 +537,22 @@ export async function handleStewardResearch(
       : input.collectVendors
         ? await deps.research(researchInput, context, true)
         : await deps.research(researchInput, context);
+    // A goal turns into real, tracked work: the proposed plan becomes durable tasks.
+    if (result.proposedPlan && chatThread && deps.createPlan) {
+      const proposed = result.proposedPlan;
+      delete result.proposedPlan;
+      try {
+        result.plan = {
+          id: await deps.createPlan(actor, input, runId, proposed),
+          title: proposed.title,
+        };
+      } catch (failure) {
+        result.plan = {
+          error:
+            failure instanceof ResearchError ? failure.message : "The plan could not be started.",
+        };
+      }
+    }
     const saved = await deps.finish(runId, result, null);
     // Memory is best effort: a saved answer is never lost because a note failed to save.
     await deps.remember?.(input, runId, result)?.catch(() => {});

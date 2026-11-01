@@ -121,3 +121,74 @@ describe("conversation mode", () => {
     expect(research.mock.calls[0]![3]).toBe("conversation");
   });
 });
+
+describe("goals become plans", () => {
+  const body = (question: string, threadKey = "main") =>
+    new Request("https://civimeet.example/api/research", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer s" },
+      body: JSON.stringify({
+        organizationId: "4afef7ba-f3ae-4a34-a4dc-c255a8c81bd0",
+        requestId: "6b4e9821-f58b-4aa9-b376-2352fb0d4f24",
+        question,
+        purpose: "general",
+        location: "Tucson",
+        threadKey,
+        skillId: "auto",
+      }),
+    });
+  const proposedPlan = {
+    title: "Single parents launch",
+    goal: "Build a Tucson single-parent community",
+    steps: [
+      {
+        title: "Research local groups",
+        kind: "research" as const,
+        agent: "main",
+        detail: "",
+        dependsOn: [],
+        input: {},
+      },
+    ],
+  };
+  const reply = {
+    provider: "perplexity" as const,
+    id: "r",
+    answer: "Let's build it.",
+    sources: [],
+    model: "m",
+    researchedAt: new Date().toISOString(),
+    usage: { inputTokens: null, outputTokens: null, costUsd: null },
+    proposedPlan,
+  };
+  const base = () => ({
+    configured: () => true,
+    authorize: vi.fn().mockResolvedValue("user"),
+    reserve: vi.fn().mockResolvedValue({
+      started: true,
+      run: { id: "run", status: "running", result: null, error: null },
+    }),
+    context: vi.fn().mockResolvedValue(""),
+    research: vi.fn().mockResolvedValue({ ...reply }),
+    finish: vi.fn().mockResolvedValue(undefined),
+  });
+  it("creates durable tasks from the plan Civi proposed and links them to the reply", async () => {
+    const deps = { ...base(), createPlan: vi.fn().mockResolvedValue("plan-1") };
+    await handleStewardResearch(body("Start a single parents community, from scratch"), deps);
+    expect(deps.createPlan).toHaveBeenCalledWith(
+      "user",
+      expect.objectContaining({ threadKey: "main" }),
+      "run",
+      proposedPlan,
+    );
+    const saved = deps.finish.mock.calls[0]![1];
+    expect(saved.plan).toEqual({ id: "plan-1", title: "Single parents launch" });
+    expect(saved.proposedPlan).toBeUndefined();
+  });
+  it("still answers when the plan can't start, and says why", async () => {
+    const deps = { ...base(), createPlan: vi.fn().mockRejectedValue(new Error("db")) };
+    const response = await handleStewardResearch(body("Start it"), deps);
+    expect(response.status).toBe(200);
+    expect(deps.finish.mock.calls[0]![1].plan).toEqual({ error: "The plan could not be started." });
+  });
+});

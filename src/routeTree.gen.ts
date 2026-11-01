@@ -33,6 +33,7 @@ import { Route as ApiResearchRouteImport } from './routes/api.research'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
 import { Route as ApiAgentResearchRouteImport } from './routes/api.agent.research'
+import { Route as ApiAgentRunRouteImport } from './routes/api.agent.run'
 import { Route as ApiAnalyticsAnalyzeRouteImport } from './routes/api.analytics.analyze'
 import { Route as ApiBrowserCommandRouteImport } from './routes/api.browser.command'
 import { Route as ApiOrganizerVoiceRouteImport } from './routes/api.organizer.voice'
@@ -160,6 +161,11 @@ const ApiAgentResearchRoute = ApiAgentResearchRouteImport.update({
   path: '/api/agent/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentRunRoute = ApiAgentRunRouteImport.update({
+  id: '/api/agent/run',
+  path: '/api/agent/run',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAnalyticsAnalyzeRoute = ApiAnalyticsAnalyzeRouteImport.update({
   id: '/api/analytics/analyze',
   path: '/api/analytics/analyze',
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/agent/run': typeof ApiAgentRunRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/agent/run': typeof ApiAgentRunRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
@@ -283,6 +291,7 @@ export interface FileRoutesById {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/agent/run': typeof ApiAgentRunRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
@@ -317,6 +326,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
+    | '/api/agent/run'
     | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/organizer/voice'
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions'
     | '/api/agent/research'
+    | '/api/agent/run'
     | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/organizer/voice'
@@ -381,6 +392,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
+    | '/api/agent/run'
     | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/organizer/voice'
@@ -414,6 +426,7 @@ export interface RootRouteChildren {
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
   ApiAgentResearchRoute: typeof ApiAgentResearchRoute
+  ApiAgentRunRoute: typeof ApiAgentRunRoute
   ApiAnalyticsAnalyzeRoute: typeof ApiAnalyticsAnalyzeRoute
   ApiBrowserCommandRoute: typeof ApiBrowserCommandRoute
   ApiOrganizerVoiceRoute: typeof ApiOrganizerVoiceRoute
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/run': {
+      id: '/api/agent/run'
+      path: '/api/agent/run'
+      fullPath: '/api/agent/run'
+      preLoaderRoute: typeof ApiAgentRunRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/analytics/analyze': {
       id: '/api/analytics/analyze'
       path: '/api/analytics/analyze'
@@ -673,6 +693,7 @@ const rootRouteChildren: RootRouteChildren = {
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
   ApiAgentResearchRoute: ApiAgentResearchRoute,
+  ApiAgentRunRoute: ApiAgentRunRoute,
   ApiAnalyticsAnalyzeRoute: ApiAnalyticsAnalyzeRoute,
   ApiBrowserCommandRoute: ApiBrowserCommandRoute,
   ApiOrganizerVoiceRoute: ApiOrganizerVoiceRoute,

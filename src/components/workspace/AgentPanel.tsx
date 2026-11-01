@@ -17,6 +17,7 @@ import { BrandLogo } from "./BrandLogo";
 import { useWorkspace } from "./WorkspaceGate";
 import { PlatformBrowser } from "./BrowserDock";
 import { LiveBrowser, connectorRequest } from "./Connectors";
+import { PlanSummary } from "./AgentPlans";
 import type { ReviewItem } from "@/lib/organizer";
 
 export type PanelActivity = {
@@ -329,7 +330,12 @@ function PanelView({
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
-        {tab === "activity" && <ActivityList items={activity} />}
+        {tab === "activity" && (
+          <>
+            <PlanSummary agent={connector} />
+            <ActivityList items={activity} />
+          </>
+        )}
         {tab === "approvals" && (
           <Approvals
             items={approvals}
