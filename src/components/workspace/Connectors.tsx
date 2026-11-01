@@ -21,6 +21,7 @@ import {
   ShieldAlert,
   Sparkles,
 } from "lucide-react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { BrandLogo } from "./BrandLogo";
@@ -47,6 +48,7 @@ type CommandBody =
   | {
       command:
         | "browser_start"
+        | "browser_open"
         | "browser_observe"
         | "browser_finish"
         | "browser_cancel"
@@ -97,6 +99,27 @@ function ago(iso: string | null | undefined, now = Date.now()) {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.round(hours / 24)}d ago`;
+}
+
+/** Send one connector command for the signed-in administrator. */
+export async function connectorRequest(
+  db: SupabaseClient,
+  organizationId: string,
+  body: CommandBody,
+): Promise<CommandResult> {
+  const { data } = await db.auth.getSession();
+  if (!data.session) throw new Error("Sign in again to manage connections.");
+  const response = await fetch("/api/connectors", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${data.session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ organizationId, ...body }),
+  });
+  const payload = (await response.json().catch(() => ({}))) as CommandResult & { error?: string };
+  if (!response.ok) throw new Error(payload.error ?? "The connection could not be completed.");
+  return payload;
 }
 
 export function LiveConnectors() {
@@ -199,23 +222,11 @@ export function LiveConnectors() {
   const actions = useMemo<Actions>(
     () => ({
       async command(body) {
-        const { data } = await db.auth.getSession();
-        if (!data.session) throw new Error("Sign in again to manage connections.");
-        const response = await fetch("/api/connectors", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${data.session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ organizationId, ...body }),
-        });
-        const payload = (await response.json().catch(() => ({}))) as CommandResult & {
-          error?: string;
-        };
-        await load();
-        if (!response.ok)
-          throw new Error(payload.error ?? "The connection could not be completed.");
-        return payload;
+        try {
+          return await connectorRequest(db, organizationId, body);
+        } finally {
+          await load();
+        }
       },
       async saveSettings(connector, settings) {
         const { error } = await db.rpc("save_connector_settings", {
@@ -1126,20 +1137,26 @@ function CommentControls({
   );
 }
 
-function LiveBrowser({
+export function LiveBrowser({
   name,
   viewer,
   busy,
   onFinish,
   onCancel,
   onExpired,
+  title,
+  finishLabel = "I’m signed in",
+  cancelLabel = "Cancel",
 }: {
   name: string;
   viewer: { url: string; expiresAt: string };
   busy: string | null;
-  onFinish: () => void;
+  onFinish?: (() => void) | undefined;
   onCancel: () => void;
   onExpired: () => void;
+  title?: string | undefined;
+  finishLabel?: string | undefined;
+  cancelLabel?: string | undefined;
 }) {
   const [remaining, setRemaining] = useState(() => Date.parse(viewer.expiresAt) - Date.now());
   const fired = useRef(false);
@@ -1164,7 +1181,7 @@ function LiveBrowser({
           <i className="h-2.5 w-2.5 rounded-full bg-slate-300" />
         </span>
         <span className="inline-flex items-center gap-2 font-medium text-slate-700">
-          <Dot tone="live" /> Live · {name} sign-in
+          <Dot tone="live" /> Live · {title ?? `${name} sign-in`}
         </span>
         <span className="ml-auto tabular-nums text-slate-500" aria-live="polite">
           {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")} left
@@ -1178,11 +1195,13 @@ function LiveBrowser({
         referrerPolicy="no-referrer"
       />
       <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 px-4 py-3">
-        <PrimaryButton disabled={Boolean(busy)} busy={busy === "finish"} onClick={onFinish}>
-          I’m signed in
-        </PrimaryButton>
+        {onFinish && (
+          <PrimaryButton disabled={Boolean(busy)} busy={busy === "finish"} onClick={onFinish}>
+            {finishLabel}
+          </PrimaryButton>
+        )}
         <GhostButton disabled={Boolean(busy)} busy={busy === "cancel"} onClick={onCancel}>
-          Cancel
+          {cancelLabel}
         </GhostButton>
         <span className="text-[12px] text-slate-400">
           Only you can see and control this browser. Nothing is recorded while you type.

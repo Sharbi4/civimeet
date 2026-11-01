@@ -16,7 +16,10 @@
 - [ ] Password reset, team invitations and membership management UI
 - [ ] 7-step organization onboarding → /dashboard
 - [x] Community dashboard: real overview counts, community needs, plans, follow-up dates, research history, activity, quick actions
-- [ ] AI Organizer workspace: chat, tasks, runtime abstraction, Live Agent Workspace panel
+- [x] Chat-first workspace: expandable sidebar (Chat, Search, Feed, Ideas, Goals, Events, Library, agent-made work), Main Agent plus one agent chat per connected platform
+- [x] Agent panel beside chat: activity, inline approvals with history, browser (take over / give back for connected accounts, supervised web browser for the main agent), memory, stop/resume per platform agent
+- [x] Platform agent memory: playbook and saved notes loaded into every conversation; each completed exchange saved as a 90-day note; six-turn thread history
+- [ ] Agent task runner: execute queued work in the agent browser (post, comment, join, message) with approvals, pacing and stop
 - [x] Authenticated Perplexity research with durable organization limits, idempotency, sources, usage and saved shared memory; private /agent preview retained
 - [x] Live Perplexity acceptance test (2026-11-01): server key accepted by /v1/agent (200, search results + answer); production research run completed with 10 sources. Legacy /chat/completions returns agent_api_migration_required and is not used
 - [x] Contribution-first team planning, exact-revision review, approval invalidation after edits, and recorded outcomes

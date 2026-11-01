@@ -7,6 +7,7 @@ import {
   Monitor,
   X,
   ArrowRight,
+  PanelRightOpen,
   Inbox,
   Search,
   Users,
@@ -22,6 +23,7 @@ import { VendorDirectory } from "@/routes/vendors";
 import { OrganizationKnowledge } from "@/routes/knowledge";
 import { PlatformAgents } from "@/routes/platform-agents";
 import { DemoConnectors, LiveConnectors } from "./Connectors";
+import { AgentPanel, type PanelActivity, type PanelMemory } from "./AgentPanel";
 import {
   WorkspaceRail,
   railViews,
@@ -520,6 +522,59 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
       open: () => navigate("goals"),
     })),
   ];
+  // The agent panel beside the chat is scoped to whichever agent you're talking to.
+  const [panelOpen, setPanelOpen] = useState(true);
+  const mentions = (text: string) =>
+    platformName ? text.toLowerCase().includes(platformName.toLowerCase()) : true;
+  const panelApprovals = data.approvals.filter(
+    (a) => !platformName || mentions(`${a.title} ${a.destination} ${a.content}`),
+  );
+  const threadResearch = data.research.filter((r) =>
+    isPlatformThread(thread)
+      ? r.input.threadKey === thread
+      : !r.input.threadKey || !r.input.threadKey.startsWith("platform_"),
+  );
+  const panelActivity: PanelActivity[] = [
+    ...threadResearch.map((r) => ({
+      id: `r-${r.id}`,
+      kind: "research" as const,
+      title: r.input.question ?? "Research",
+      detail: (r.result?.answer ?? "").slice(0, 160),
+      time: r.created_at,
+    })),
+    ...panelApprovals
+      .filter((a) => a.status !== "pending" && a.reviewed_at)
+      .map((a) => ({
+        id: `d-${a.id}`,
+        kind: "decision" as const,
+        title: `${a.status === "approved" ? "Approved" : "Declined"}: ${a.title}`,
+        detail: a.destination,
+        time: a.reviewed_at!,
+      })),
+    ...(isPlatformThread(thread)
+      ? []
+      : data.activity.slice(0, 10).map((a) => ({
+          id: `w-${a.id}`,
+          kind: "workspace" as const,
+          title: a.action.replaceAll("_", " "),
+          detail: "",
+          time: a.created_at,
+        }))),
+  ].sort((x, y) => stamp(y.time) - stamp(x.time));
+  const mainMemory: PanelMemory[] = [
+    ...(data.goal ? [{ id: "goal", kind: "fact", content: `Goal: ${data.goal}` }] : []),
+    {
+      id: "mission",
+      kind: "fact",
+      content: `Mission: ${data.mission}${data.area ? ` · ${data.area}` : ""}`,
+    },
+    ...threadResearch.slice(0, 6).map((r) => ({
+      id: `m-${r.id}`,
+      kind: "conversation_summary",
+      content: `Asked: ${r.input.question ?? ""}\nLearned: ${(r.result?.answer ?? "").slice(0, 300)}`,
+      time: r.created_at,
+    })),
+  ];
   const openArtifact = (item: { id: string; kind: string }) =>
     navigate(data.approvals.some((a) => a.id === item.id) ? "approvals" : "library");
   const navigate = (next: View) => {
@@ -907,31 +962,69 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
               </details>
             </>
           )}
-          {view === "chat" &&
-            (demo ? (
-              <DemoChat
-                key={thread}
-                thread={thread}
-                platformName={platformName}
-                initialMessage={chatSeed}
-                onDraft={(c) => edit(undefined, c)}
-                sent={sampleNotes[thread] ?? []}
-                onSend={(message) =>
-                  setSampleNotes((notes) => ({
-                    ...notes,
-                    [thread]: [...(notes[thread] ?? []), message],
-                  }))
-                }
-              />
-            ) : (
-              <OrganizerChat
-                key={`${thread}:${chatSeed}`}
-                thread={thread}
-                platformName={platformName}
-                initialMessage={chatSeed}
-                onDraft={(c) => edit(undefined, c)}
-              />
-            ))}
+          {view === "chat" && (
+            <div
+              className={`grid min-h-0 ${panelOpen ? "xl:grid-cols-[minmax(0,1fr)_420px]" : ""}`}
+            >
+              <div className="relative min-w-0">
+                {!panelOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setPanelOpen(true)}
+                    className="absolute right-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-lg border border-[#e4e9ec] bg-white px-3 py-1.5 text-[12px] font-medium text-[#142d40] shadow-sm hover:bg-slate-50"
+                  >
+                    <PanelRightOpen size={15} /> Agent panel
+                  </button>
+                )}
+                {demo ? (
+                  <DemoChat
+                    key={thread}
+                    thread={thread}
+                    platformName={platformName}
+                    initialMessage={chatSeed}
+                    onDraft={(c) => edit(undefined, c)}
+                    sent={sampleNotes[thread] ?? []}
+                    onSend={(message) =>
+                      setSampleNotes((notes) => ({
+                        ...notes,
+                        [thread]: [...(notes[thread] ?? []), message],
+                      }))
+                    }
+                  />
+                ) : (
+                  <OrganizerChat
+                    key={`${thread}:${chatSeed}`}
+                    thread={thread}
+                    platformName={platformName}
+                    initialMessage={chatSeed}
+                    onDraft={(c) => edit(undefined, c)}
+                  />
+                )}
+              </div>
+              {panelOpen && (
+                <div className="border-l border-[#e4e9ec] xl:h-[calc(100dvh-125px)] xl:min-h-[540px]">
+                  <AgentPanel
+                    key={thread}
+                    demo={demo}
+                    label={chatLabel(thread, platformName)}
+                    connector={
+                      isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
+                    }
+                    platformName={platformName}
+                    approvals={panelApprovals}
+                    activity={panelActivity}
+                    mainMemory={mainMemory}
+                    admin={admin}
+                    webAgentId={data.webAgentId}
+                    onReview={review}
+                    onEdit={(item) => edit(item)}
+                    onOpenConnections={() => navigate("connectors")}
+                    onClose={() => setPanelOpen(false)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
           {view === "search" && (
             <SearchView items={searchItems}>
               {demo ? (

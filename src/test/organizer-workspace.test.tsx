@@ -97,3 +97,22 @@ it("collapses the sidebar to icons and remembers the choice", async () => {
   expect(screen.getByRole("button", { name: "Main Agent" })).toBeInTheDocument();
   window.localStorage.removeItem("civimeet.rail");
 });
+
+it("shows the agent panel beside the chat with approvals, browser control and stop", async () => {
+  await mount();
+  const panel = screen.getByRole("complementary", { name: "Main Agent panel" });
+  expect(within(panel).getByText("Waiting for you")).toBeInTheDocument();
+  expect(within(panel).getAllByRole("button", { name: "Approve" }).length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole("button", { name: "Facebook Agent" }));
+  const facebook = screen.getByRole("complementary", { name: "Facebook Agent panel" });
+  fireEvent.click(within(facebook).getByRole("tab", { name: "Browser" }));
+  fireEvent.click(within(facebook).getByRole("button", { name: "Take over" }));
+  expect(within(facebook).getByRole("button", { name: "Give back to agent" })).toBeInTheDocument();
+  fireEvent.click(within(facebook).getByRole("button", { name: "Stop agent" }));
+  expect(await within(facebook).findByRole("button", { name: "Resume agent" })).toBeInTheDocument();
+  expect(within(facebook).getByText("Stopped")).toBeInTheDocument();
+  fireEvent.click(within(facebook).getByRole("tab", { name: "Memory" }));
+  expect(within(facebook).getByText(/Midvale Park Neighbors group/)).toBeInTheDocument();
+  fireEvent.click(within(facebook).getByRole("button", { name: "Hide agent panel" }));
+  expect(screen.getByRole("button", { name: "Agent panel" })).toBeInTheDocument();
+});
