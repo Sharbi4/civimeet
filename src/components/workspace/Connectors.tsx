@@ -784,7 +784,7 @@ function ConnectOptions({
         {method === "browser" && (
           <MethodBody
             title="Sign in through the agent’s browser"
-            text={`A secure browser opens right here. Sign in to ${definition.name} the way you always do, including two-factor codes. The agent keeps that signed-in browser; your password is never stored.`}
+            text={`A secure browser opens right here. Sign in with your ${definition.name} email or phone and password, including two-factor codes. “Continue with Google” or Apple buttons usually don’t work inside the agent browser. The agent keeps that signed-in browser; your password is never stored.`}
             footer={
               capabilities && !capabilities.browser
                 ? "The agent browser is not configured on this deployment yet."
@@ -1206,6 +1206,9 @@ export function LiveBrowser({
           {cancelLabel}
         </GhostButton>
         <span className="text-[12px] text-slate-400">
+          {onFinish
+            ? `Use your ${name} email or phone and password; Google and Apple sign-in usually don’t work here. `
+            : ""}
           Only you can see and control this browser. Nothing is recorded while you type.
         </span>
       </div>

@@ -223,7 +223,7 @@ export function ChatActionsProvider({
             connected ? "succeeded" : "needs_user",
             connected
               ? `${name} is open in your secure agent browser, already signed in. You're in control; give it back when you're done.`
-              : `I've opened ${name} in your secure browser. Sign in there yourself (two-factor too), then tap “I’m signed in”. I never see your password.`,
+              : `I've opened ${name} in your secure browser. Sign in there yourself with your ${name} email or phone and password (two-factor too), then tap “I’m signed in”. “Continue with Google” or Apple usually doesn't work inside the agent browser. I never see your password.`,
           );
         }
         if (definition.oauth) {
