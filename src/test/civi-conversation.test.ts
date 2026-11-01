@@ -108,12 +108,10 @@ describe("conversation mode", () => {
       {
         configured: () => true,
         authorize: vi.fn().mockResolvedValue("user"),
-        reserve: vi
-          .fn()
-          .mockResolvedValue({
-            started: true,
-            run: { id: "run", status: "running", result: null, error: null },
-          }),
+        reserve: vi.fn().mockResolvedValue({
+          started: true,
+          run: { id: "run", status: "running", result: null, error: null },
+        }),
         context: vi.fn().mockResolvedValue(""),
         research,
         finish: vi.fn().mockResolvedValue(undefined),
