@@ -1,0 +1,1432 @@
+.ow-app {
+  --ow-navy: #142d40;
+  --ow-muted: #64717a;
+  --ow-border: #e4e9ec;
+  display: flex;
+  min-height: 100dvh;
+  background: #f8fafb;
+  color: #182d3d;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.ow-app * {
+  box-sizing: border-box;
+}
+.ow-app h1,
+.ow-app h2,
+.ow-app h3 {
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+.ow-app h1 {
+  font-size: 23px;
+}
+.ow-app h2 {
+  font-size: 21px;
+  margin-bottom: 10px;
+}
+.ow-app h3 {
+  font-size: 16px;
+  margin: 10px 0 7px;
+}
+.ow-app p {
+  margin-bottom: 12px;
+}
+.ow-app button {
+  cursor: pointer;
+}
+.ow-app button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ow-app :is(button, a, input, textarea, select, summary):focus-visible {
+  outline: 3px solid #225dba;
+  outline-offset: 3px;
+}
+.ow-rail {
+  width: 82px;
+  flex-shrink: 0;
+  background: white;
+  border-right: 1px solid var(--ow-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 5px;
+  gap: 7px;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: auto;
+  z-index: 30;
+}
+.ow-brand {
+  padding: 0 14px 14px;
+  display: block;
+}
+.ow-brand img {
+  width: 38px;
+}
+.ow-rail > button {
+  position: relative;
+  width: 70px;
+  padding: 9px 2px;
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #657481;
+  min-height: 53px;
+}
+.ow-rail > button span {
+  font-size: 9px;
+  line-height: 1.2;
+}
+.ow-rail > button[aria-current] {
+  background: #142d40;
+  color: white;
+}
+.ow-rail i {
+  position: absolute;
+  right: 5px;
+  top: 2px;
+  border-radius: 20px;
+  background: #fff0ce;
+  color: #875600;
+  min-width: 15px;
+  font-size: 10px;
+  font-style: normal;
+}
+.ow-body {
+  min-width: 0;
+  flex: 1;
+}
+.ow-top {
+  height: 89px;
+  background: white;
+  border-bottom: 1px solid var(--ow-border);
+  padding: 16px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.ow-kicker {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ow-muted);
+}
+.ow-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  max-width: 45%;
+}
+.ow-identity img {
+  width: 32px;
+}
+.ow-identity span {
+  font-size: 12px;
+}
+.ow-identity small {
+  display: block;
+  color: var(--ow-muted);
+  font-size: 10px;
+}
+.ow-main {
+  max-width: 1390px;
+  margin: auto;
+  padding: 30px 32px 50px;
+}
+.ow-demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: #fff6df;
+  padding: 9px 32px;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.ow-demo-banner a {
+  margin-left: auto;
+  text-decoration: underline;
+}
+.ow-welcome {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+.ow-welcome h2 {
+  font-size: 30px;
+}
+.ow-welcome p,
+.ow-subtitle {
+  color: var(--ow-muted);
+}
+.ow-primary,
+.ow-buttons > button:first-child,
+.ow-composer button {
+  background: var(--ow-navy);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.ow-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin: 8px 0 16px;
+}
+.ow-section-title > button,
+.ow-link {
+  color: #265c7f;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ow-section-title h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.ow-section-title h2 span {
+  font-size: 12px;
+  border-radius: 20px;
+  background: #fff0ce;
+  padding: 2px 7px;
+  margin-left: 6px;
+}
+.ow-section-title p {
+  font-size: 12px;
+  color: var(--ow-muted);
+  max-width: 650px;
+  margin: 8px 0;
+}
+.ow-approval-list,
+.ow-three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.ow-card {
+  background: white;
+  border: 1px solid var(--ow-border);
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 0;
+}
+.ow-card h2 {
+  font-size: 17px;
+}
+.ow-card-top {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+.ow-card-top > span {
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: #9a6b16;
+}
+.ow-card-top .ow-link {
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ow-destination {
+  font-size: 11px;
+  color: var(--ow-muted);
+}
+.ow-draft-copy {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  max-height: 140px;
+  overflow: auto;
+}
+.ow-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 17px;
+}
+.ow-buttons button {
+  font-size: 11px;
+  border: 1px solid var(--ow-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.ow-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--ow-border);
+  border-radius: 12px;
+  background: white;
+  margin: 25px 0;
+}
+.ow-stats > div {
+  padding: 20px 24px;
+  border-right: 1px solid var(--ow-border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ow-stats > div:last-child {
+  border: 0;
+}
+.ow-stats strong {
+  font-size: 29px;
+  font-weight: 500;
+}
+.ow-stats span {
+  font-size: 11px;
+  color: var(--ow-muted);
+}
+.ow-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 20px 0;
+}
+.ow-list > button,
+.ow-list > article,
+.ow-session-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--ow-border);
+  font-size: 12px;
+}
+.ow-list span,
+.ow-session-link span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ow-list b,
+.ow-session-link b {
+  display: block;
+  font-weight: 500;
+}
+.ow-list small,
+.ow-session-link small {
+  display: block;
+  font-size: 10px;
+  color: var(--ow-muted);
+}
+.ow-recent {
+  margin-top: 24px;
+  font-size: 12px;
+}
+.ow-app summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.ow-app small {
+  color: var(--ow-muted);
+  font-size: 10px;
+}
+.ow-empty {
+  text-align: center;
+  border: 1px dashed #cfd9de;
+  border-radius: 12px;
+  padding: 28px;
+  color: var(--ow-muted);
+  margin: 18px 0;
+}
+.ow-empty svg {
+  margin: auto;
+}
+.ow-empty p {
+  max-width: 430px;
+  margin: 0 auto 16px;
+  font-size: 13px;
+}
+.ow-empty button {
+  color: #265c7f;
+  text-decoration: underline;
+}
+.ow-main-chat {
+  padding: 0;
+  max-width: none;
+}
+.ow-chat-layout {
+  display: grid;
+  grid-template-columns: 205px minmax(0, 1fr);
+  min-height: calc(100dvh - 125px);
+}
+.ow-threads {
+  border-right: 1px solid var(--ow-border);
+  background: #fff;
+  padding: 24px 12px;
+}
+.ow-threads > p {
+  font-size: 10px;
+  color: var(--ow-muted);
+  padding: 0 9px;
+}
+.ow-threads > button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  padding: 13px 9px;
+  font-size: 12px;
+  border-radius: 7px;
+  width: 100%;
+  margin-bottom: 3px;
+}
+.ow-threads button[aria-pressed="true"] {
+  background: #eef3f6;
+  color: #16394e;
+}
+.ow-chat-thread {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 960px;
+  width: 100%;
+  margin: auto;
+  height: calc(100dvh - 125px);
+  min-height: 540px;
+  background: white;
+}
+.ow-chat-thread > header {
+  padding: 25px 30px 13px;
+  border-bottom: 1px solid var(--ow-border);
+}
+.ow-chat-thread > header h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.ow-chat-thread > header p {
+  font-size: 11px;
+  color: var(--ow-muted);
+  margin: 6px 0;
+}
+.ow-messages {
+  overflow: auto;
+  flex: 1;
+  padding: 24px 30px;
+  min-height: 150px;
+}
+.ow-user-message {
+  margin: 0 0 22px auto;
+  background: #edf3f7;
+  border-radius: 12px 12px 2px 12px;
+  max-width: 80%;
+  padding: 15px 18px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ow-agent-message {
+  margin-bottom: 28px;
+  line-height: 1.8;
+  font-size: 13px;
+}
+.ow-agent-message > strong {
+  font-size: 12px;
+  display: block;
+  margin-bottom: 10px;
+}
+.ow-answer {
+  overflow-wrap: anywhere;
+}
+.ow-answer details {
+  font-size: 11px;
+  margin-top: 12px;
+}
+.ow-answer a {
+  color: #265c7f;
+  text-decoration: underline;
+}
+.ow-composer {
+  padding: 15px 25px 20px;
+  border-top: 1px solid var(--ow-border);
+}
+.ow-app input:not([type="checkbox"]),
+.ow-app textarea,
+.ow-app select {
+  border: 1px solid #d7e0e5;
+  background: white;
+  border-radius: 7px;
+  padding: 9px 11px;
+  width: 100%;
+  color: #182d3d;
+  min-width: 0;
+  font: inherit;
+}
+.ow-composer textarea {
+  min-height: 85px;
+  resize: vertical;
+  max-height: 220px;
+  font-size: 13px;
+}
+.ow-composer > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  gap: 12px;
+}
+.ow-composer span {
+  font-size: 10px;
+  color: var(--ow-muted);
+}
+.ow-composer button {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.ow-notice,
+.ow-error {
+  padding: 12px 30px;
+  background: #fff4dd;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.ow-research-options {
+  display: flex;
+  gap: 15px;
+  padding: 16px 30px;
+}
+.ow-app label {
+  display: block;
+  font-size: 12px;
+}
+.ow-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100dvh;
+  overflow: auto;
+  background: white;
+  width: 370px;
+  max-width: 100vw;
+  z-index: 45;
+  border-left: 1px solid var(--ow-border);
+  box-shadow: -12px 0 40px #142d4012;
+  padding: 25px;
+}
+.ow-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ow-panel-tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid var(--ow-border);
+  margin-bottom: 23px;
+}
+.ow-panel-tabs button {
+  padding: 12px 0;
+  font-size: 11px;
+}
+.ow-panel-tabs button[aria-pressed="true"] {
+  border-bottom: 2px solid #142d40;
+}
+.ow-panel p {
+  font-size: 13px;
+  color: var(--ow-muted);
+}
+.ow-panel h3 {
+  font-size: 18px;
+}
+.ow-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #142d4060;
+  display: grid;
+  place-items: center;
+  z-index: 60;
+  padding: 20px;
+}
+.ow-edit {
+  max-width: 620px;
+  width: 100%;
+  max-height: 90dvh;
+  overflow: auto;
+  background: white;
+  padding: 28px;
+  border-radius: 14px;
+}
+.ow-edit form {
+  display: grid;
+  gap: 12px;
+}
+.ow-edit p {
+  font-size: 12px;
+  color: var(--ow-muted);
+}
+.ow-checklist {
+  display: grid;
+  gap: 12px;
+  margin-top: 15px;
+}
+.ow-checklist label {
+  display: flex;
+  gap: 8px;
+}
+.ow-browser-demo {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 20px;
+}
+.ow-fake-browser {
+  background: white;
+  border: 1px solid var(--ow-border);
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 24px;
+}
+.ow-fake-browser > div {
+  background: #edf1f5;
+  padding: 12px;
+  margin: -24px -24px 25px;
+  font-size: 11px;
+}
+.ow-fake-browser textarea {
+  min-height: 170px;
+  font-size: 13px;
+}
+.ow-fake-browser button {
+  display: block;
+  background: #142d40;
+  color: white;
+  padding: 12px;
+  border-radius: 7px;
+  margin: 16px 0;
+}
+.ow-status {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 4px 9px;
+  background: #fff1d2;
+  font-size: 11px;
+}
+.og-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafb;
+  border-bottom: 1px solid #e4e9ec;
+  padding: 8px 24px 8px 100px;
+  gap: 20px;
+}
+.og-account > div > p {
+  display: none;
+}
+.og-account h1 {
+  font-size: 12px;
+}
+.og-account button {
+  font-size: 11px;
+  height: 29px;
+}
+.og-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 24px 7px 100px;
+  background: #f8fafb;
+  font-size: 11px;
+}
+.og-switch label {
+  font-size: 11px;
+}
+.og-switch select {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.og-switch nav[hidden] {
+  display: none;
+}
+.organizer-gate .ow-rail {
+  top: 0;
+}
+.ow-app [hidden] {
+  display: none !important;
+}
+@media (min-width: 1500px) {
+  .ow-main {
+    padding: 35px 45px;
+  }
+  .ow-approval-list {
+    gap: 22px;
+  }
+}
+@media (max-width: 1100px) {
+  .ow-approval-list {
+    grid-template-columns: 1fr;
+  }
+  .ow-draft-copy {
+    max-height: 95px;
+  }
+  .ow-three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ow-card-top {
+    justify-content: flex-start;
+    gap: 25px;
+  }
+  .ow-chat-layout {
+    grid-template-columns: 170px minmax(0, 1fr);
+  }
+  .ow-welcome h2 {
+    font-size: 25px;
+  }
+}
+@media (max-width: 700px) {
+  .ow-app {
+    padding-bottom: 76px;
+  }
+  .ow-rail {
+    position: fixed;
+    inset: auto 0 0;
+    height: 69px;
+    width: 100%;
+    flex-direction: row;
+    padding: 5px 8px;
+    overflow-x: auto;
+    border-top: 1px solid var(--ow-border);
+    border-right: 0;
+    gap: 2px;
+    align-items: center;
+  }
+  .ow-brand {
+    display: none;
+  }
+  .ow-rail > button {
+    min-width: 65px;
+    min-height: 52px;
+    padding: 7px 3px;
+  }
+  .ow-top {
+    height: 83px;
+    padding: 15px 18px;
+  }
+  .ow-top h1 {
+    font-size: 21px;
+  }
+  .ow-identity {
+    max-width: 38%;
+    gap: 6px;
+  }
+  .ow-identity span {
+    font-size: 10px;
+  }
+  .ow-identity small {
+    display: none;
+  }
+  .ow-identity img {
+    width: 25px;
+  }
+  .ow-kicker {
+    font-size: 8px;
+  }
+  .ow-main {
+    padding: 23px 18px 30px;
+  }
+  .ow-main-chat {
+    padding: 0;
+  }
+  .ow-demo-banner {
+    padding: 9px 18px;
+    gap: 6px;
+    font-size: 10px;
+  }
+  .ow-demo-banner span {
+    width: 100%;
+  }
+  .ow-demo-banner a {
+    margin-left: 0;
+  }
+  .ow-welcome {
+    display: block;
+    margin-bottom: 23px;
+  }
+  .ow-welcome h2 {
+    font-size: 26px;
+  }
+  .ow-welcome p {
+    font-size: 12px;
+  }
+  .ow-welcome button {
+    font-size: 12px;
+  }
+  .ow-section-title {
+    align-items: flex-start;
+  }
+  .ow-section-title > button {
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .ow-approval-list,
+  .ow-three,
+  .ow-two,
+  .ow-browser-demo {
+    grid-template-columns: 1fr;
+  }
+  .ow-card {
+    padding: 17px;
+  }
+  .ow-stats > div {
+    padding: 16px 12px;
+  }
+  .ow-stats strong {
+    font-size: 24px;
+  }
+  .ow-stats span {
+    font-size: 9px;
+  }
+  .ow-chat-layout {
+    display: block;
+  }
+  .ow-threads {
+    display: flex;
+    overflow: auto;
+    gap: 5px;
+    border-bottom: 1px solid var(--ow-border);
+    padding: 9px;
+  }
+  .ow-threads > p {
+    display: none;
+  }
+  .ow-threads > button {
+    min-width: 125px;
+    font-size: 10px;
+    padding: 10px 7px;
+  }
+  .ow-chat-thread {
+    height: calc(100dvh - 240px);
+    min-height: 480px;
+  }
+  .ow-chat-thread > header {
+    padding: 16px 18px;
+  }
+  .ow-messages {
+    padding: 20px 18px;
+  }
+  .ow-user-message {
+    max-width: 94%;
+    font-size: 12px;
+  }
+  .ow-agent-message {
+    font-size: 12px;
+  }
+  .ow-composer {
+    padding: 12px 15px;
+  }
+  .ow-composer span {
+    font-size: 9px;
+  }
+  .ow-panel {
+    width: 100%;
+    padding: 24px 20px 90px;
+  }
+  .ow-research-options {
+    padding: 12px 18px;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .og-account {
+    padding: 8px 18px;
+  }
+  .og-switch {
+    padding: 7px 18px;
+  }
+  .ow-notice {
+    padding: 12px 18px;
+  }
+}
+.ow-dialog {
+  max-width: 620px !important;
+  width: calc(100vw - 32px) !important;
+  color: #182d3d;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.ow-dialog form {
+  display: grid;
+  gap: 12px;
+}
+.ow-dialog label {
+  display: block;
+  font-size: 12px;
+}
+.ow-dialog :is(input, select, textarea) {
+  display: block;
+  width: 100%;
+  border: 1px solid #d7e0e5;
+  border-radius: 7px;
+  padding: 9px 11px;
+  margin-top: 5px;
+  background: white;
+}
+.ow-dialog .ow-buttons button:first-child {
+  background: #142d40;
+  color: white;
+}
+.ow-dialog .ow-buttons button {
+  padding: 9px 13px;
+  border: 1px solid #d7e0e5;
+  border-radius: 7px;
+}
+/* Workspace reference: full organization sidebar, quiet surfaces, teal emphasis. */
+.ow-app {
+  --ow-navy: #064cff;
+  --ow-muted: #5d6c7c;
+  --ow-border: #e1e7f0;
+  background: #f7f9fc;
+  color: #14283e;
+}
+.ow-rail {
+  width: 254px;
+  align-items: stretch;
+  padding: 20px 14px 12px;
+  gap: 3px;
+  background: #fff;
+}
+.ow-brand {
+  padding: 0 12px 19px;
+}
+.ow-brand img {
+  width: 155px;
+  height: 36px;
+  object-fit: contain;
+}
+.ow-rail > button {
+  width: 100%;
+  min-height: 40px;
+  flex-direction: row;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 11px;
+  padding: 10px 12px;
+  color: #5d6c7c;
+}
+.ow-rail > button span {
+  font-size: 13px;
+  line-height: 1.3;
+}
+.ow-rail > button svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.ow-rail > button[aria-current] {
+  background: #edf3ff;
+  color: #0640d4;
+  font-weight: 600;
+}
+.ow-rail i {
+  position: static;
+  margin-left: auto;
+  padding: 1px 6px;
+  background: #d97706;
+  color: white;
+  font-size: 10px;
+}
+.ow-rail > .ow-org-card {
+  margin: 0 0 12px;
+  padding: 11px 9px;
+  background: #eff3f8;
+  border: 1px solid #e1e7f0;
+  border-radius: 12px;
+  gap: 9px;
+}
+.ow-org-card b {
+  font-size: 11px;
+  line-height: 1.3;
+  display: block;
+}
+.ow-org-card small {
+  display: block;
+  font-size: 10px;
+  margin-top: 4px;
+}
+.ow-org-monogram {
+  background: #153581;
+  color: #dbe8ff;
+  border-radius: 8px;
+  padding: 9px 6px;
+  flex-shrink: 0;
+}
+.ow-nav-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8191a3;
+  margin: 4px 12px !important;
+}
+.ow-organizer-card {
+  background: #064cff;
+  color: white;
+  border-radius: 14px;
+  padding: 16px 13px;
+  margin-top: 18px;
+}
+.ow-organizer-card h3 {
+  font-size: 13px;
+  margin: 0 0 7px;
+}
+.ow-organizer-card p {
+  font-size: 11px;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+.ow-organizer-card > div {
+  display: flex;
+  gap: 4px;
+}
+.ow-organizer-card > div span {
+  font-size: 9px;
+  background: #ffffff25;
+  padding: 4px 6px;
+  border-radius: 20px;
+}
+.ow-sidebar-role {
+  padding: 18px 10px 3px;
+  margin-top: auto;
+  text-transform: capitalize;
+}
+.ow-sidebar-role span {
+  font-size: 12px;
+  display: block;
+  font-weight: 600;
+}
+.ow-sidebar-role small {
+  font-size: 10px;
+  display: block;
+  color: #8191a3;
+}
+.ow-top {
+  height: 80px;
+  padding: 15px 26px;
+}
+.ow-top-actions {
+  display: flex;
+  gap: 9px;
+  margin-left: auto;
+}
+.ow-top-actions button {
+  padding: 9px 13px;
+  border: 1px solid #e1e7f0;
+  border-radius: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ow-top-actions button:last-child {
+  background: #064cff;
+  color: white;
+  border-color: #064cff;
+}
+.ow-identity {
+  max-width: none;
+}
+.ow-identity > span {
+  display: none;
+}
+.ow-identity img {
+  width: 28px;
+}
+.ow-main {
+  padding: 26px;
+  max-width: 1320px;
+}
+.ow-main-chat {
+  padding: 0;
+}
+.ow-supervision-status {
+  display: inline-block;
+  font-size: 10px;
+  background: #edf3ff;
+  color: #064cff;
+  padding: 4px 9px;
+  border-radius: 20px;
+  margin-bottom: 11px;
+}
+.ow-welcome {
+  align-items: flex-start;
+  margin-bottom: 23px;
+}
+.ow-welcome h2 {
+  font-size: 29px;
+  line-height: 1.2;
+  max-width: 590px;
+}
+.ow-welcome p {
+  font-size: 12px;
+  max-width: 660px;
+}
+.ow-welcome > .ow-primary {
+  display: none;
+}
+.ow-card {
+  border-radius: 14px;
+  box-shadow: 0 1px 3px #10161305;
+}
+.ow-approval-list {
+  grid-template-columns: 1fr;
+  border: 1px solid #f1d99f;
+  background: #fffcf5;
+  border-radius: 14px;
+  overflow: hidden;
+  gap: 0;
+}
+.ow-approval-list > .ow-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 20px;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid #f1e7d0;
+  background: transparent;
+  box-shadow: none;
+  padding: 17px 20px;
+}
+.ow-approval-list > .ow-card:last-child {
+  border: 0;
+}
+.ow-approval-list .ow-card-top {
+  grid-column: 1/-1;
+  justify-content: space-between;
+}
+.ow-approval-list h3 {
+  margin-top: 7px;
+  grid-column: 1;
+}
+.ow-approval-list .ow-destination {
+  grid-column: 1;
+  margin: 0;
+  font-size: 10px;
+}
+.ow-approval-list .ow-draft-copy {
+  grid-column: 1;
+  max-height: 80px;
+  margin-top: 7px;
+  margin-bottom: 0;
+  font-size: 11px;
+}
+.ow-approval-list .ow-buttons {
+  grid-column: 2;
+  grid-row: 2/5;
+  align-self: center;
+  margin: 0;
+  justify-content: flex-end;
+  max-width: 245px;
+}
+.ow-approval-list small {
+  grid-column: 1/-1;
+}
+.ow-stats {
+  background: transparent;
+  border: 0;
+  gap: 13px;
+  margin: 20px 0;
+}
+.ow-stats > div {
+  background: white;
+  border: 1px solid #e1e7f0 !important;
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.ow-stats strong {
+  font-weight: 600;
+}
+.ow-two {
+  gap: 17px;
+}
+.ow-threads button[aria-pressed="true"] {
+  background: #edf3ff;
+  color: #0640d4;
+}
+.ow-user-message {
+  background: #eef4f1;
+}
+.ow-link,
+.ow-section-title > button {
+  color: #064cff;
+}
+.og-account,
+.og-switch {
+  padding-left: 280px;
+}
+@media (max-width: 1050px) {
+  .ow-rail {
+    width: 220px;
+  }
+  .ow-rail > button span {
+    font-size: 12px;
+  }
+  .ow-organizer-card {
+    padding: 12px;
+  }
+  .ow-organizer-card > div span {
+    font-size: 8px;
+  }
+  .ow-approval-list > .ow-card {
+    display: block;
+  }
+  .ow-approval-list .ow-buttons {
+    margin-top: 12px;
+    max-width: none;
+    justify-content: flex-start;
+  }
+  .ow-chat-layout {
+    grid-template-columns: 150px minmax(0, 1fr);
+  }
+  .ow-top-actions button {
+    font-size: 10px;
+    padding: 8px;
+  }
+  .og-account,
+  .og-switch {
+    padding-left: 245px;
+  }
+}
+@media (max-width: 700px) {
+  .ow-rail {
+    width: 100%;
+    padding: 5px 8px;
+    flex-direction: row;
+    gap: 2px;
+  }
+  .ow-rail > .ow-org-card,
+  .ow-nav-label,
+  .ow-organizer-card,
+  .ow-sidebar-role {
+    display: none !important;
+  }
+  .ow-rail > button {
+    width: 65px;
+    min-width: 65px;
+    min-height: 52px;
+    flex-direction: column;
+    gap: 5px;
+    padding: 7px 3px;
+    justify-content: center;
+  }
+  .ow-rail > button span {
+    font-size: 9px;
+  }
+  .ow-rail i {
+    position: absolute;
+    right: 4px;
+    top: 1px;
+    margin: 0;
+  }
+  .ow-top {
+    padding: 14px 18px;
+    gap: 10px;
+  }
+  .ow-top-actions {
+    display: none;
+  }
+  .ow-identity {
+    margin-left: auto;
+  }
+  .ow-identity > span {
+    display: block;
+    max-width: 100px;
+    font-size: 9px;
+  }
+  .ow-main {
+    padding: 20px 16px 30px;
+  }
+  .ow-main-chat {
+    padding: 0;
+  }
+  .ow-welcome h2 {
+    font-size: 26px;
+  }
+  .ow-approval-list > .ow-card {
+    padding: 16px;
+  }
+  .ow-approval-list .ow-card-top {
+    gap: 10px;
+  }
+  .ow-stats {
+    gap: 7px;
+  }
+  .ow-stats > div {
+    padding: 15px 10px;
+  }
+  .ow-stats strong {
+    font-size: 23px;
+  }
+  .ow-stats span {
+    font-size: 8px;
+  }
+  .ow-chat-layout {
+    display: block;
+  }
+  .og-account,
+  .og-switch {
+    padding-left: 18px;
+  }
+}
+
+@media (min-width: 701px) {
+  .ow-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    color: #14283e;
+    padding: 0 9px 18px;
+    margin: 0;
+  }
+  .ow-brand img {
+    width: 37px;
+    height: 37px;
+  }
+  .ow-brand b {
+    font-size: 20px;
+    letter-spacing: -0.03em;
+  }
+  .ow-brand small {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #8191a3;
+  }
+  .ow-nav-label {
+    padding-top: 9px;
+  }
+  .ow-rail {
+    gap: 2px;
+  }
+}
+.ow-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(245px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.ow-event-focus {
+  margin-top: 8px;
+}
+.ow-event-focus > span {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #064cff;
+  letter-spacing: 0.08em;
+}
+.ow-event-focus h3 {
+  font-size: 20px;
+  margin-top: 15px;
+}
+.ow-event-focus p {
+  font-size: 12px;
+  color: #5d6c7c;
+}
+.ow-event-focus button {
+  border: 1px solid #dae2ee;
+  border-radius: 8px;
+  padding: 10px 13px;
+  color: #064cff;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.ow-dashboard-grid .ow-approval-list > .ow-card {
+  display: block;
+}
+.ow-dashboard-grid .ow-approval-list .ow-buttons {
+  justify-content: flex-start;
+  margin-top: 12px;
+  max-width: none;
+}
+.ow-event-focus .ow-list article {
+  font-size: 12px;
+}
+.ow-organizer-card {
+  background: #064cff;
+}
+.ow-organizer-card p {
+  color: #eef4ff;
+}
+.ow-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.ow-search {
+  position: relative;
+  max-width: 285px;
+  flex: 1;
+  margin-left: auto;
+}
+.ow-search input {
+  font-size: 12px !important;
+  background: #f6f8fc !important;
+  border-radius: 30px !important;
+  padding: 10px 15px !important;
+}
+.ow-search-results {
+  position: absolute;
+  top: 46px;
+  left: 0;
+  right: 0;
+  z-index: 25;
+  background: white;
+  box-shadow: 0 12px 30px #15283c20;
+  border: 1px solid #e1e7f0;
+  border-radius: 10px;
+  padding: 8px;
+  max-height: 300px;
+  overflow: auto;
+}
+.ow-search-results button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  font-size: 12px;
+  text-align: left;
+  border-radius: 6px;
+}
+.ow-search-results button:hover {
+  background: #edf3ff;
+}
+.ow-search-results p {
+  padding: 10px;
+  font-size: 12px;
+}
+@media (max-width: 1100px) {
+  .ow-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .ow-event-focus {
+    margin-top: 0;
+  }
+  .ow-search {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .ow-brand {
+    display: none;
+  }
+  .ow-top {
+    position: static;
+  }
+  .ow-dashboard-grid {
+    gap: 15px;
+  }
+}

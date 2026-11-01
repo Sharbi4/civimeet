@@ -26,14 +26,14 @@ export function CompactHome() {
       <div className="cm-compact">
         <section className="cmc-hero cmc-wrap" aria-labelledby="home-title">
           <div className="cmc-copy">
-            <p className="cmc-eyebrow">Your AI community organizer</p>
+            <p className="cmc-eyebrow">Contribute. Connect. Meet Up.</p>
             <h1 id="home-title">
               Bring people together.
               <br />
-              <span>Let AI handle the prep.</span>
+              <span>Let AI do the groundwork.</span>
             </h1>
             <p className="cmc-intro">
-              CiviMeet finds local resources and vendors, drafts community updates, and helps you
+              Your AI community organizer finds local partners, drafts useful updates, and helps you
               plan events—all in one workspace.
             </p>
             <p className="cmc-audience">
@@ -56,6 +56,9 @@ export function CompactHome() {
                     or account actions occur.
                   </DialogDescription>
                   <StewardMiniDemo />
+                  <Link to="/demo" className="cmc-more">
+                    Try the full dashboard demo <ArrowRight size={16} />
+                  </Link>
                 </DialogContent>
               </Dialog>
             </div>

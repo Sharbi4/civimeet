@@ -1,0 +1,30 @@
+begin;
+do $$
+declare owner_id uuid:=gen_random_uuid(); editor_id uuid:=gen_random_uuid(); other_id uuid:=gen_random_uuid(); org uuid; other_org uuid; item uuid; blocked boolean;
+begin
+ insert into auth.users(id,email) values(owner_id,'review-owner@example.invalid'),(editor_id,'review-editor@example.invalid'),(other_id,'review-other@example.invalid');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',owner_id,'role','authenticated')::text,true);
+ execute 'set local role authenticated';org:=public.create_vendor_workspace('Review tests');execute 'reset role';
+ insert into public.organization_members(organization_id,user_id,role) values(org,editor_id,'organizer');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',editor_id,'role','authenticated')::text,true);execute 'set local role authenticated';
+ item:=public.save_organizer_approval(org,'{"title":"Draft invitation","content":"Please review this sample invitation before posting.","destination":"Sample organization page","kind":"post"}');
+ blocked:=false;begin perform public.review_organizer_approval(item,1,'approve');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Editor approved an external draft';end if;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',owner_id,'role','authenticated')::text,true);
+ perform public.review_organizer_approval(item,1,'approve');
+ perform public.save_organizer_approval(org,'{"title":"Edited invitation","content":"A changed invitation requires a new review.","destination":"A different page","kind":"post"}',item,1);
+ if (select status from public.organizer_approvals where id=item)<>'pending' then raise exception 'Edit preserved approval';end if;
+ blocked:=false;begin perform public.review_organizer_approval(item,1,'approve');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Stale review accepted';end if;
+ perform public.review_organizer_approval(item,2,'reject');
+ blocked:=false;begin perform public.review_organizer_approval(item,2,'approve');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Reviewed draft approved twice';end if;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',other_id,'role','authenticated')::text,true);
+ other_org:=public.create_vendor_workspace('Other review tests');
+ if (select count(*) from public.organizer_approvals)<>0 then raise exception 'Cross-organization read';end if;
+ blocked:=false;begin perform public.review_organizer_approval(item,2,'approve');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Cross-organization review';end if;
+ execute 'reset role';
+ if (select count(*) from public.vendor_activity where organization_id=org and action like 'organizer_draft_%')<>4 then raise exception 'Missing audit entries';end if;
+end; $$;
+rollback;

@@ -11,6 +11,7 @@ import { researchInputSchema, type ResearchInput, type ResearchResult } from "./
 import { researchCommunity, ResearchError } from "./perplexity.server";
 
 const inputSchema = researchInputSchema.extend({
+  threadKey: z.enum(["main", "venue", "outreach", "volunteers", "discover"]).optional(),
   organizationId: z.string().uuid(),
   requestId: z.string().uuid(),
   planId: z.string().uuid().nullable().default(null),
@@ -118,6 +119,7 @@ const defaults: Dependencies = {
         agentId: input.agentId,
         collectVendors: input.collectVendors,
         skillId: input.skillId,
+        threadKey: input.threadKey,
       },
     });
     if (error) {
@@ -162,6 +164,28 @@ const defaults: Dependencies = {
               answer: row.result?.answer?.slice(0, 600),
             })),
           ).slice(0, 1600),
+      );
+    }
+    if (input.threadKey) {
+      const history = await db
+        .from("steward_research_runs")
+        .select("input,result")
+        .eq("organization_id", input.organizationId)
+        .eq("input->>threadKey", input.threadKey)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (history.error) throw new Error("Organizer conversation could not be loaded");
+      parts.push(
+        "Current conversation: " +
+          input.threadKey +
+          "\n" +
+          JSON.stringify(
+            (history.data ?? []).reverse().map((row) => ({
+              question: row.input.question,
+              answer: row.result?.answer?.slice(0, 700),
+            })),
+          ).slice(0, 2400),
       );
     }
     const brief = await db
@@ -279,7 +303,22 @@ export async function handleStewardResearch(
     } finally {
       reader.releaseLock();
     }
-    const parsed = inputSchema.safeParse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+    const raw = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    const types: Record<string, string> = {
+      organizations: "resources",
+      venues: "venues",
+      vendors: "vendors",
+      events: "events",
+    };
+    const normalized =
+      raw && typeof raw === "object" && !Array.isArray(raw) && "query" in raw
+        ? {
+            ...raw,
+            question: raw.query,
+            purpose: typeof raw.type === "string" ? types[raw.type] : undefined,
+          }
+        : raw;
+    const parsed = inputSchema.safeParse(normalized);
     if (!parsed.success)
       return json({ error: "Check the question, location, organization, and plan." }, 400);
     const input = parsed.data;

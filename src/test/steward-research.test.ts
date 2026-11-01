@@ -150,3 +150,36 @@ it("rejects discovery without an agent and area before spending", async () => {
   ).toBe(400);
   expect(deps.reserve).not.toHaveBeenCalled();
 });
+
+it("preserves an allowed side-chat key and rejects arbitrary memory namespaces", async () => {
+  const deps = dependencies();
+  const response = await handleStewardResearch(request({ ...input, threadKey: "venue" }), deps);
+  expect(response.status).toBe(200);
+  expect(deps.reserve).toHaveBeenCalledWith(
+    "verified-user",
+    expect.objectContaining({ threadKey: "venue" }),
+  );
+  const rejected = dependencies();
+  expect(
+    (await handleStewardResearch(request({ ...input, threadKey: "other-organization" }), rejected))
+      .status,
+  ).toBe(400);
+  expect(rejected.research).not.toHaveBeenCalled();
+});
+it("accepts the research query/type contract through the same authenticated reservation", async () => {
+  const deps = dependencies();
+  const response = await handleStewardResearch(
+    request({
+      organizationId: input.organizationId,
+      requestId: input.requestId,
+      query: input.question,
+      type: "venues",
+    }),
+    deps,
+  );
+  expect(response.status).toBe(200);
+  expect(deps.research).toHaveBeenCalledWith(
+    expect.objectContaining({ question: input.question, purpose: "venues" }),
+    expect.any(String),
+  );
+});

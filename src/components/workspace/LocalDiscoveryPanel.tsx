@@ -213,7 +213,7 @@ export function LocalDiscoveryPanel({ onSaved }: { onSaved?: () => void }) {
               Review vendors
             </Link>
             {run.result.savedDiscovery?.planId && (
-              <Link to="/dashboard" className="text-primary underline">
+              <Link to="/planning" className="text-primary underline">
                 Review gathering proposal
               </Link>
             )}

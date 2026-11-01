@@ -50,7 +50,7 @@ vi.mock("@/components/workspace/WorkspaceGate", () => ({
     },
   }),
 }));
-import { Route } from "@/routes/dashboard";
+import { Route } from "@/routes/planning";
 const Dashboard = Route.options.component as ComponentType;
 beforeEach(() => {
   state.role = "owner";

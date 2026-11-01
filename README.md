@@ -2,7 +2,7 @@
 
 AI community operations platform: Contribute → Connect → Meet Up.
 
-The signed-in `/dashboard` brings community needs, contribution-first plans, exact-revision review, follow-up dates, saved Perplexity research, and organization activity together. See [steward workflow and configuration](docs/steward-dashboard.md) and the [research-informed implementation plan](docs/community-steward-plan.md).
+The signed-in `/dashboard` is the chat-first organizer workspace. Explore the clearly labeled Tucson example at `/demo`. Community needs and full plan editing remain at `/planning`. See [workspace setup, integrations, and current availability](docs/organizer-workspace.md). See [steward workflow and configuration](docs/steward-dashboard.md) and the [research-informed implementation plan](docs/community-steward-plan.md).
 
 ## Perplexity research
 

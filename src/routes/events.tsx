@@ -47,7 +47,7 @@ const blank = () => ({
   plan_id: "",
 });
 const selectClass = "w-full rounded-md border bg-background px-3 py-2 text-sm";
-function Events() {
+export function Events() {
   const { db, organizationId, role } = useWorkspace();
   const admin = ["owner", "admin"].includes(role);
   const editor = role !== "viewer";

@@ -21,7 +21,7 @@ export const Route = createFileRoute("/knowledge")({
   ),
 });
 type Entry = { id: string; title: string; content: string; source_url: string; updated_at: string };
-function OrganizationKnowledge() {
+export function OrganizationKnowledge() {
   const { db, organizationId, role } = useWorkspace();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [title, setTitle] = useState("");

@@ -39,7 +39,7 @@ type Work = {
   lease_until: string | null;
 };
 
-function PlatformAgents() {
+export function PlatformAgents() {
   const { db, organizationId, role } = useWorkspace();
   const administrator = ["owner", "admin"].includes(role);
   const [agents, setAgents] = useState<PlatformAgent[]>([]);

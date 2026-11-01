@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:title",
-        content: "CiviMeet — Bring people together. Let AI handle the prep.",
+        content: "CiviMeet — Bring people together. Let AI do the groundwork.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

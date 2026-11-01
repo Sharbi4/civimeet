@@ -16,16 +16,19 @@ import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as GetStartedRouteImport } from './routes/get-started'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as KnowledgeRouteImport } from './routes/knowledge'
+import { Route as PlanningRouteImport } from './routes/planning'
 import { Route as PlatformAgentsRouteImport } from './routes/platform-agents'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProductRouteImport } from './routes/product'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VendorsRouteImport } from './routes/vendors'
+import { Route as ApiResearchRouteImport } from './routes/api.research'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
 import { Route as ApiAgentResearchRouteImport } from './routes/api.agent.research'
@@ -69,6 +72,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsRoute = EventsRouteImport.update({
   id: '/events',
   path: '/events',
@@ -87,6 +95,11 @@ const HowItWorksRoute = HowItWorksRouteImport.update({
 const KnowledgeRoute = KnowledgeRouteImport.update({
   id: '/knowledge',
   path: '/knowledge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanningRoute = PlanningRouteImport.update({
+  id: '/planning',
+  path: '/planning',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlatformAgentsRoute = PlatformAgentsRouteImport.update({
@@ -117,6 +130,11 @@ const TermsRoute = TermsRouteImport.update({
 const VendorsRoute = VendorsRouteImport.update({
   id: '/vendors',
   path: '/vendors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiResearchRoute = ApiResearchRouteImport.update({
+  id: '/api/research',
+  path: '/api/research',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SolutionsIndexRoute = SolutionsIndexRouteImport.update({
@@ -164,16 +182,19 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/events': typeof EventsRoute
   '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
+  '/planning': typeof PlanningRoute
   '/platform-agents': typeof PlatformAgentsRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
@@ -190,16 +211,19 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/events': typeof EventsRoute
   '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
+  '/planning': typeof PlanningRoute
   '/platform-agents': typeof PlatformAgentsRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
@@ -217,16 +241,19 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/events': typeof EventsRoute
   '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/knowledge': typeof KnowledgeRoute
+  '/planning': typeof PlanningRoute
   '/platform-agents': typeof PlatformAgentsRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
@@ -245,16 +272,19 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/dashboard'
+    | '/demo'
     | '/events'
     | '/get-started'
     | '/how-it-works'
     | '/knowledge'
+    | '/planning'
     | '/platform-agents'
     | '/pricing'
     | '/privacy'
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
@@ -271,16 +301,19 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/dashboard'
+    | '/demo'
     | '/events'
     | '/get-started'
     | '/how-it-works'
     | '/knowledge'
+    | '/planning'
     | '/platform-agents'
     | '/pricing'
     | '/privacy'
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/research'
     | '/solutions/$slug'
     | '/solutions'
     | '/api/agent/research'
@@ -297,16 +330,19 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/dashboard'
+    | '/demo'
     | '/events'
     | '/get-started'
     | '/how-it-works'
     | '/knowledge'
+    | '/planning'
     | '/platform-agents'
     | '/pricing'
     | '/privacy'
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
@@ -324,16 +360,19 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
+  DemoRoute: typeof DemoRoute
   EventsRoute: typeof EventsRoute
   GetStartedRoute: typeof GetStartedRoute
   HowItWorksRoute: typeof HowItWorksRoute
   KnowledgeRoute: typeof KnowledgeRoute
+  PlanningRoute: typeof PlanningRoute
   PlatformAgentsRoute: typeof PlatformAgentsRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProductRoute: typeof ProductRoute
   TermsRoute: typeof TermsRoute
   VendorsRoute: typeof VendorsRoute
+  ApiResearchRoute: typeof ApiResearchRoute
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
   ApiAgentResearchRoute: typeof ApiAgentResearchRoute
@@ -394,6 +433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events': {
       id: '/events'
       path: '/events'
@@ -420,6 +466,13 @@ declare module '@tanstack/react-router' {
       path: '/knowledge'
       fullPath: '/knowledge'
       preLoaderRoute: typeof KnowledgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planning': {
+      id: '/planning'
+      path: '/planning'
+      fullPath: '/planning'
+      preLoaderRoute: typeof PlanningRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/platform-agents': {
@@ -462,6 +515,13 @@ declare module '@tanstack/react-router' {
       path: '/vendors'
       fullPath: '/vendors'
       preLoaderRoute: typeof VendorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/research': {
+      id: '/api/research'
+      path: '/api/research'
+      fullPath: '/api/research'
+      preLoaderRoute: typeof ApiResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/solutions/': {
@@ -524,16 +584,19 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
+  DemoRoute: DemoRoute,
   EventsRoute: EventsRoute,
   GetStartedRoute: GetStartedRoute,
   HowItWorksRoute: HowItWorksRoute,
   KnowledgeRoute: KnowledgeRoute,
+  PlanningRoute: PlanningRoute,
   PlatformAgentsRoute: PlatformAgentsRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProductRoute: ProductRoute,
   TermsRoute: TermsRoute,
   VendorsRoute: VendorsRoute,
+  ApiResearchRoute: ApiResearchRoute,
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
   ApiAgentResearchRoute: ApiAgentResearchRoute,

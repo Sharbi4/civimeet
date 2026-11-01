@@ -29,7 +29,7 @@ export const Route = createFileRoute("/vendors")({
   ),
 });
 
-function VendorDirectory() {
+export function VendorDirectory() {
   const { db, organizationId, role } = useWorkspace();
   const editable = role !== "viewer";
   const [vendors, setVendors] = useState<Vendor[]>([]);
