@@ -83,7 +83,7 @@ export const demoApprovals: ReviewItem[] = [
   },
 ];
 export const demoReplies: Record<OrganizerThread, string> = {
-  main: "Here’s the working plan for the Neighborhood Resource Fair in Tucson next month.\n\n1. Confirm which resources residents need.\n2. Research local partners and compare accessible venues.\n3. Shortlist food trucks and confirm quotes.\n4. Build the timeline, volunteer roles, and RSVP plan.\n5. Prepare invitations for review.\n\nThe sample Facebook draft, venue hold, and $250 deposit are waiting in Approvals. Nothing has been posted, booked, or paid. These are illustrative examples, not completed research.",
+  main: "Love it. A resource fair in Tucson next month is a great way to meet neighbors.\n\nAre you picturing it in person, and roughly how many people? And do you already have a spot in mind, or should I start looking at venues near you?\n\n(Sample conversation. The draft post, venue hold and $250 deposit in Approvals are illustrative; nothing has been posted, booked or paid.)",
   venue:
     "Compare Reid Park Community Center and other accessible community spaces. Confirm capacity for 200, availability, permits, accessibility, and full cost directly. The prototype has no verified venue quotes or citations; run live Discover research in your organization for evidence.",
   outreach:

@@ -19,6 +19,8 @@
 - [x] Chat-first workspace: expandable sidebar (Chat, Search, Feed, Ideas, Goals, Events, Library, agent-made work), Main Agent plus one agent chat per connected platform
 - [x] Agent panel beside chat: activity, inline approvals with history, browser (take over / give back for connected accounts, supervised web browser for the main agent), memory, stop/resume per platform agent
 - [x] Platform agent memory: playbook and saved notes loaded into every conversation; each completed exchange saved as a 90-day note; six-turn thread history
+- [x] Conversational Civi: personality and per-platform roles loaded into chat; event planning gathers format, place, date, size, purpose and budget through questions, then one click creates the event and starts vendor/venue discovery (or invitations for virtual events); chat replies kept out of shared knowledge; agent can open cited pages in its Steel browser
+- [ ] Task plans: every request becomes a tracked plan (steps, owner agent, status, approvals) shown live in the agent panel
 - [ ] Agent task runner: execute queued work in the agent browser (post, comment, join, message) with approvals, pacing and stop
 - [x] Authenticated Perplexity research with durable organization limits, idempotency, sources, usage and saved shared memory; private /agent preview retained
 - [x] Live Perplexity acceptance test (2026-11-01): server key accepted by /v1/agent (200, search results + answer); production research run completed with 10 sources. Legacy /chat/completions returns agent_api_migration_required and is not used

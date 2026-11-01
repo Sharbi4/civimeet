@@ -539,6 +539,12 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
   const [drawerOpen, setDrawerOpen] = useState(false);
   const panelOpen = wide ? sideOpen : drawerOpen;
   const setPanelOpen = (open: boolean) => (wide ? setSideOpen(open) : setDrawerOpen(open));
+  useEffect(() => {
+    // When the agent opens a page, bring its browser into view.
+    const show = () => (wide ? setSideOpen(true) : setDrawerOpen(true));
+    window.addEventListener("civimeet:browse", show);
+    return () => window.removeEventListener("civimeet:browse", show);
+  }, [wide]);
   const mentions = (text: string) =>
     platformName ? text.toLowerCase().includes(platformName.toLowerCase()) : true;
   const panelApprovals = data.approvals.filter(
@@ -1013,6 +1019,7 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
                     platformName={platformName}
                     initialMessage={chatSeed}
                     onDraft={(c) => edit(undefined, c)}
+                    onOpenEvents={() => navigate("events")}
                   />
                 )}
               </div>

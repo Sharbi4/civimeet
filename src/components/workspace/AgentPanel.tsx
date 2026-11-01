@@ -220,6 +220,11 @@ function PanelView({
   const [tab, setTab] = useState<Tab>(pending.length ? "approvals" : "browser");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  useEffect(() => {
+    const show = () => setTab("browser");
+    window.addEventListener("civimeet:browse", show);
+    return () => window.removeEventListener("civimeet:browse", show);
+  }, []);
   const status =
     state.status === "connected"
       ? { text: "Connected", dot: "bg-emerald-500" }

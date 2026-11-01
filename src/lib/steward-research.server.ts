@@ -9,6 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { researchInputSchema, type ResearchInput, type ResearchResult } from "./research";
 import { researchCommunity, ResearchError } from "./perplexity.server";
+import { mainAgentRole, platformRoles } from "./civi";
 
 const inputSchema = researchInputSchema.extend({
   threadKey: z
@@ -203,6 +204,13 @@ const defaults: Dependencies = {
       );
     }
     const platform = input.threadKey?.startsWith("platform_") ? input.threadKey.slice(9) : null;
+    if (input.threadKey === "main") parts.push("Your role: " + mainAgentRole);
+    if (platform && platformRoles[platform]) {
+      const role = platformRoles[platform];
+      parts.push(
+        `Your role on ${platform}: ${role.role}. Goal: ${role.goal} Manner: ${role.manner}`,
+      );
+    }
     if (platform) {
       // Platform agent memory: its playbook plus facts and summaries it saved earlier.
       const agent = await db
@@ -252,8 +260,12 @@ const defaults: Dependencies = {
       const history = await historyQuery
         .eq("status", "completed")
         .order("created_at", { ascending: false })
-        .limit(6);
+        .limit(8);
       if (history.error) throw new Error("Organizer conversation could not be loaded");
+      const latestDraft = (history.data ?? []).find((row) => row.result?.eventDraft)?.result
+        ?.eventDraft;
+      if (latestDraft)
+        parts.push("Event details gathered so far: " + JSON.stringify(latestDraft).slice(0, 1200));
       parts.push(
         "Current conversation: " +
           input.threadKey +
@@ -438,9 +450,14 @@ export async function handleStewardResearch(
     if (!parsed.success)
       return json({ error: "Check the question, location, organization, and plan." }, 400);
     const input = parsed.data;
+    // Chat with the Main Agent or a platform agent is a conversation first: Civi asks
+    // the planning questions before any research brief or event plan is written.
+    const chatThread = input.threadKey === "main" || input.threadKey?.startsWith("platform_");
     const selectedSkill =
       input.skillId === "auto"
-        ? selectStewardSkill(input.question, Boolean(input.agentId && input.location.trim()))
+        ? chatThread
+          ? "conversation"
+          : selectStewardSkill(input.question, Boolean(input.agentId && input.location.trim()))
         : input.skillId;
     if (selectedSkill) {
       input.skillId = selectedSkill;

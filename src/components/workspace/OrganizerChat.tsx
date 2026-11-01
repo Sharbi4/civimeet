@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, BookOpen, Sprout } from "lucide-react";
+import { ArrowUp, BookOpen, CalendarPlus, Monitor, Sprout } from "lucide-react";
+import { requestAgentBrowse } from "./BrowserDock";
+import { missingEventDetails, type EventDraft } from "@/lib/civi";
 import { useWorkspace } from "./WorkspaceGate";
 import {
   chatLabel,
@@ -11,25 +13,158 @@ import {
 import type { ResearchResult } from "@/lib/research";
 import { OrganizerVoice } from "./OrganizerVoice";
 
-export function ResearchAnswer({ result }: { result: ResearchResult }) {
+export function ResearchAnswer({
+  result,
+  onBrowse,
+}: {
+  result: ResearchResult;
+  onBrowse?: ((url: string, title: string) => void) | undefined;
+}) {
+  const sources = result.sources.filter((s) => /^https?:\/\//.test(s.url));
   return (
     <div className="ow-answer">
       <p className="whitespace-pre-wrap">{result.answer}</p>
-      {result.sources.length > 0 && (
+      {sources.length > 0 && (
         <details>
-          <summary>{result.sources.length} research sources</summary>
+          <summary>
+            {sources.length} {sources.length === 1 ? "source" : "sources"}
+          </summary>
           <ul>
-            {result.sources
-              .filter((s) => /^https?:\/\//.test(s.url))
-              .map((s) => (
-                <li key={s.id}>
-                  <a href={s.url} target="_blank" rel="noreferrer">
-                    [{s.id}] {s.title}
-                  </a>
-                </li>
-              ))}
+            {sources.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-center gap-2">
+                <a href={s.url} target="_blank" rel="noreferrer">
+                  [{s.id}] {s.title}
+                </a>
+                {onBrowse && (
+                  <button
+                    type="button"
+                    onClick={() => onBrowse(s.url, s.title)}
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[12px] font-medium text-[#0640d4] hover:bg-[#edf3ff]"
+                  >
+                    <Monitor size={12} /> Open in agent browser
+                  </button>
+                )}
+              </li>
+            ))}
           </ul>
         </details>
+      )}
+    </div>
+  );
+}
+
+/** Three-dot typing indicator while Civi is replying. */
+function Typing() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 py-1"
+      role="status"
+      aria-label="Civi is replying"
+    >
+      {[0, 150, 300].map((delay) => (
+        <span
+          key={delay}
+          className="h-2 w-2 animate-bounce rounded-full bg-[#94a3b8]"
+          style={{ animationDelay: `${delay}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+const fieldLabels: [keyof EventDraft, string][] = [
+  ["format", "Type"],
+  ["location", "Where"],
+  ["date", "When"],
+  ["attendance", "People"],
+  ["goal", "Purpose"],
+  ["budgetUsd", "Budget"],
+  ["venue", "Venue"],
+];
+function showField(draft: EventDraft, key: keyof EventDraft) {
+  const value = draft[key];
+  if (value === null || value === undefined || value === "") return null;
+  if (key === "format") return value === "virtual" ? "Virtual" : "In person";
+  if (key === "date")
+    return (
+      new Date(`${String(value)}T12:00:00`).toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }) + (draft.time ? ` · ${draft.time}` : "")
+    );
+  if (key === "attendance") return `About ${value}`;
+  if (key === "budgetUsd") return `$${Number(value).toLocaleString()}`;
+  return String(value);
+}
+function EventDraftCard({
+  draft,
+  created,
+  busy,
+  canCreate,
+  onCreate,
+  onOpenEvents,
+}: {
+  draft: EventDraft;
+  created: { title: string } | null;
+  busy: boolean;
+  canCreate: boolean;
+  onCreate: () => void;
+  onOpenEvents?: (() => void) | undefined;
+}) {
+  const missing = missingEventDetails(draft);
+  return (
+    <div className="mt-3 rounded-2xl border border-[#dbe6ff] bg-[#f7faff] p-4">
+      <p className="!mb-2 flex items-center gap-2 text-[13px] font-semibold text-[#142d40]">
+        <CalendarPlus size={16} className="text-[#0640d4]" />
+        {draft.title ?? "Your event"}
+      </p>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
+        {fieldLabels.map(([key, label]) => {
+          const value = showField(draft, key);
+          if (!value && (key === "budgetUsd" || key === "venue")) return null;
+          return (
+            <div key={key} className="contents">
+              <dt className="text-[#64717a]">{label}</dt>
+              <dd className={value ? "text-[#142d40]" : "italic text-[#94a3b8]"}>
+                {value ?? "still to decide"}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+      {created ? (
+        <p className="!mb-0 mt-3 text-[13px] text-[#0f5132]">
+          Created “{created.title}”. Your agents are on it.{" "}
+          {onOpenEvents && (
+            <button
+              type="button"
+              onClick={onOpenEvents}
+              className="font-medium text-[#0640d4] underline-offset-2 hover:underline"
+            >
+              Open in Events
+            </button>
+          )}
+        </p>
+      ) : missing.length ? (
+        <p className="!mb-0 mt-3 text-[12px] text-[#64717a]">
+          Still to decide: {missing.join(", ")}.
+        </p>
+      ) : (
+        <button
+          type="button"
+          disabled={!canCreate || busy}
+          onClick={onCreate}
+          className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#064cff] px-4 py-2 text-[13px] font-medium text-white shadow-sm hover:bg-[#0640d4] disabled:opacity-50"
+        >
+          {busy ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            <CalendarPlus size={15} />
+          )}
+          Create event and start the agents
+        </button>
       )}
     </div>
   );
@@ -40,6 +175,7 @@ export function OrganizerChat({
   initialMessage = "",
   onDraft,
   eventId,
+  onOpenEvents,
 }: {
   thread: ChatThread | "discover";
   /** Display name of the connected platform for platform agent threads. */
@@ -47,6 +183,7 @@ export function OrganizerChat({
   initialMessage?: string;
   onDraft?: (content: string) => void;
   eventId?: string;
+  onOpenEvents?: () => void;
 }) {
   const { db, organizationId, role } = useWorkspace();
   const [turns, setTurns] = useState<OrganizerTurn[]>([]);
@@ -97,12 +234,32 @@ export function OrganizerChat({
     const timer = setInterval(() => void load(), 5000);
     return () => clearInterval(timer);
   }, [turns, load]);
-  async function send(question = message, presence = false) {
-    if (busy || role === "viewer") return;
+  type SendOptions = {
+    presence?: boolean;
+    skillId?: string;
+    eventId?: string;
+    agentId?: string;
+  };
+  async function send(question = message, options: SendOptions = {}) {
+    const text = question.trim();
+    if (busy || role === "viewer" || text.length < 2) return;
     setBusy(true);
     setError("");
     const key = requestKey.current ?? crypto.randomUUID();
     requestKey.current = key;
+    // Show the message in the thread right away, with Civi typing underneath.
+    setMessage("");
+    setTurns((current) => [
+      ...current.filter((turn) => turn.id !== `pending-${key}`),
+      {
+        id: `pending-${key}`,
+        input: { question: text, threadKey: thread },
+        status: "running",
+        result: null,
+        error: null,
+        created_at: new Date().toISOString(),
+      },
+    ]);
     controller.current = new AbortController();
     const timeout = setTimeout(() => controller.current?.abort(), 120000);
     try {
@@ -117,31 +274,36 @@ export function OrganizerChat({
         },
         body: JSON.stringify({
           organizationId,
-          eventId,
+          eventId: options.eventId ?? eventId,
           requestId: key,
-          question,
+          question: text,
           purpose: thread === "venue" ? "venues" : thread === "discover" ? purpose : "general",
           location,
           includeKnowledge: true,
           threadKey: thread,
+          ...(options.agentId ? { agentId: options.agentId } : {}),
           skillId:
-            presence || isPlatformThread(thread)
+            options.skillId ??
+            (options.presence
               ? "community_presence"
               : thread === "outreach"
                 ? "attendance_outreach"
-                : thread === "main"
+                : thread === "main" || isPlatformThread(thread)
                   ? "auto"
-                  : undefined,
+                  : undefined),
         }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "Research could not finish.");
       if (!alive.current) return;
       requestKey.current = null;
-      setMessage("");
       await load();
     } catch (e) {
       if (alive.current) {
+        if (!(e instanceof Error && e.name === "AbortError")) {
+          setTurns((current) => current.filter((turn) => turn.id !== `pending-${key}`));
+          setMessage((current) => current || text);
+        }
         setError(
           e instanceof Error && e.name === "AbortError"
             ? "Stopped waiting. Research may finish in the background; check this conversation before retrying."
@@ -156,6 +318,90 @@ export function OrganizerChat({
       if (alive.current) setBusy(false);
     }
   }
+  // Creating an event from the conversation hands it to the agents right away.
+  const [created, setCreated] = useState<Record<string, { title: string; eventId: string }>>({});
+  const [creating, setCreating] = useState(false);
+  useEffect(() => {
+    const saved: Record<string, { title: string; eventId: string }> = {};
+    for (const turn of turns) {
+      const raw = window.localStorage.getItem(`civimeet.event-from:${turn.id}`);
+      if (raw)
+        try {
+          saved[turn.id] = JSON.parse(raw);
+        } catch {
+          /* ignore */
+        }
+    }
+    setCreated(saved);
+  }, [turns]);
+  async function createEvent(turnId: string, draft: EventDraft) {
+    if (creating || role === "viewer") return;
+    setCreating(true);
+    setError("");
+    try {
+      const title = (draft.title ?? draft.goal ?? "Community gathering").slice(0, 200);
+      const purpose = [
+        draft.goal,
+        draft.audience ? `For ${draft.audience}` : null,
+        draft.attendance ? `About ${draft.attendance} people` : null,
+        draft.format === "virtual" ? "Virtual event" : "In-person event",
+        draft.time ? `Time: ${draft.time}` : null,
+      ]
+        .filter(Boolean)
+        .join(". ");
+      const area =
+        draft.format === "virtual"
+          ? `Online${draft.location ? ` · ${draft.location}` : ""}`
+          : (draft.location ?? "");
+      const { data, error: failure } = await db.rpc("save_community_event", {
+        workspace: organizationId,
+        event_data: {
+          title: title.length >= 3 ? title : "Community gathering",
+          purpose: purpose.length >= 10 ? purpose : `${purpose} · community gathering`,
+          event_date: draft.date,
+          venue: draft.venue ?? "",
+          geographic_area: area.slice(0, 160),
+          budget_cents: Math.round((draft.budgetUsd ?? 0) * 100),
+        },
+      });
+      if (failure || !data) throw new Error(failure?.message ?? "The event could not be created.");
+      const record = { title, eventId: String(data) };
+      window.localStorage.setItem(`civimeet.event-from:${turnId}`, JSON.stringify(record));
+      setCreated((current) => ({ ...current, [turnId]: record }));
+      setCreating(false);
+      requestKey.current = null;
+      if (draft.format === "virtual") {
+        await send(
+          `Our virtual event "${title}" is set for ${draft.date}. Draft the invitations and a simple plan to get the word out.`,
+          { skillId: "attendance_outreach", eventId: record.eventId },
+        );
+      } else {
+        const web = await db
+          .from("platform_agents")
+          .select("id")
+          .eq("organization_id", organizationId)
+          .eq("platform", "web")
+          .eq("selected", true)
+          .maybeSingle();
+        await send(
+          `Find venues, vendors and local partners for "${title}" in ${draft.location} on ${draft.date} for about ${draft.attendance} people${draft.budgetUsd ? ` with a budget of $${draft.budgetUsd}` : ""}.`,
+          web.data?.id
+            ? { skillId: "local_partner_discovery", eventId: record.eventId, agentId: web.data.id }
+            : { skillId: "event_design", eventId: record.eventId },
+        );
+      }
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "The event could not be created.");
+    } finally {
+      setCreating(false);
+    }
+  }
+  const latestDraftTurn = [...turns].reverse().find((turn) => turn.result?.eventDraft)?.id;
+  const browse =
+    thread === "main" || thread === "discover"
+      ? (url: string, title: string) =>
+          requestAgentBrowse({ organizationId, url, task: `Look at ${title}`.slice(0, 500) })
+      : undefined;
   const running = turns.some(
     (t) => t.status === "running" && Date.now() - Date.parse(t.created_at) < 185000,
   );
@@ -194,7 +440,7 @@ export function OrganizerChat({
                 requestKey.current = null;
                 void send(
                   "Build our community presence using our saved organization brief. Find relevant local communities and prepare helpful contributions and a practical plan for the next week. Prioritize usefulness over promotion. Cite sources and clearly identify actions that need a connection or approval.",
-                  true,
+                  { presence: true },
                 );
               }}
             >
@@ -260,13 +506,23 @@ export function OrganizerChat({
             )}
             <div className="ow-user-message">{t.input.question}</div>
             <div className="ow-agent-message">
-              <strong>Civi · AI organizer</strong>
+              <strong>Civi</strong>
               {t.status === "running" ? (
-                <p>Researching and checking sources…</p>
+                <Typing />
               ) : t.result ? (
                 <>
-                  <ResearchAnswer result={t.result} />
-                  {role !== "viewer" && onDraft && (
+                  <ResearchAnswer result={t.result} onBrowse={browse} />
+                  {t.result.eventDraft && t.id === latestDraftTurn && (
+                    <EventDraftCard
+                      draft={t.result.eventDraft}
+                      created={created[t.id] ?? null}
+                      busy={creating}
+                      canCreate={role !== "viewer" && !busy}
+                      onCreate={() => void createEvent(t.id, t.result!.eventDraft!)}
+                      onOpenEvents={onOpenEvents}
+                    />
+                  )}
+                  {role !== "viewer" && onDraft && t.result.skill?.id !== "conversation" && (
                     <button
                       className="ow-link"
                       onClick={() => {
@@ -305,7 +561,14 @@ export function OrganizerChat({
           minLength={2}
           maxLength={3000}
           value={message}
-          disabled={busy || role === "viewer"}
+          disabled={role === "viewer"}
+          onKeyDown={(e) => {
+            // Enter sends; Shift+Enter adds a new line.
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
           onChange={(e) => {
             setMessage(e.target.value);
             requestKey.current = null;
@@ -317,15 +580,23 @@ export function OrganizerChat({
           }
         />
         <div>
-          <span>Sources saved to your organization · no automatic publishing</span>
+          <span>Enter to send · Shift+Enter for a new line</span>
           {busy ? (
-            <button type="button" onClick={() => controller.current?.abort()}>
-              Stop waiting
+            <button
+              type="button"
+              onClick={() => controller.current?.abort()}
+              aria-label="Stop waiting"
+              title="Stop waiting"
+            >
+              <span
+                className="block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+                aria-hidden="true"
+              />
             </button>
           ) : (
             <button
               type="submit"
-              disabled={message.trim().length < 10 || running || role === "viewer"}
+              disabled={message.trim().length < 2 || running || role === "viewer"}
               aria-label="Send to organizer"
             >
               <ArrowUp size={18} />

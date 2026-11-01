@@ -31,6 +31,15 @@ const InlineBrowserScope = createContext<{
   setInline: (value: boolean) => void;
 } | null>(null);
 const ignoreSplit = () => {};
+
+type BrowseRequest = { organizationId: string; url: string; task: string };
+let pendingBrowse: BrowseRequest | null = null;
+/** Ask the agent's browser to open a page (for example a source the agent cited). The
+ * request waits until the browser panel is mounted, so it works even if its tab was closed. */
+export function requestAgentBrowse(request: BrowseRequest) {
+  pendingBrowse = request;
+  window.dispatchEvent(new CustomEvent("civimeet:browse", { detail: request }));
+}
 export function PlatformBrowser({ agentId }: { agentId: string }) {
   const context = useContext(InlineBrowserScope);
   const setInline = context?.setInline;
@@ -236,7 +245,10 @@ function BrowserDock({
     );
     return () => clearTimeout(timer);
   }, [media?.expiresAt]);
-  async function command(command: BrowserCommand["command"]) {
+  async function command(
+    command: BrowserCommand["command"],
+    overrides: { url?: string; task?: string } = {},
+  ) {
     if (operation.current) return;
     operation.current = true;
     setPendingAction(command);
@@ -258,8 +270,10 @@ function BrowserDock({
           agentId: selected,
           requestId: crypto.randomUUID(),
           command,
-          task,
-          ...(["start", "navigate"].includes(command) && url ? { url } : {}),
+          task: overrides.task ?? task,
+          ...(["start", "navigate"].includes(command) && (overrides.url ?? url)
+            ? { url: overrides.url ?? url }
+            : {}),
         }),
       });
       const result = await response.json();
@@ -326,6 +340,47 @@ function BrowserDock({
     }, 5000);
     return () => clearInterval(timer);
   }, [layout, active, administrator, state, error]);
+  // Pages the agent cites can be opened here. The administrator's click authorizes that site.
+  const browseRef = useRef<(request: BrowseRequest) => Promise<void>>(async () => {});
+  browseRef.current = async (request) => {
+    if (request.organizationId !== scope.organizationId || agent?.platform !== "web") return;
+    pendingBrowse = null;
+    setLayout((current) => (current === "collapsed" ? "panel" : current));
+    try {
+      if (!administrator)
+        throw new Error("An organization administrator can open pages in the agent browser.");
+      const target = new URL(request.url);
+      target.hash = "";
+      target.search = "";
+      const clean = approvedBrowserUrl(target.href, [target.origin]);
+      if (!sites.includes(target.origin)) {
+        const { error: failure } = await scope.db.from("browser_sites").insert({
+          organization_id: scope.organizationId,
+          origin: target.origin,
+          approved_by: scope.userId,
+        });
+        if (failure && !/duplicate/i.test(failure.message))
+          throw new Error("Could not authorize this website for the agent browser.");
+        setSites((current) => [...new Set([...current, target.origin])]);
+      }
+      setUrl(clean);
+      setTask(request.task.slice(0, 500));
+      await command(active ? "navigate" : "start", {
+        url: clean,
+        task: request.task.slice(0, 500),
+      });
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "The page could not be opened.");
+    }
+  };
+  const agentReady = Boolean(agent);
+  useEffect(() => {
+    if (!agentReady) return;
+    if (pendingBrowse) void browseRef.current(pendingBrowse);
+    const listen = (event: Event) => void browseRef.current((event as CustomEvent).detail);
+    window.addEventListener("civimeet:browse", listen);
+    return () => window.removeEventListener("civimeet:browse", listen);
+  }, [agentReady]);
   if (layout === "collapsed")
     return (
       <Button className="fixed bottom-5 right-5 z-40 shadow-lg" onClick={() => setLayout("panel")}>

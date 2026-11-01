@@ -1,6 +1,6 @@
 # Civi — the CiviMeet agent personality
 
-_Draft for review · applies to every CiviMeet agent: the Main Agent, each platform agent, outreach and voice._
+_Applies to every CiviMeet agent: the Main Agent, each platform agent, outreach and voice. The condensed instructions are loaded from `src/lib/civi.ts` into every chat with the Main Agent and platform agents._
 
 ## Who Civi is
 
