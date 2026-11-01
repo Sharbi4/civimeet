@@ -28,6 +28,16 @@ export async function authorizeVoice(token: string, organizationId: string) {
 
 // Fail closed on unknown configuration: prompts are not an authorization boundary.
 export function isIsolatedVoiceAgent(agent: unknown): boolean {
+  function hasUnsafeConfiguration(value: unknown, path = ""): boolean {
+    if (!value || typeof value !== "object") return false;
+    return Object.entries(value).some(([key, child]) => {
+      const next = `${path}.${key}`;
+      const hasContent = Array.isArray(child) ? child.length > 0 : child !== null && child !== undefined && child !== false && child !== "" && (typeof child !== "object" || Object.keys(child).length > 0);
+      if (/^(tools|tool_ids|tools_config_list|mcp_servers|mcp_server_ids|knowledge_base|procedure_ids|start_procedure_ids|procedures)$/.test(key) && hasContent) return true;
+      if (/override/i.test(next) && child === true) return true;
+      return hasUnsafeConfiguration(child, next);
+    });
+  }
   const schema = z.object({
     platform_settings: z.object({ auth: z.object({ enable_auth: z.literal(true) }) }),
     conversation_config: z.object({ agent: z.object({ prompt: z.object({
@@ -37,7 +47,7 @@ export function isIsolatedVoiceAgent(agent: unknown): boolean {
     }) }) }),
     workflow: z.union([z.null(), z.object({ nodes: z.record(z.unknown()).refine(nodes => Object.keys(nodes).length === 0), edges: z.record(z.unknown()).optional() })]).optional(),
   });
-  return schema.safeParse(agent).success;
+  return schema.safeParse(agent).success && !hasUnsafeConfiguration(agent);
 }
 const json = (body: object, status = 200) => Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 export async function handleOrganizerVoice(request: Request, authorize = authorizeVoice, provider = fetch) {

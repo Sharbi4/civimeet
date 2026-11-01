@@ -41,6 +41,7 @@ it("clears transcripts and disconnects on thread and organization switch", async
   view.rerender(<OrganizerVoice thread="venue" />);
   expect(mocks.end).toHaveBeenCalledTimes(2);
   expect(screen.queryByText("Prepare a gathering draft")).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole("button", { name: "Start voice" })).toBeEnabled());
 });
 it("stops and closes the active voice session", async () => {
   setupFetch(); mocks.start.mockResolvedValue({ endSession: mocks.end });

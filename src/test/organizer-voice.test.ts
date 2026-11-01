@@ -37,6 +37,9 @@ describe("Organizer voice boundaries", () => {
     for (const field of ["tools", "tool_ids", "knowledge_base"]) expect(isIsolatedVoiceAgent({ ...safeAgent, conversation_config: { agent: { prompt: { [field]: ["outbound"] } } } })).toBe(false);
     expect(isIsolatedVoiceAgent({ ...safeAgent, workflow: { nodes: { call: {} } } })).toBe(false);
     expect(isIsolatedVoiceAgent({ ...safeAgent, platform_settings: { auth: { enable_auth: false } } })).toBe(false);
+    expect(isIsolatedVoiceAgent({ ...safeAgent, platform_settings: { auth: { enable_auth: true }, overrides: { tools: true } } })).toBe(false);
+    expect(isIsolatedVoiceAgent({ ...safeAgent, mcp_server_ids: ["remote-server"] })).toBe(false);
+    expect(isIsolatedVoiceAgent({ ...safeAgent, procedure_ids: ["outbound-procedure"] })).toBe(false);
   });
   it("only obtains a token after Start, scoped to the authorized thread and organization", async () => {
     vi.stubEnv("ELEVENLABS_API_KEY", "fixture-key"); vi.stubEnv("ELEVENLABS_AGENT_ID", "agent-fixture");
