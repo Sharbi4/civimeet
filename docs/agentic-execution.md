@@ -56,6 +56,8 @@ Every action and its real outcome is stored in `organizer_chat_actions` and show
 | Follow-up turn without acknowledging the check                           | 400 `Every pending computer safety check must be acknowledged exactly once`. This confirms the harness must stop for a person; it now explains this error in plain words.                    |
 | Steel screenshot of example.com → Spark 1.3                              | Steel 200. Spark returned a `computer_call` asking for a `screenshot` (no safety check). The instructions now tell the model that a fresh screenshot arrives every turn.                     |
 
+A second check confirmed the two-turn loop: Spark 1.3 first asked for a `screenshot` (with about 3.3k of 3.4k input tokens served from cache), and after a `computer_call_output` with a fresh screenshot it returned the click at 640, 431, again flagged `computer_action_requires_confirmation`. A live Steel session (create, connect over CDP, open example.com, release) also worked; Spark again asked for a screenshot before acting, so no click was performed in that session.
+
 Expect Meta to ask for confirmation on ordinary clicks, so a read-only run will often pause for **Allow and continue**. Not yet run end to end: a real signed-in platform run (needs the published app and a connected account).
 
 ## What does not exist yet (do not assume a button means it works)
