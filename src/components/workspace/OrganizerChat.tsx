@@ -8,6 +8,7 @@ import {
   type OrganizerTurn,
 } from "@/lib/organizer";
 import type { ResearchResult } from "@/lib/research";
+import { OrganizerVoice } from "./OrganizerVoice";
 
 export function ResearchAnswer({ result }: { result: ResearchResult }) {
   return (
@@ -151,6 +152,7 @@ export function OrganizerChat({
         <h2>{thread === "discover" ? "Discover your community" : threadLabels[thread]}</h2>
         <p>Research and preparation, grounded in your organization’s knowledge.</p>
       </header>
+      <OrganizerVoice key={`${organizationId}:${thread}`} thread={thread} />
       {thread === "discover" && (
         <div className="ow-research-options">
           <label>
@@ -209,7 +211,7 @@ export function OrganizerChat({
                 <>
                   <ResearchAnswer result={t.result} />
                   {role !== "viewer" && (
-                    <button className="ow-link" onClick={() => onDraft(t.result!.answer)}>
+                    <button className="ow-link" onClick={() => { if (t.result) onDraft(t.result.answer); }}>
                       Prepare a draft for review
                     </button>
                   )}
