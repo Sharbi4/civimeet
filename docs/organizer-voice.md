@@ -27,3 +27,16 @@ Remove all tools (including client, server, webhook, MCP and phone tools), share
 - No telephony is configured or implemented. Phone outreach is disabled. Enabling it requires a separate server executor with verified telephony, administrator approval bound to exact recipient/script/org/revision, idempotency, and no cold political calls. No call, post, message, booking, or payment was made in this work.
 
 References: [WebRTC token](https://elevenlabs.io/docs/eleven-agents/api-reference/conversations/get-webrtc-token), [authentication](https://elevenlabs.io/docs/eleven-agents/customization/authentication), [agent configuration](https://elevenlabs.io/docs/eleven-agents/api-reference/agents/get).
+
+## Changed files and verification
+
+- `src/components/workspace/OrganizerVoice.tsx` — consent, session lifecycle and transcript controls.
+- `src/components/workspace/OrganizerChat.tsx` — voice controls in live chat.
+- `src/lib/organizer-voice.server.ts` — authenticated membership, isolated-agent validation and token issuance.
+- `src/routes/api.organizer.voice.ts` — voice HTTP boundary.
+- `src/routes/dashboard.tsx` — workspace metadata.
+- `src/test/organizer-voice.test.ts`, `src/test/organizer-voice-controls.test.tsx` — targeted boundary/control tests.
+- `package.json`, `bun.lock` — ElevenLabs client SDK.
+- `AGENTS.md`, `roadmap.md`, this document — safeguards, setup and remaining blocker.
+
+All 48 selected voice/workspace/Perplexity/Steel regression tests passed. Build telemetry reports clean. Signed-in browser verification in the actual organization confirmed disabled Start and the unconfigured voice state; no microphone or live agent session was started. A screenshot was captured but visual inspection was unavailable, so verification rests on the rendered browser controls and text. Existing history was not changed; no framework or research/browser provider was replaced. No deployment was performed.
