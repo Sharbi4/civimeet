@@ -1,18 +1,15 @@
-import { Fragment, useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
   MessageCircle,
-  Search,
   CalendarDays,
-  Users,
-  BookOpen,
-  Link2,
-  CheckCircle,
   Activity,
   Monitor,
   X,
   ArrowRight,
+  Inbox,
+  Search,
+  Users,
 } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
 import { OrganizerChat } from "./OrganizerChat";
@@ -26,39 +23,61 @@ import { OrganizationKnowledge } from "@/routes/knowledge";
 import { PlatformAgents } from "@/routes/platform-agents";
 import { DemoConnectors, LiveConnectors } from "./Connectors";
 import {
+  WorkspaceRail,
+  railViews,
+  type RailArtifact,
+  type RailChat,
+  type RailView,
+} from "./WorkspaceRail";
+import {
+  AgentLibrary,
+  FeedView,
+  GoalsView,
+  IdeasView,
+  SearchView,
+  type AgentWork,
+  type FeedEntry,
+  type SearchItem,
+} from "./WorkspaceViews";
+import { connectors as connectorCatalog } from "@/lib/connectors";
+import {
+  chatLabel,
   demoApprovals,
   demoReplies,
+  isPlatformThread,
   organizerThreads,
+  platformThread,
   threadLabels,
-  type OrganizerThread,
+  type ChatThread,
   type ReviewItem,
 } from "@/lib/organizer";
 import "./organizer.css";
 
-type View =
-  | "dashboard"
-  | "chat"
-  | "discover"
-  | "events"
-  | "people"
-  | "library"
-  | "browser"
-  | "connectors"
-  | "approvals"
-  | "activity";
-const views = [
-  ["dashboard", "Dashboard", LayoutDashboard],
-  ["chat", "Organizer Chat", MessageCircle],
-  ["browser", "Browser Sessions", Monitor],
-  ["events", "Events", CalendarDays],
-  ["discover", "Discover", Search],
-  ["people", "People", Users],
-  ["library", "Library", BookOpen],
-  ["connectors", "Connections", Link2],
-  ["approvals", "Approvals", CheckCircle],
-  ["activity", "Activity", Activity],
-] as const;
-type Task = { id: string; title: string; follow_up: string; follow_up_on: string; status: string };
+type View = RailView;
+const views = railViews;
+type Task = {
+  id: string;
+  title: string;
+  follow_up: string;
+  follow_up_on: string;
+  status: string;
+  contribution?: string;
+  gathering?: string;
+};
+type ResearchItem = {
+  id: string;
+  input: { question?: string; threadKey?: string };
+  result: { answer?: string; sources?: { url: string }[] } | null;
+  created_at: string;
+};
+type Need = {
+  id: string;
+  title: string;
+  detail: string;
+  kind: string;
+  priority: string;
+  created_at: string;
+};
 type EventRow = { id: string; title: string; event_date: string; venue: string; status: string };
 type Log = { id: string; action: string; actor_id?: string; created_at: string };
 type SessionRow = {
@@ -79,6 +98,10 @@ type WorkspaceData = {
   approvals: ReviewItem[];
   vendorCount: number;
   webAgentId: string | null;
+  goal: string;
+  connected: string[];
+  research: ResearchItem[];
+  needs: Need[];
 };
 const blank: WorkspaceData = {
   name: "Your community",
@@ -91,6 +114,10 @@ const blank: WorkspaceData = {
   approvals: [],
   vendorCount: 0,
   webAgentId: null,
+  goal: "",
+  connected: [],
+  research: [],
+  needs: [],
 };
 const demoData: WorkspaceData = {
   ...blank,
@@ -98,11 +125,44 @@ const demoData: WorkspaceData = {
   mission: "Connect Tucson residents to food, housing, health, and library resources.",
   area: "Tucson, AZ",
   vendorCount: 18,
+  goal: "Host a Neighborhood Resource Fair next month that connects 200 residents with food, housing and health partners.",
+  connected: ["facebook", "google_calendar"],
+  research: [
+    {
+      id: "r1",
+      input: { question: "Which Tucson food banks run mobile pantries near Reid Park?" },
+      result: {
+        answer:
+          "Community Food Bank of Southern Arizona runs weekly mobile pantries on the south side; two stops are within a mile of Reid Park. Hours and eligibility should be confirmed before promoting.",
+        sources: [{ url: "https://www.communityfoodbank.org/" }],
+      },
+      created_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+    },
+  ],
+  needs: [
+    {
+      id: "n1",
+      title: "Families asking where to find weekend meals",
+      detail: "Several neighbors in the Midvale Park group asked about Saturday food options.",
+      kind: "question",
+      priority: "high",
+      created_at: new Date(Date.now() - 5 * 3_600_000).toISOString(),
+    },
+    {
+      id: "n2",
+      title: "Seniors want help signing up for utility assistance",
+      detail: "",
+      kind: "resource",
+      priority: "normal",
+      created_at: new Date(Date.now() - 26 * 3_600_000).toISOString(),
+    },
+  ],
   approvals: demoApprovals,
   tasks: [
     {
       id: "task1",
       title: "Confirm venue requirements",
+      contribution: "Compare accessible spaces for 200 people near bus lines.",
       follow_up: "Compare accessible spaces for 200 people.",
       follow_up_on: "Next week · sample",
       status: "draft",
@@ -110,6 +170,7 @@ const demoData: WorkspaceData = {
     {
       id: "task2",
       title: "Prepare volunteer briefing",
+      contribution: "A short volunteer guide with roles, shifts and a welcome script.",
       follow_up: "Define roles and opt-in shifts.",
       follow_up_on: "Before the fair · sample",
       status: "draft",
@@ -155,12 +216,12 @@ export function LiveOrganizerWorkspace() {
       db.from("organizations").select("name").eq("id", organizationId).single(),
       db
         .from("organization_briefs")
-        .select("mission,area")
+        .select("mission,area,event_goal")
         .eq("organization_id", organizationId)
         .maybeSingle(),
       db
         .from("steward_plans")
-        .select("id,title,follow_up,follow_up_on,status")
+        .select("id,title,follow_up,follow_up_on,status,contribution,gathering")
         .eq("organization_id", organizationId)
         .order("follow_up_on")
         .limit(25),
@@ -199,6 +260,25 @@ export function LiveOrganizerWorkspace() {
         .eq("platform", "web")
         .eq("selected", true)
         .maybeSingle(),
+      db
+        .from("organization_connectors")
+        .select("connector")
+        .eq("organization_id", organizationId)
+        .eq("status", "connected"),
+      db
+        .from("steward_research_runs")
+        .select("id,input,result,created_at")
+        .eq("organization_id", organizationId)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(12),
+      db
+        .from("community_needs")
+        .select("id,title,detail,kind,priority,created_at")
+        .eq("organization_id", organizationId)
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
     if (r.some((x) => x.error)) {
       setError(
@@ -216,6 +296,10 @@ export function LiveOrganizerWorkspace() {
       approvals: (r[6].data ?? []) as ReviewItem[],
       vendorCount: r[7].count ?? 0,
       webAgentId: r[8].data?.id ?? null,
+      goal: r[1].data?.event_goal ?? "",
+      connected: ((r[9].data ?? []) as { connector: string }[]).map((row) => row.connector),
+      research: (r[10].data ?? []) as ResearchItem[],
+      needs: (r[11].data ?? []) as Need[],
     });
     setLoading(false);
   }, [db, organizationId]);
@@ -308,13 +392,25 @@ type Props = {
   save: (draft: Draft, item?: ReviewItem) => Promise<void>;
 };
 function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review, save }: Props) {
-  const [view, setView] = useState<View>("dashboard");
+  // Signing in lands on the agent chat; the overview stays one click away.
+  const [view, setView] = useState<View>("chat");
+  const [railOpen, setRailOpen] = useState(true);
+  useEffect(() => {
+    const saved = window.localStorage.getItem("civimeet.rail");
+    if (saved) setRailOpen(saved === "open");
+    else if (window.innerWidth < 900) setRailOpen(false);
+  }, []);
+  const toggleRail = () =>
+    setRailOpen((open) => {
+      window.localStorage.setItem("civimeet.rail", open ? "closed" : "open");
+      return !open;
+    });
   useEffect(() => {
     // Official sign-ins return to /dashboard?view=connectors.
     const requested = new URLSearchParams(window.location.search).get("view");
     if (requested && views.some(([id]) => id === requested)) setView(requested as View);
   }, []);
-  const [thread, setThread] = useState<OrganizerThread>("main");
+  const [thread, setThread] = useState<ChatThread>("main");
   const [panel, setPanel] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -323,15 +419,109 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
   const [chatSeed, setChatSeed] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [search, setSearch] = useState("");
-  const [sampleNotes, setSampleNotes] = useState<Record<OrganizerThread, string[]>>({
-    main: [],
-    venue: [],
-    outreach: [],
-    volunteers: [],
-  });
+  const [sampleNotes, setSampleNotes] = useState<Record<string, string[]>>({});
   const pending = data.approvals.filter((a) => a.status === "pending");
   const admin = role === "admin" || role === "owner";
   const editor = role !== "viewer";
+  // Every connected community or events platform gets its own agent conversation.
+  const platformChats: RailChat[] = connectorCatalog
+    .filter(
+      (item) =>
+        (item.category === "social" || item.category === "events") &&
+        data.connected.includes(item.id),
+    )
+    .map((item) => ({
+      id: platformThread(item.id),
+      label: `${item.name} Agent`,
+      connector: item.id,
+    }));
+  const chats: RailChat[] = [{ id: "main", label: threadLabels.main }, ...platformChats];
+  const topics: RailChat[] = organizerThreads
+    .filter((item) => item !== "main")
+    .map((item) => ({ id: item, label: threadLabels[item] }));
+  const platformName = isPlatformThread(thread)
+    ? connectorCatalog.find((item) => platformThread(item.id) === thread)?.name
+    : undefined;
+  const agentWork: AgentWork[] = [
+    ...data.approvals.map((a) => ({ id: a.id, title: a.title, kind: a.kind, text: a.content })),
+    ...data.research.map((r) => ({
+      id: r.id,
+      title: r.input.question ?? "Research brief",
+      kind: "research",
+      text: r.result?.answer ?? "",
+      time: r.created_at,
+    })),
+  ];
+  const recent: RailArtifact[] = agentWork
+    .slice(0, 6)
+    .map(({ id, title, kind }) => ({ id, title, kind }));
+  const stamp = (iso: string) => (Number.isNaN(Date.parse(iso)) ? 0 : Date.parse(iso));
+  const feed: FeedEntry[] = [
+    ...data.research.map((r) => ({
+      id: `r-${r.id}`,
+      kind: "research" as const,
+      label: "Research",
+      title: r.input.question ?? "Research brief",
+      text: (r.result?.answer ?? "").slice(0, 400),
+      url: r.result?.sources?.[0]?.url,
+      time: r.created_at,
+    })),
+    ...data.needs.map((n) => ({
+      id: `n-${n.id}`,
+      kind: "need" as const,
+      label: n.kind === "question" ? "Community question" : "Community need",
+      title: n.title,
+      text: n.detail,
+      time: n.created_at,
+    })),
+    ...data.activity.slice(0, 8).map((a) => ({
+      id: `a-${a.id}`,
+      kind: "activity" as const,
+      label: "Workspace",
+      title: a.action.replaceAll("_", " "),
+      text: "",
+      time: a.created_at,
+    })),
+  ].sort((x, y) => stamp(y.time) - stamp(x.time));
+  const searchItems: SearchItem[] = [
+    ...data.events.map((e) => ({
+      id: e.id,
+      type: "Event",
+      title: e.title,
+      detail: `${e.event_date} · ${e.venue}`,
+      open: () => navigate("events"),
+    })),
+    ...data.tasks.map((t) => ({
+      id: t.id,
+      type: "Idea",
+      title: t.title,
+      detail: t.follow_up,
+      open: () => navigate("ideas"),
+    })),
+    ...data.approvals.map((a) => ({
+      id: a.id,
+      type: "Draft",
+      title: a.title,
+      detail: a.destination,
+      open: () => navigate("approvals"),
+    })),
+    ...data.research.map((r) => ({
+      id: r.id,
+      type: "Research",
+      title: r.input.question ?? "Research brief",
+      detail: (r.result?.answer ?? "").slice(0, 120),
+      open: () => navigate("library"),
+    })),
+    ...data.needs.map((n) => ({
+      id: n.id,
+      type: "Need",
+      title: n.title,
+      detail: n.detail,
+      open: () => navigate("goals"),
+    })),
+  ];
+  const openArtifact = (item: { id: string; kind: string }) =>
+    navigate(data.approvals.some((a) => a.id === item.id) ? "approvals" : "library");
   const navigate = (next: View) => {
     setView(next);
     setNotice("");
@@ -468,67 +658,30 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
   );
   return (
     <div className="ow-app">
-      <nav className="ow-rail" aria-label="Organizer workspace">
-        <Link to="/" aria-label="CiviMeet home" className="ow-brand">
-          <img src="/brand/civimeet-mark.svg" alt="" />
-          <span>
-            <b>CiviMeet</b>
-            <small>Community OS</small>
-          </span>
-        </Link>
-        <button
-          className="ow-org-card"
-          onClick={() => setPanel("Identity")}
-          aria-label="Organization identity"
-        >
-          <span className="ow-org-monogram">
-            {data.name
-              .split(" ")
-              .map((word) => word[0])
-              .slice(0, 3)
-              .join("")}
-          </span>
-          <span>
-            <b>{data.name}</b>
-            <small>{data.area || "Organization workspace"}</small>
-          </span>
-        </button>
-        <p className="ow-nav-label">Workspace</p>
-        {views.map(([id, label, Icon]) => (
-          <Fragment key={id}>
-            {id === "discover" && <p className="ow-nav-label">Community</p>}
-            {id === "approvals" && <p className="ow-nav-label">Oversight</p>}
-            <button
-              key={id}
-              aria-label={label}
-              title={label}
-              aria-current={view === id ? "page" : undefined}
-              onClick={() => navigate(id)}
-            >
-              <Icon size={21} />
-              <span>{label}</span>
-              {id === "approvals" && pending.length > 0 && <i>{pending.length}</i>}
-            </button>
-          </Fragment>
-        ))}
-        <div className="ow-organizer-card">
-          <h3>Your AI Organizer</h3>
-          <p>
-            {demo
-              ? "Preparing the Tucson Resource Fair — research, outreach drafts, and the next steps."
-              : "Research your community, prepare useful contributions, and bring people together."}
-          </p>
-          <div>
-            <span>Contribute</span>
-            <span>Connect</span>
-            <span>Meet Up</span>
-          </div>
-        </div>
-        <div className="ow-sidebar-role">
-          <span>{demo ? "Sample administrator" : role === "organizer" ? "Editor" : role}</span>
-          <small>{demo ? "Demo workspace" : "Organization workspace"}</small>
-        </div>
-      </nav>
+      <WorkspaceRail
+        view={view}
+        onNavigate={navigate}
+        expanded={railOpen}
+        onToggle={toggleRail}
+        organization={data.name}
+        area={data.area}
+        pending={pending.length}
+        chats={chats}
+        topics={topics}
+        activeChat={thread}
+        onChat={(id) => {
+          setThread(id as ChatThread);
+          setChatSeed("");
+          navigate("chat");
+        }}
+        recent={recent}
+        onArtifact={openArtifact}
+        onIdentity={() => setPanel("Identity")}
+        footer={{
+          title: demo ? "Sample administrator" : role === "organizer" ? "Editor" : role,
+          detail: demo ? "Demo workspace" : "Organization workspace",
+        }}
+      />
       <div className="ow-body">
         <header className="ow-top">
           <div>
@@ -754,57 +907,90 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
               </details>
             </>
           )}
-          {view === "chat" && (
-            <div className="ow-chat-layout">
-              <aside className="ow-threads">
-                <p>Your conversations</p>
-                {organizerThreads.map((t) => (
-                  <button
-                    key={t}
-                    aria-pressed={thread === t}
-                    onClick={() => {
-                      setThread(t);
-                      setChatSeed("");
-                    }}
-                  >
-                    <MessageCircle size={16} />
-                    {threadLabels[t]}
-                  </button>
-                ))}
-              </aside>
-              {demo ? (
-                <DemoChat
-                  key={thread}
-                  thread={thread}
-                  initialMessage={chatSeed}
-                  onDraft={(c) => edit(undefined, c)}
-                  sent={sampleNotes[thread]}
-                  onSend={(message) =>
-                    setSampleNotes((notes) => ({ ...notes, [thread]: [...notes[thread], message] }))
-                  }
-                />
-              ) : (
-                <OrganizerChat
-                  key={`${thread}:${chatSeed}`}
-                  thread={thread}
-                  initialMessage={chatSeed}
-                  onDraft={(c) => edit(undefined, c)}
-                />
-              )}
-            </div>
-          )}
-          {view === "discover" &&
+          {view === "chat" &&
             (demo ? (
-              <SampleDiscover />
+              <DemoChat
+                key={thread}
+                thread={thread}
+                platformName={platformName}
+                initialMessage={chatSeed}
+                onDraft={(c) => edit(undefined, c)}
+                sent={sampleNotes[thread] ?? []}
+                onSend={(message) =>
+                  setSampleNotes((notes) => ({
+                    ...notes,
+                    [thread]: [...(notes[thread] ?? []), message],
+                  }))
+                }
+              />
             ) : (
-              <>
-                <OrganizerChat thread="discover" onDraft={(c) => edit(undefined, c)} />
-                <details className="ow-recent">
-                  <summary>Save local partners and prepare a plan</summary>
-                  <LocalDiscoveryPanel />
-                </details>
-              </>
+              <OrganizerChat
+                key={`${thread}:${chatSeed}`}
+                thread={thread}
+                platformName={platformName}
+                initialMessage={chatSeed}
+                onDraft={(c) => edit(undefined, c)}
+              />
             ))}
+          {view === "search" && (
+            <SearchView items={searchItems}>
+              {demo ? (
+                <SampleDiscover />
+              ) : (
+                <>
+                  <OrganizerChat thread="discover" onDraft={(c) => edit(undefined, c)} />
+                  <details className="ow-recent">
+                    <summary>Save local partners and prepare a plan</summary>
+                    <LocalDiscoveryPanel />
+                  </details>
+                </>
+              )}
+            </SearchView>
+          )}
+          {view === "feed" && <FeedView entries={feed} demo={demo} onDiscuss={openChat} />}
+          {view === "ideas" && (
+            <IdeasView
+              ideas={data.tasks
+                .filter((t) => t.status !== "completed")
+                .map((t) => ({
+                  id: t.id,
+                  title: t.title,
+                  contribution: t.contribution || t.follow_up,
+                  gathering: t.gathering ?? "",
+                  followUpOn: t.follow_up_on,
+                  status: t.status,
+                }))}
+              demo={demo}
+              onDevelop={openChat}
+              onEvent={() => navigate("events")}
+            />
+          )}
+          {view === "goals" && (
+            <GoalsView
+              mission={data.mission}
+              goal={data.goal}
+              area={data.area}
+              stats={
+                demo
+                  ? [
+                      ["142", "RSVPs"],
+                      ["18", "Partners"],
+                      ["87%", "Plan complete"],
+                      [String(platformChats.length), "Platforms live"],
+                    ]
+                  : [
+                      [String(data.events.length), "Event plans"],
+                      [String(data.vendorCount), "Saved vendors"],
+                      [String(platformChats.length), "Platforms live"],
+                      [String(pending.length), "Awaiting review"],
+                    ]
+              }
+              needs={data.needs}
+              demo={demo}
+              onEdit={() => setPanel("Identity")}
+              onDiscuss={openChat}
+            />
+          )}
           {view === "events" &&
             (demo ? (
               <>
@@ -849,6 +1035,9 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
                 <VendorDirectory />
               </>
             ))}
+          {view === "library" && (
+            <AgentLibrary work={agentWork} demo={demo} onOpen={openArtifact} />
+          )}
           {view === "library" &&
             (demo ? (
               <div className="ow-card">
@@ -1000,7 +1189,7 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
                   next="research"
                   onNext={() => {
                     setPanel(null);
-                    navigate("discover");
+                    navigate("search");
                   }}
                 />
               )}
@@ -1090,7 +1279,7 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
 function Empty({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
   return (
     <div className="ow-empty">
-      <CheckCircle size={25} />
+      <Inbox size={25} />
       <h3>{title}</h3>
       <p>{text}</p>
       {action}
@@ -1099,34 +1288,42 @@ function Empty({ title, text, action }: { title: string; text: string; action?: 
 }
 function DemoChat({
   thread,
+  platformName,
   initialMessage,
   onDraft,
   sent,
   onSend,
 }: {
-  thread: OrganizerThread;
+  thread: ChatThread;
+  platformName?: string | undefined;
   initialMessage: string;
   onDraft: (s: string) => void;
   sent: string[];
   onSend: (message: string) => void;
 }) {
   const [message, setMessage] = useState(initialMessage);
+  const label = chatLabel(thread, platformName);
+  const reply = isPlatformThread(thread)
+    ? `This week on ${platformName ?? "this platform"}, I’d share the mobile pantry schedule in two neighborhood groups, answer the weekend-meals question in Midvale Park with sourced options, and invite partners to the Resource Fair once the venue is confirmed.\n\nFirst draft is ready for your review. Nothing is posted until you approve it.`
+    : demoReplies[thread];
   return (
     <div className="ow-chat-thread">
       <header>
-        <h2>{threadLabels[thread]}</h2>
+        <h2>{label}</h2>
         <p>Sample conversation · no AI or browser calls</p>
       </header>
       <div className="ow-messages">
         <div className="ow-user-message">
           {thread === "main"
             ? "Help us organize a neighborhood resource fair in Tucson next month."
-            : `Help with ${threadLabels[thread].toLowerCase()}.`}
+            : isPlatformThread(thread)
+              ? `What should we do on ${platformName ?? "this platform"} this week?`
+              : `Help with ${label.toLowerCase()}.`}
         </div>
         <article className="ow-agent-message">
           <strong>Civi · sample organizer</strong>
-          <p className="whitespace-pre-wrap">{demoReplies[thread]}</p>
-          <button className="ow-link" onClick={() => onDraft(demoReplies[thread])}>
+          <p className="whitespace-pre-wrap">{reply}</p>
+          <button className="ow-link" onClick={() => onDraft(reply)}>
             Prepare a sample draft for review
           </button>
         </article>

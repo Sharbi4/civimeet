@@ -844,7 +844,7 @@ function Dashboard() {
                         : "Research availability could not be checked. Please refresh this page."}
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Research is limited to 10 requests per day for your organization. Unsuccessful
+                    Research is limited to 20 requests per day for your organization. Unsuccessful
                     attempts count toward this allowance.
                   </p>
                 </div>

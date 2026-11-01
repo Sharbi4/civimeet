@@ -11,7 +11,10 @@ import { researchInputSchema, type ResearchInput, type ResearchResult } from "./
 import { researchCommunity, ResearchError } from "./perplexity.server";
 
 const inputSchema = researchInputSchema.extend({
-  threadKey: z.enum(["main", "venue", "outreach", "volunteers", "discover"]).optional(),
+  threadKey: z
+    .string()
+    .regex(/^(main|venue|outreach|volunteers|discover|platform_[a-z][a-z0-9_]{1,39})$/)
+    .optional(),
   organizationId: z.string().uuid(),
   requestId: z.string().uuid(),
   planId: z.string().uuid().nullable().default(null),
@@ -62,7 +65,7 @@ const json = (body: unknown, status = 200) =>
     headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
   });
 export function stewardResearchStatus() {
-  return json({ configured: configured(), provider: "perplexity", dailyRequestLimit: 10 });
+  return json({ configured: configured(), provider: "perplexity", dailyRequestLimit: 20 });
 }
 function configured() {
   return ["PERPLEXITY_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].every((key) =>

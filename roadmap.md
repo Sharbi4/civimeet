@@ -18,7 +18,7 @@
 - [x] Community dashboard: real overview counts, community needs, plans, follow-up dates, research history, activity, quick actions
 - [ ] AI Organizer workspace: chat, tasks, runtime abstraction, Live Agent Workspace panel
 - [x] Authenticated Perplexity research with durable organization limits, idempotency, sources, usage and saved shared memory; private /agent preview retained
-- [ ] Live Perplexity acceptance test: civimeet.com currently receives provider authentication/access rejection; replace the server API key and retest
+- [x] Live Perplexity acceptance test (2026-11-01): server key accepted by /v1/agent (200, search results + answer); production research run completed with 10 sources. Legacy /chat/completions returns agent_api_migration_required and is not used
 - [x] Contribution-first team planning, exact-revision review, approval invalidation after edits, and recorded outcomes
 - [ ] AI-generated plans, steward onboarding/profile, and hosted recurring workflows
 - [x] Vendor directory, sourced discoveries, organization knowledge, private platform-agent memory and isolated work queues

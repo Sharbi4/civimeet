@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, BookOpen, Sprout } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
 import {
-  threadLabels,
-  threadPrompts,
-  type OrganizerThread,
+  chatLabel,
+  chatPrompt,
+  isPlatformThread,
+  type ChatThread,
   type OrganizerTurn,
 } from "@/lib/organizer";
 import type { ResearchResult } from "@/lib/research";
@@ -35,11 +36,14 @@ export function ResearchAnswer({ result }: { result: ResearchResult }) {
 }
 export function OrganizerChat({
   thread,
+  platformName,
   initialMessage = "",
   onDraft,
   eventId,
 }: {
-  thread: OrganizerThread | "discover";
+  thread: ChatThread | "discover";
+  /** Display name of the connected platform for platform agent threads. */
+  platformName?: string | undefined;
   initialMessage?: string;
   onDraft?: (content: string) => void;
   eventId?: string;
@@ -120,13 +124,14 @@ export function OrganizerChat({
           location,
           includeKnowledge: true,
           threadKey: thread,
-          skillId: presence
-            ? "community_presence"
-            : thread === "outreach"
-              ? "attendance_outreach"
-              : thread === "main"
-                ? "auto"
-                : undefined,
+          skillId:
+            presence || isPlatformThread(thread)
+              ? "community_presence"
+              : thread === "outreach"
+                ? "attendance_outreach"
+                : thread === "main"
+                  ? "auto"
+                  : undefined,
         }),
       });
       const body = await response.json();
@@ -157,10 +162,18 @@ export function OrganizerChat({
   return (
     <div className="ow-chat-thread">
       <header>
-        <h2>{thread === "discover" ? "Discover your community" : threadLabels[thread]}</h2>
-        <p>Research and preparation, grounded in your organization’s knowledge.</p>
+        <h2>
+          {thread === "discover" ? "Discover your community" : chatLabel(thread, platformName)}
+        </h2>
+        <p>
+          {isPlatformThread(thread)
+            ? `Everything your agent does on ${platformName ?? "this platform"}: ideas, drafts and what it learns, in one conversation.`
+            : "Research and preparation, grounded in your organization’s knowledge."}
+        </p>
       </header>
-      <OrganizerVoice key={`${organizationId}:${thread}`} thread={thread} />
+      {!isPlatformThread(thread) && (
+        <OrganizerVoice key={`${organizationId}:${thread}`} thread={thread} />
+      )}
       {thread === "main" && (
         <section
           className="rounded-xl border border-blue-100 bg-blue-50/50 p-4"
@@ -233,7 +246,7 @@ export function OrganizerChat({
               messages, bookings, and payments require review.
             </p>
             {thread !== "discover" && (
-              <button onClick={() => setMessage(threadPrompts[thread])}>
+              <button onClick={() => setMessage(chatPrompt(thread, platformName))}>
                 Use a suggested starting point
               </button>
             )}
@@ -241,7 +254,9 @@ export function OrganizerChat({
         )}
         {turns.map((t) => (
           <article key={t.id}>
-            {t.input.eventId && <p className="text-xs text-muted-foreground">Event research · {t.input.location}</p>}
+            {t.input.eventId && (
+              <p className="text-xs text-muted-foreground">Event research · {t.input.location}</p>
+            )}
             <div className="ow-user-message">{t.input.question}</div>
             <div className="ow-agent-message">
               <strong>Civi · AI organizer</strong>
