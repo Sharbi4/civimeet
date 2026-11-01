@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -19,6 +20,76 @@ import {
 import { StewardMiniDemo } from "./HomeInteractive";
 import "./home-premium.css";
 import "./home-compact.css";
+
+// BLS median hourly wage for U.S. meeting, convention and event planners (May 2025).
+// A scenario input is not a claim that CiviMeet has measured these savings.
+const PLANNER_HOURLY_WAGE = 29.41;
+
+export function PlanningTimeScenario() {
+  const [hoursPerEvent, setHoursPerEvent] = useState(5);
+  const [eventsPerMonth, setEventsPerMonth] = useState(2);
+  const hours = hoursPerEvent * eventsPerMonth;
+  const value = Math.round(hours * PLANNER_HOURLY_WAGE);
+  return (
+    <section className="cmc-time cmc-wrap" aria-labelledby="cmc-time-title">
+      <div className="cmc-time-intro">
+        <p className="cmc-eyebrow">Time back for your mission</p>
+        <h2 id="cmc-time-title">What could fewer planning hours mean?</h2>
+        <p>
+          CiviMeet helps prepare venue research, vendor comparisons, event plans and outreach
+          drafts. Explore the value of time your team <em>might</em> reclaim.
+        </p>
+        <Link to="/product" className="cmc-more">
+          See how the organizer helps <ArrowRight size={16} />
+        </Link>
+      </div>
+      <div className="cmc-time-card">
+        <div className="cmc-time-controls">
+          <label htmlFor="planning-hours">
+            Hours reclaimed per event <strong>{hoursPerEvent}</strong>
+          </label>
+          <input
+            id="planning-hours"
+            type="range"
+            min={1}
+            max={12}
+            value={hoursPerEvent}
+            onChange={(event) => setHoursPerEvent(Number(event.target.value))}
+          />
+          <label htmlFor="planning-events">
+            Events each month <strong>{eventsPerMonth}</strong>
+          </label>
+          <input
+            id="planning-events"
+            type="range"
+            min={1}
+            max={8}
+            value={eventsPerMonth}
+            onChange={(event) => setEventsPerMonth(Number(event.target.value))}
+          />
+        </div>
+        <div className="cmc-time-result" aria-live="polite">
+          <strong>{hours} hours</strong>
+          <span>potential staff time per month</span>
+          <strong>${value.toLocaleString("en-US")}</strong>
+          <span>equivalent labor value at $29.41/hour</span>
+        </div>
+        <p className="cmc-time-note">
+          Illustrative scenario, not measured CiviMeet savings or guaranteed cash savings. Assumes
+          the hours you select can be reclaimed. Labor benchmark:{" "}
+          <a
+            href="https://www.bls.gov/ooh/business-and-financial/meeting-convention-and-event-planners.htm"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            U.S. BLS, May 2025 median event-planner pay
+          </a>
+          . Does not deduct subscription or AI usage costs.
+        </p>
+      </div>
+    </section>
+  );
+}
 
 export function CompactHome() {
   return (
@@ -120,6 +191,7 @@ export function CompactHome() {
             </div>
           </article>
         </section>
+        <PlanningTimeScenario />
         <section className="cmc-answers cmc-wrap" aria-labelledby="home-questions">
           <div>
             <p className="cmc-eyebrow">A few useful details</p>
