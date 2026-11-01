@@ -1,3 +1,5 @@
+import { stewardSkills, type StewardSkillId } from "@/lib/steward-skills";
+import { LocalDiscoveryPanel } from "./LocalDiscoveryPanel";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +19,7 @@ export function PlatformConversation({ agent }: { agent: PlatformAgent }) {
   const { db, organizationId, role } = useWorkspace();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [message, setMessage] = useState("");
+  const [skillId, setSkillId] = useState<StewardSkillId | "auto">("auto");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -68,8 +71,9 @@ export function PlatformConversation({ agent }: { agent: PlatformAgent }) {
           requestId: key,
           question: message,
           purpose: "general",
+          skillId,
           location: "",
-          includeKnowledge: false,
+          includeKnowledge: true,
         }),
       });
       const body = await response.json();
@@ -91,6 +95,7 @@ export function PlatformConversation({ agent }: { agent: PlatformAgent }) {
   return (
     <div className="space-y-4">
       <PlatformBrowser agentId={agent.id} />
+      {agent.platform === "web" && <LocalDiscoveryPanel />}
       <section
         className="space-y-4 rounded-xl border bg-card p-5"
         aria-label={`${platformLabels[agent.platform]} conversation`}
@@ -126,6 +131,11 @@ export function PlatformConversation({ agent }: { agent: PlatformAgent }) {
               </p>
               <div className="text-sm">
                 <strong>{agent.name}</strong>
+                {turn.result?.skill && (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {turn.result.skill.name}
+                  </span>
+                )}
                 <p className="mt-2 whitespace-pre-wrap">
                   {turn.status === "running"
                     ? "Researching a useful next step…"
@@ -171,6 +181,27 @@ export function PlatformConversation({ agent }: { agent: PlatformAgent }) {
                 Prepare my next contribution
               </Button>
             )}
+            <label className="block text-sm space-y-2">
+              <span>Agent skill</span>
+              <select
+                className="w-full rounded-md border bg-background p-2"
+                value={skillId}
+                disabled={busy}
+                onChange={(e) => {
+                  setSkillId(e.target.value as StewardSkillId | "auto");
+                  setRequestId(null);
+                }}
+              >
+                <option value="auto">Choose the best skill for my request</option>
+                {Object.entries(stewardSkills)
+                  .filter(([id]) => id !== "local_partner_discovery")
+                  .map(([id, skill]) => (
+                    <option key={id} value={id}>
+                      {skill.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
             <label className="block text-sm space-y-2">
               <span>Guide your agent</span>
               <Textarea

@@ -1,3 +1,4 @@
+import { LocalDiscoveryPanel } from "@/components/workspace/LocalDiscoveryPanel";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { WorkspaceGate, useWorkspace } from "@/components/workspace/WorkspaceGate";
@@ -244,6 +245,7 @@ function VendorDirectory() {
           </Button>
         )}
       </div>
+      <LocalDiscoveryPanel onSaved={() => setRefresh((value) => value + 1)} />
       {error && (
         <p role="alert" className="rounded-md border p-3 text-sm text-destructive">
           {error}

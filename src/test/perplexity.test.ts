@@ -116,3 +116,36 @@ describe("Perplexity research adapter", () => {
     expect(result.usage.costUsd).toBeNull();
   });
 });
+
+it("runs structured discovery with trusted skill instructions and returns readable summary", async () => {
+  const local = { summary: "A sourced local partner brief.", vendors: [], plan: null };
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(
+      Response.json({
+        ...completed,
+        output: [
+          {
+            type: "message",
+            role: "assistant",
+            content: [{ type: "output_text", text: JSON.stringify(local) }],
+          },
+        ],
+      }),
+    );
+  const result = await researchCommunity(
+    { ...input, purpose: "vendors" },
+    {
+      apiKey: "fixture-provider-credential",
+      fetcher,
+      collectVendors: true,
+      skillId: "local_partner_discovery",
+    },
+  );
+  expect(result.localDiscovery).toEqual(local);
+  expect(result.answer).toBe(local.summary);
+  expect(result.skill?.id).toBe("local_partner_discovery");
+  expect(JSON.parse(fetcher.mock.calls[0]![1]!.body as string).instructions).toContain(
+    "SKILL: LOCAL PARTNER DISCOVERY",
+  );
+});

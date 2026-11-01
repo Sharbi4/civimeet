@@ -1,3 +1,5 @@
+import type { StewardSkillId } from "./steward-skills";
+import type { LocalDiscovery } from "./local-discovery";
 import { z } from "zod";
 
 export const researchInputSchema = z.object({
@@ -8,6 +10,9 @@ export const researchInputSchema = z.object({
 
 export type ResearchInput = z.infer<typeof researchInputSchema>;
 export type ResearchResult = {
+  localDiscovery?: LocalDiscovery;
+  savedDiscovery?: { vendorCount: number; skippedCount: number; planId: string | null };
+  skill?: { id: StewardSkillId; name: string; nextSkillId: StewardSkillId };
   provider: "perplexity";
   id: string;
   answer: string;

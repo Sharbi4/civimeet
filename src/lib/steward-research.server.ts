@@ -1,3 +1,9 @@
+import {
+  stewardSkillIds,
+  stewardSkills,
+  selectStewardSkill,
+  type StewardSkillId,
+} from "./steward-skills";
 import "@tanstack/react-start/server-only";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -9,6 +15,8 @@ const inputSchema = researchInputSchema.extend({
   requestId: z.string().uuid(),
   planId: z.string().uuid().nullable().default(null),
   includeKnowledge: z.boolean().default(false),
+  collectVendors: z.boolean().default(false),
+  skillId: z.enum([...stewardSkillIds, "auto"]).optional(),
   agentId: z.string().uuid().nullable().default(null),
 });
 type Submission = z.infer<typeof inputSchema>;
@@ -23,8 +31,17 @@ type Dependencies = {
   authorize: (token: string, organizationId: string) => Promise<string>;
   reserve: (actor: string, input: Submission) => Promise<{ started: boolean; run: Run }>;
   context: (input: Submission) => Promise<string>;
-  research: (input: ResearchInput, context: string) => Promise<ResearchResult>;
-  finish: (id: string, result: ResearchResult | null, error: string | null) => Promise<void>;
+  research: (
+    input: ResearchInput,
+    context: string,
+    collectVendors?: boolean,
+    skillId?: StewardSkillId,
+  ) => Promise<ResearchResult>;
+  finish: (
+    id: string,
+    result: ResearchResult | null,
+    error: string | null,
+  ) => Promise<ResearchResult | void>;
 };
 const json = (body: unknown, status = 200) =>
   Response.json(body, {
@@ -99,6 +116,8 @@ const defaults: Dependencies = {
         purpose: input.purpose,
         includeKnowledge: input.includeKnowledge,
         agentId: input.agentId,
+        collectVendors: input.collectVendors,
+        skillId: input.skillId,
       },
     });
     if (error) {
@@ -152,6 +171,30 @@ const defaults: Dependencies = {
       .maybeSingle();
     if (brief.error) throw new Error("Community brief could not be loaded");
     if (brief.data) parts.push("Community brief: " + JSON.stringify(brief.data).slice(0, 3000));
+    if (input.collectVendors) {
+      const [needs, vendors] = await Promise.all([
+        db
+          .from("community_needs")
+          .select("title,detail,kind")
+          .eq("organization_id", input.organizationId)
+          .eq("status", "open")
+          .order("created_at", { ascending: false })
+          .limit(3),
+        db
+          .from("vendors")
+          .select("name,category,status")
+          .eq("organization_id", input.organizationId)
+          .neq("status", "archived")
+          .order("updated_at", { ascending: false })
+          .limit(10),
+      ]);
+      if (needs.error || vendors.error) throw new Error("Discovery context could not be loaded");
+      parts.push("Open community needs: " + JSON.stringify(needs.data).slice(0, 1000));
+      parts.push(
+        "Existing local partners (avoid redundant discovery): " +
+          JSON.stringify(vendors.data).slice(0, 1000),
+      );
+    }
     if (input.planId) {
       const { data, error } = await db
         .from("steward_plans")
@@ -178,14 +221,20 @@ const defaults: Dependencies = {
     }
     return parts.join("\n");
   },
-  research: (input, context) => researchCommunity(input, { context }),
+  research: (input, context, collectVendors, skillId) =>
+    researchCommunity(input, { context, collectVendors: collectVendors ?? false, skillId }),
   async finish(id, result, error) {
-    const response = await database().rpc("finish_steward_research", {
-      target_run: id,
-      research_result: result,
-      failure: error,
-    });
+    const response = await database().rpc(
+      result?.localDiscovery ? "finish_steward_discovery" : "finish_steward_research",
+      {
+        target_run: id,
+        research_result: result,
+        failure: error,
+      },
+    );
     if (response.error) throw new Error("Research could not be saved");
+    if (result?.localDiscovery) return response.data as ResearchResult;
+    return undefined;
   },
 };
 
@@ -234,6 +283,23 @@ export async function handleStewardResearch(
     if (!parsed.success)
       return json({ error: "Check the question, location, organization, and plan." }, 400);
     const input = parsed.data;
+    const selectedSkill =
+      input.skillId === "auto"
+        ? selectStewardSkill(input.question, Boolean(input.agentId && input.location.trim()))
+        : input.skillId;
+    if (selectedSkill) {
+      input.skillId = selectedSkill;
+      input.purpose = stewardSkills[selectedSkill].purpose;
+      input.collectVendors = stewardSkills[selectedSkill].collectVendors;
+    }
+    if (
+      input.collectVendors &&
+      (!input.agentId || !input.location.trim() || input.purpose !== "vendors")
+    )
+      return json(
+        { error: "Choose an active agent and a specific local area for discovery." },
+        400,
+      );
     const actor = await deps.authorize(authorization.slice(7), input.organizationId);
     const reservation = await deps.reserve(actor, input);
     if (!reservation.started)
@@ -243,12 +309,18 @@ export async function handleStewardResearch(
       );
     runId = reservation.run.id;
     const context = await deps.context(input);
-    const result = await deps.research(
-      { question: input.question, location: input.location, purpose: input.purpose },
-      context,
-    );
-    await deps.finish(runId, result, null);
-    return json({ run: { id: runId, status: "completed", result, error: null } });
+    const researchInput = {
+      question: input.question,
+      location: input.location,
+      purpose: input.purpose,
+    };
+    const result = selectedSkill
+      ? await deps.research(researchInput, context, input.collectVendors, selectedSkill)
+      : input.collectVendors
+        ? await deps.research(researchInput, context, true)
+        : await deps.research(researchInput, context);
+    const saved = await deps.finish(runId, result, null);
+    return json({ run: { id: runId, status: "completed", result: saved ?? result, error: null } });
   } catch (error) {
     const message =
       error instanceof ResearchError

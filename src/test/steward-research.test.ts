@@ -115,3 +115,38 @@ describe("Authenticated steward research", () => {
     expect(deps.authorize).not.toHaveBeenCalled();
   });
 });
+
+it("selects a trusted skill before reserving and preserves its output", async () => {
+  const deps = dependencies();
+  const response = await handleStewardResearch(
+    request({ ...input, skillId: "attendance_outreach" }),
+    deps,
+  );
+  expect(response.status).toBe(200);
+  expect(deps.reserve).toHaveBeenCalledWith(
+    "verified-user",
+    expect.objectContaining({
+      skillId: "attendance_outreach",
+      purpose: "general",
+      collectVendors: false,
+    }),
+  );
+  expect(deps.research).toHaveBeenCalledWith(
+    expect.objectContaining({ purpose: "general" }),
+    expect.any(String),
+    false,
+    "attendance_outreach",
+  );
+});
+it("rejects discovery without an agent and area before spending", async () => {
+  const deps = dependencies();
+  expect(
+    (
+      await handleStewardResearch(
+        request({ ...input, skillId: "local_partner_discovery", location: "" }),
+        deps,
+      )
+    ).status,
+  ).toBe(400);
+  expect(deps.reserve).not.toHaveBeenCalled();
+});
