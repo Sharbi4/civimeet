@@ -85,7 +85,7 @@ export function DemoRequestPage({ source }: { source: "contact" | "get-started" 
         <img src="/product/conversation-640.jpg" srcSet="/product/conversation-640.jpg 640w, /product/conversation-1280.jpg 1280w" sizes="(max-width: 767px) 100vw, 45vw" alt="People sharing a conversation around a community table" width={1280} height={854} className="mt-8 aspect-[3/2] w-full rounded-md object-cover" />
         <p className="mt-2 text-xs text-muted-foreground">Photo: Pexels. People pictured are not CiviMeet customers.</p>
         <p className="mt-7 text-sm">Prefer email? <a href="mailto:support@civimeet.com" className="text-primary underline underline-offset-4">support@civimeet.com</a></p>
-        <p className="mt-3 text-sm">Already have an account? <Link to="/auth" className="text-primary underline underline-offset-4">Sign in</Link> · <Link to="/auth" search={{ mode: "signup" }} className="text-primary underline underline-offset-4">Create an account</Link></p>
+        <p className="mt-3 text-sm">Already have an account? <Link to="/auth" className="text-primary underline underline-offset-4">Sign in</Link></p>
       </div>
       <div className="border-t pt-8 md:border-t-0 md:pt-2">
         <h2 className="mb-7 text-2xl">Request your demo</h2>
