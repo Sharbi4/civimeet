@@ -13,7 +13,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import sofiaFont from "@/assets/fonts/avenir-next-Regular.otf.asset.json";
+import brandFont from "@/assets/fonts/avenir-next-Regular.otf.asset.json";
 import { BrowserWorkspaceProvider } from "@/components/workspace/BrowserDock";
 import { getGoogleAnalyticsConfig } from "@/lib/google-analytics.functions";
 import { googleTagBootstrap, trackGooglePageView } from "@/lib/google-analytics";
@@ -103,9 +103,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/brand/civimeet-mark.svg", type: "image/svg+xml" },
       {
         rel: "preload",
-        href: sofiaFont.url,
+        href: brandFont.url,
         as: "font",
-        type: "font/woff2",
+        type: "font/otf",
         crossorigin: "anonymous",
       },
     ],
