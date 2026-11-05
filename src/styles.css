@@ -4,15 +4,47 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Sofia Pro Soft (Olivier Gourvat / Mostardesign) — served from Lovable assets.
-   Single weight file, declared as a full range so bold/semibold text reuses it
-   instead of falling back or being synthetically emboldened. */
+/* Avenir Next LT Pro — served from Lovable assets. Upright medium/heavy weights use the supplied Condensed cuts. */
 @font-face {
-  font-family: "Sofia Pro Soft";
-  src: url("/__l5e/assets-v1/77902c86-6b0a-46fc-93af-d06070a0a366/sofia-pro-soft.woff2")
-    format("woff2");
-  font-weight: 100 900;
+  font-family: "Avenir Next LT Pro";
+  src: url("/__l5e/assets-v1/c72e3144-490a-472e-82a5-9ded863df654/avenir-next-Regular.otf") format("opentype");
+  font-weight: 400;
   font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Avenir Next LT Pro";
+  src: url("/__l5e/assets-v1/283b46d5-181c-4785-ae31-41d931502f8d/avenir-next-It.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Avenir Next LT Pro";
+  src: url("/__l5e/assets-v1/aaae477e-8867-4a1d-8eb0-794d9f5ed3ec/avenir-next-MediumCn.otf") format("opentype");
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Avenir Next LT Pro";
+  src: url("/__l5e/assets-v1/fd211225-acaf-42d9-8850-8b3b74f3a90a/avenir-next-MediumIt.otf") format("opentype");
+  font-weight: 500 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Avenir Next LT Pro";
+  src: url("/__l5e/assets-v1/e5001841-aa3e-4bc0-ad97-bcc3630eecf8/avenir-next-HeavyCn.otf") format("opentype");
+  font-weight: 800 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Avenir Next LT Pro";
+  src: url("/__l5e/assets-v1/8be33340-a6ae-4905-8164-dac129a9a1d7/avenir-next-HeavyIt.otf") format("opentype");
+  font-weight: 800 900;
+  font-style: italic;
   font-display: swap;
 }
 
@@ -76,7 +108,7 @@
 
 :root {
   --radius: 0.5rem;
-  --font-sans: "Sofia Pro Soft", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Avenir Next LT Pro", ui-sans-serif, system-ui, sans-serif;
   --background: oklch(0.99 0.002 250);
   --foreground: oklch(0.2 0.02 260);
   --card: oklch(1 0 0);
