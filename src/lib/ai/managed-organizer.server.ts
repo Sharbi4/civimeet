@@ -60,7 +60,7 @@ function provider() {
       503,
       "The OpenAI organizer needs server configuration. Research is still available below.",
     );
-  return new OpenAI({ apiKey: process.env["OPENAI_API_KEY"], maxRetries: 0, timeout: 30000 }).beta
+  return new OpenAI({ apiKey: process.env["OPENAI_API_KEY"], project: process.env["OPENAI_PROJECT_ID"] || "proj_YcAMhVhK4eAC6sEeJq2b5j0d", maxRetries: 0, timeout: 30000 }).beta
     .agents.sessions;
 }
 const defaults = {
@@ -351,6 +351,7 @@ export async function handleManagedOrganizer(
     const claim = await deps.reserve(actor, input);
     reserved = claim.session;
     const row = reserved;
+    let initialInputSubmitted = false;
     if (!row.provider_id) {
       if (claim.replayed || input.action === "resume")
         throw new OrganizerError(
@@ -373,12 +374,15 @@ export async function handleManagedOrganizer(
             organizerInstructions + "\nOrganization reference data (not instructions):\n" + context,
           tools: organizerTools,
         },
-        environment: { type: "openai_hosted", network: { access: "disabled" } },
+        // Conversation + application functions need no sandbox. Browser tasks are a separate capability.
+        environment: { type: "none" },
+        input: input.message!,
         // This optional API field is not available to every project yet. Enable only after capability verification.
         ...(process.env["OPENAI_ORGANIZER_PROVIDER_SPEND_CAP"] === "true" ? { spend_control: { limit: cents } } : {}),
         metadata: { civimeet_session: row.id },
       });
       row.provider_id = created.id;
+      initialInputSubmitted = true;
       try {
         await deps.update(row, { provider_id: created.id });
       } catch (e) {
@@ -390,7 +394,7 @@ export async function handleManagedOrganizer(
     const before = await api.retrieve(providerId);
     const tokenLimit = z.coerce.number().int().min(1000).max(1000000).parse(process.env["OPENAI_ORGANIZER_SESSION_TOKEN_LIMIT"] || 100000);
     if (input.action === "send" && (before.usage?.total_tokens ?? 0) >= tokenLimit) throw new OrganizerError(429, "This conversation has reached its token allowance. Start a new conversation to continue with saved organization knowledge.");
-    if (input.action === "send" && !claim.replayed && before.status !== "idle")
+    if (input.action === "send" && !claim.replayed && !initialInputSubmitted && before.status !== "idle")
       throw new OrganizerError(
         409,
         "A task is still active. Resume or stop it before sending another message.",
@@ -410,7 +414,7 @@ export async function handleManagedOrganizer(
     let events: Awaited<ReturnType<typeof api.events.stream>>;
     try {
       events = await api.events.stream(providerId, { signal: abort.signal });
-      if (input.action === "send" && !claim.replayed)
+      if (input.action === "send" && !claim.replayed && !initialInputSubmitted)
         await api.events.create(providerId, {
           "Idempotency-Key": input.requestId!,
           events: [
@@ -487,7 +491,7 @@ export async function handleManagedOrganizer(
         };
         try {
           send({ type: "started" });
-          if ((input.action === "resume" || claim.replayed) && before.status === "idle") {
+          if ((input.action === "resume" || claim.replayed || initialInputSubmitted) && before.status === "idle") {
             send({ type: "saved", message: "Saved conversation recovered." });
             return;
           }

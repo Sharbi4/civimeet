@@ -22,6 +22,7 @@ dist-ssr
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+.civimeet-agent/
 
 # Editor directories and files
 .vscode/*

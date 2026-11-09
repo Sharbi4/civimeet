@@ -157,7 +157,7 @@ export function WorkspaceGate({
         }
       : null,
   );
-  const Layout = compact && membership ? Fragment : SiteLayout;
+  const Layout = compact ? Fragment : SiteLayout;
   return (
     <Layout>
       <div className={compact && membership ? "organizer-gate" : ""}>
