@@ -24,7 +24,8 @@
 - [x] Public site: home, product, how it works, solutions, pricing, about, contact, draft legal pages
 - [x] Uploaded logo in header/footer/sign-in + tab icon
 - [x] Enable Lovable Cloud; sign up/in/out, organization creation and role-enforced vendor workspace
-- [ ] Password reset, team invitations and membership management UI
+- [x] Members-only sign-in: email/password, Continue with Google, forgot-password and reset page (no Lovable login, no public sign-up)
+- [ ] Team invitations and membership management UI
 - [ ] 7-step organization onboarding → /dashboard
 - [x] Community dashboard: real overview counts, community needs, plans, follow-up dates, research history, activity, quick actions
 - [x] Chat-first workspace: expandable sidebar (Chat, Search, Feed, Ideas, Goals, Events, Library, agent-made work), Main Agent plus one agent chat per connected platform
