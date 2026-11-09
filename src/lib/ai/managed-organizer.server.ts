@@ -374,7 +374,8 @@ export async function handleManagedOrganizer(
           tools: organizerTools,
         },
         environment: { type: "openai_hosted", network: { access: "disabled" } },
-        spend_control: { limit: cents },
+        // This optional API field is not available to every project yet. Enable only after capability verification.
+        ...(process.env["OPENAI_ORGANIZER_PROVIDER_SPEND_CAP"] === "true" ? { spend_control: { limit: cents } } : {}),
         metadata: { civimeet_session: row.id },
       });
       row.provider_id = created.id;
@@ -387,6 +388,8 @@ export async function handleManagedOrganizer(
     }
     const providerId = row.provider_id;
     const before = await api.retrieve(providerId);
+    const tokenLimit = z.coerce.number().int().min(1000).max(1000000).parse(process.env["OPENAI_ORGANIZER_SESSION_TOKEN_LIMIT"] || 100000);
+    if (input.action === "send" && (before.usage?.total_tokens ?? 0) >= tokenLimit) throw new OrganizerError(429, "This conversation has reached its token allowance. Start a new conversation to continue with saved organization knowledge.");
     if (input.action === "send" && !claim.replayed && before.status !== "idle")
       throw new OrganizerError(
         409,
@@ -399,7 +402,10 @@ export async function handleManagedOrganizer(
       .min(15000)
       .max(180000)
       .parse(process.env["OPENAI_ORGANIZER_TIMEOUT_MS"] || 120000);
-    const timer = setTimeout(() => abort.abort(), duration);
+    const timer = setTimeout(() => {
+      abort.abort();
+      void api.events.create(providerId, { events: [{ type: "agent.session.input.cancel" }] }).catch(() => {});
+    }, duration);
     request.signal.addEventListener("abort", () => abort.abort(), { once: true });
     let events: Awaited<ReturnType<typeof api.events.stream>>;
     try {

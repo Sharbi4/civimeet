@@ -45,7 +45,7 @@ describe("managed organizer authorization and execution", () => {
   it("starts a new session with organization context, bounded spend and no browser tool", async () => {
     const { d, api } = dependencies(); d.reserve.mockResolvedValue({ session: { ...row, provider_id: null } as unknown as typeof row, replayed: false });
     await (await handleManagedOrganizer(req(), d)).text();
-    const config = api.create.mock.calls[0]![0]; expect(config.agent.instructions).toContain("Community service"); expect(config.environment.network.access).toBe("disabled"); expect(config.spend_control.limit).toBe(200); expect(config.agent.tools.every((t: { type: string }) => t.type === "function")).toBe(true);
+    const config = api.create.mock.calls[0]![0]; expect(config.agent.instructions).toContain("Community service"); expect(config.environment.network.access).toBe("disabled"); expect(config.agent.reasoning.effort).toBe("medium"); expect(config.spend_control).toBeUndefined(); expect(config.agent.tools.every((t: { type: string }) => t.type === "function")).toBe(true);
   });
   it("blocks cross-site and oversized requests before authentication", async () => {
     const { d } = dependencies(); expect((await handleManagedOrganizer(req({}, { Origin: "https://other.example" }), d)).status).toBe(403);
