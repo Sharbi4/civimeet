@@ -1,0 +1,335 @@
+{
+  "version": 1,
+  "sdk_version": "3.4.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://zmqvxnbigvnutgbhelvd.supabase.co/auth/v1",
+    "require_oauth_client_claim": true,
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "civimeet",
+      "version": "0.1.0",
+      "title": "CiviMeet"
+    },
+    "tools": [
+      {
+        "name": "list_organizations",
+        "title": "List my organizations",
+        "description": "List the CiviMeet organizations you belong to, with your role in each.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_gatherings",
+        "title": "List gatherings",
+        "description": "List an organization's planned community gatherings (events) with date, venue, budget and review status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Organization ID from list_organizations. Optional when you belong to exactly one organization."
+            },
+            "upcomingOnly": {
+              "type": "boolean",
+              "description": "Only include gatherings dated today or later."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum gatherings to return (default 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_vendors",
+        "title": "List vendors",
+        "description": "List vendors and venues saved in an organization's directory, optionally filtered by category or name.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Organization ID from list_organizations. Optional when you belong to exactly one organization."
+            },
+            "search": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "description": "Match against vendor name or category."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum vendors to return (default 25)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_shared_knowledge",
+        "title": "Search shared knowledge",
+        "description": "Search an organization's shared knowledge notes (mission, history, policies) by title or text.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Organization ID from list_organizations. Optional when you belong to exactly one organization."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "description": "Words to look for. Omit to list recent notes."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "description": "Maximum notes to return (default 10)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_approvals",
+        "title": "List approvals",
+        "description": "List posts, messages and bookings Civi has drafted for review. Drafts are never published until a person approves them in CiviMeet.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Organization ID from list_organizations. Optional when you belong to exactly one organization."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "all"
+              ],
+              "description": "Which drafts to include (default pending)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum drafts to return (default 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_payment_requests",
+        "title": "List payment requests",
+        "description": "List payment requests Civi and its helpers have filed. Approved means a person or the budget rule allowed it; it is only paid once a payment account confirms it.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Organization ID from list_organizations. Optional when you belong to exactly one organization."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum requests to return (default 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_community_needs",
+        "title": "List community needs",
+        "description": "List questions, concerns and requests the community has raised with an organization.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Organization ID from list_organizations. Optional when you belong to exactly one organization."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "open",
+                "resolved",
+                "all"
+              ],
+              "description": "Which needs to include (default open)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum needs to return (default 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_connected_accounts",
+        "title": "List connected accounts",
+        "description": "Show which community accounts (Facebook, Instagram, Eventbrite and others) an organization has connected and their status. No logins or tokens are ever returned.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Organization ID from list_organizations. Optional when you belong to exactly one organization."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "record_community_need",
+        "title": "Record a community need",
+        "description": "Save a question, concern or request from the community to an organization's open needs list. Requires editor access; nothing is sent to anyone.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Organization ID from list_organizations. Optional when you belong to exactly one organization."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200,
+              "description": "Short summary of the need."
+            },
+            "detail": {
+              "type": "string",
+              "maxLength": 4000,
+              "description": "More context about the need."
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "question",
+                "resource",
+                "concern",
+                "gathering",
+                "celebration"
+              ],
+              "description": "What kind of need this is."
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "normal",
+                "high"
+              ],
+              "description": "Urgency (default normal)."
+            },
+            "sourceUrl": {
+              "type": "string",
+              "maxLength": 2048,
+              "pattern": "^https?:\\/\\/[^\\s@]+$",
+              "description": "Link where the need was raised, if any."
+            }
+          },
+          "required": [
+            "title",
+            "kind"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
