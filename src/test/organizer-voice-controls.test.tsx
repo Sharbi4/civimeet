@@ -8,7 +8,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 function setupFetch(configured = true) {
   vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
     const body = JSON.parse(init.body);
-    return Response.json({ configured, reason: "Voice demo disabled — agent not configured.", ...(body.action === "start" ? { conversationToken: "fixture-conversation-token", organizationId: body.organizationId, thread: body.thread } : {}) });
+    return Response.json({ configured, reason: "Voice isn't set up for this workspace yet.", ...(body.action === "start" ? { conversationToken: "fixture-conversation-token", organizationId: body.organizationId, thread: body.thread } : {}) });
   }));
 }
 it("does not access the microphone or start a session before explicit Start", async () => {
@@ -17,9 +17,9 @@ it("does not access the microphone or start a session before explicit Start", as
   expect(mocks.start).not.toHaveBeenCalled();
   expect(vi.mocked(fetch).mock.calls.map(call => JSON.parse(String(call[1]?.body)).action)).toEqual(["status"]);
 });
-it("never starts unavailable demo voice", async () => {
+it("never starts voice that is not set up", async () => {
   setupFetch(false); render(<OrganizerVoice thread="main" />);
-  await screen.findByText(/Voice demo disabled — agent/);
+  await screen.findByText(/Voice isn’t set up|Voice isn't set up/);
   fireEvent.click(screen.getByRole("button", { name: "Start voice" }));
   expect(mocks.start).not.toHaveBeenCalled();
 });
