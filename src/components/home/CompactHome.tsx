@@ -53,8 +53,8 @@ export function CompactHome() {
                 <DialogContent className="cm-home cm-quick-demo">
                   <DialogTitle>See your Community Steward at work</DialogTitle>
                   <DialogDescription>
-                    Choose a task to explore. This is an illustrative demo; no messages, bookings,
-                    or account actions occur.
+                    Choose a task to see how Civi researches, drafts, and prepares. Your team approves
+                    before anything is posted, sent, booked, or paid.
                   </DialogDescription>
                   <StewardMiniDemo />
                   <Link to="/get-started" className="cmc-more">
