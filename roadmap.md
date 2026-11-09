@@ -1,5 +1,14 @@
 # CiviMeet roadmap
 
+## Dashboard refinement (Nov 9)
+- [ ] Simplified premium chat-first workspace (ChatGPT / Meta AI style): slim sidebar, centered conversation, browser opens on the right only when working
+- [ ] Connections and sign-ins live only in Settings → Connections; connecting an account opens its helper agent in the sidebar
+- [ ] Helper agents for Facebook, Instagram, Threads, Reddit, Eventbrite and LinkedIn (add Threads)
+- [ ] Civi reports on every helper (status, waiting approvals, spend) in a friendly community voice
+- [ ] Browser agent runs on ChatGPT (OpenAI computer use) instead of Meta Muse
+- [ ] Payments: monthly budget, automatic approval for small amounts, person approval above; Civi can request payments; Settings → Payments
+- [ ] Live money movement through the organization's own Stripe or Plaid account (needs those accounts' credentials)
+
 - [x] Organizer Chat voice controls through linked ElevenLabs: authorized token endpoint, explicit microphone start, cleanup, disabled unconfigured demo, tests and setup documentation; no outbound actions
 - [x] Configure existing private ElevenLabs planning agent and server agent setting; updated isolation check passed and authenticated preview voice status returned ready
 - [ ] Verify actual voice/audio in a separately authorized session (not attempted: no token or microphone started); voice is isolated discussion, not the organization-memory/orchestrator path, and phone outreach stays disabled
