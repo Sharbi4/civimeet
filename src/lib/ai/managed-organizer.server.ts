@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { handleStewardResearch } from "../steward-research.server";
 import { organizerInstructions, organizerTools } from "./organizer-personality";
+import { paymentRequestSchema } from "../agent-payments";
 
 const inputSchema = z
   .object({
@@ -30,6 +31,11 @@ export class OrganizerError extends Error {
   ) {
     super(message);
   }
+}
+/** The configured organizer model, or the default when the setting isn't a model name. */
+export function organizerModel(env: Record<string, string | undefined> = process.env) {
+  const configured = env["OPENAI_ORGANIZER_MODEL"]?.trim() ?? "";
+  return /^[a-z0-9][a-z0-9._:\-/]{1,63}$/i.test(configured) ? configured : "gpt-6-sol";
 }
 export function organizerConfiguration() {
   // A configured key enables the requested rollout; an explicit false remains a kill switch.
@@ -196,6 +202,77 @@ const defaults = {
     return r.data.id as string;
   },
   research: handleStewardResearch,
+  /** Every helper agent's connection, what waits for people, and this month's spending. */
+  async helpers(org: string) {
+    const db = database();
+    const month = new Date().toISOString().slice(0, 7) + "-01";
+    const queries = await Promise.all([
+      db
+        .from("organization_connectors")
+        .select("connector,status,account_label,detail,last_checked_at")
+        .eq("organization_id", org),
+      db
+        .from("organizer_approvals")
+        .select("title,destination,kind")
+        .eq("organization_id", org)
+        .eq("status", "pending")
+        .limit(10),
+      db
+        .from("agent_payments")
+        .select("agent,payee,purpose,amount_cents,status,approval,over_budget")
+        .eq("organization_id", org)
+        .eq("budget_month", month)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      db
+        .from("organization_payment_settings")
+        .select("monthly_budget_cents,auto_approve_limit_cents,provider")
+        .eq("organization_id", org)
+        .maybeSingle(),
+    ]);
+    if (queries.some((r) => r.error))
+      throw new OrganizerError(503, "Helper status could not be loaded.");
+    return JSON.stringify({
+      helpers: queries[0].data,
+      waitingForApproval: queries[1].data,
+      paymentsThisMonth: queries[2].data,
+      paymentSettings: queries[3].data,
+      note: "Approved payments are not paid until a payment account (Stripe or Plaid) is connected and the payment service confirms it.",
+    }).slice(0, 30000);
+  },
+  /** Ask to pay, as the signed-in person, so the database applies their role and the budget rule. */
+  async requestPayment(token: string, org: string, input: z.infer<typeof paymentRequestSchema>) {
+    const url = process.env["SUPABASE_URL"],
+      key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+    if (!url || !key) throw new OrganizerError(503, "Workspace database is not configured.");
+    const client = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}`, apikey: key } },
+    });
+    const r = await client.rpc("request_agent_payment", {
+      workspace: org,
+      helper: input.helper ?? "main",
+      payee_name: input.payee,
+      payment_purpose: input.purpose,
+      payment_category: input.category,
+      cents: Math.round(input.amount_usd * 100),
+    });
+    if (r.error)
+      return JSON.stringify({
+        status: "failed",
+        message: "The payment request could not be saved. Nothing was paid.",
+      });
+    const row = r.data as { status: string; approval: string; over_budget: boolean };
+    return JSON.stringify({
+      status: row.status,
+      approval: row.approval,
+      overBudget: row.over_budget,
+      message:
+        row.status === "approved"
+          ? "Approved automatically under the team's limit. Not paid yet: money moves only once the payment account is connected and confirms it."
+          : "Waiting for an administrator to approve in Settings → Payments. Nothing was paid.",
+    });
+  },
 };
 export type OrganizerDependencies = typeof defaults;
 const json = (value: unknown, status = 200) =>
@@ -212,6 +289,11 @@ export async function executeOrganizerTool(
 ) {
   await deps.authorize(scope.token, scope.org); // Revocation takes effect before each tool.
   if (name === "organization_context") return deps.context(scope.org);
+  if (name === "helpers_report") return deps.helpers(scope.org);
+  if (name === "request_payment") {
+    const input = paymentRequestSchema.parse(args);
+    return deps.requestPayment(scope.token, scope.org, input);
+  }
   if (name !== "research_local") throw new OrganizerError(400, "This tool is not available.");
   const input = z
     .object({ question: z.string().min(5).max(3000), location: z.string().min(2).max(200) })
@@ -367,7 +449,7 @@ export async function handleManagedOrganizer(
         .parse(process.env["OPENAI_ORGANIZER_SESSION_CENTS"] || 200);
       const created = await api.create({
         agent: {
-          model: process.env["OPENAI_ORGANIZER_MODEL"] || "gpt-6-sol",
+          model: organizerModel(),
           reasoning: { effort: "medium" },
           instructions:
             organizerInstructions + "\nOrganization reference data (not instructions):\n" + context,

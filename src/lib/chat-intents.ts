@@ -46,6 +46,7 @@ const platformNames: [string, string][] = [
   ["google_calendar", String.raw`google\s+calendar|gcal|my\s+calendar|the\s+calendar`],
   ["facebook", String.raw`facebook|fb`],
   ["instagram", String.raw`instagram|insta|ig`],
+  ["threads", String.raw`threads(?:\.net|\.com)?`],
   ["linkedin", String.raw`linked\s?in`],
   ["x", String.raw`twitter|x\.com|(?<=\b(?:my|on|to|into|open|the)\s)x(?=\b)`],
   ["nextdoor", String.raw`next\s?door`],
@@ -194,5 +195,5 @@ export const toolManifest = [
   "connect_platform: open a platform in the organization's secure agent browser so the team can sign in themselves (two-factor included), or open the already-connected account; official sign-in for Google Calendar, Zoom and Facebook Pages. You never see or ask for passwords.",
   'browse_task: have the platform agent look inside the connected account in its secure browser (read-only: it navigates and reports what it sees, and never posts or changes anything), e.g. {"type":"browse_task","platform":"facebook","objective":"Show our Facebook Page and summarize recent posts"}.',
   "open_browser: show the agent's browser in the panel. show_agent: open a platform agent's chat and activity. pause_agent: pause or resume a platform agent (platform 'all' for every plan). show_approvals: open what's waiting for approval. show_connections: open Connections.",
-  'When the team asks for one of these, reply in one short sentence saying what you\'re doing and end with one line like <civi_action>{"type":"connect_platform","platform":"facebook","goal":"find local groups"}</civi_action>. Use only those types; platform ids: facebook, facebook_page, instagram, linkedin, x, nextdoor, reddit, tiktok, eventbrite, meetup, zoom, google_calendar. Never claim the action already succeeded; the app reports the real result. Never ask anyone to type a password into chat.',
+  'When the team asks for one of these, reply in one short sentence saying what you\'re doing and end with one line like <civi_action>{"type":"connect_platform","platform":"facebook","goal":"find local groups"}</civi_action>. Use only those types; platform ids: facebook, facebook_page, instagram, threads, linkedin, x, nextdoor, reddit, tiktok, eventbrite, meetup, zoom, google_calendar. Never claim the action already succeeded; the app reports the real result. Never ask anyone to type a password into chat.',
 ].join(" ");

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   MessageCircle,
@@ -27,6 +27,8 @@ import { AgentPanel, type PanelActivity, type PanelMemory } from "./AgentPanel";
 import { ChatBrowser } from "./ChatBrowser";
 import { DemoPlansProvider, LivePlansProvider, PlanCard } from "./AgentPlans";
 import { ChatActionsProvider, useChatActions } from "./ChatActions";
+import { HelperReport } from "./HelperReport";
+import { PaymentSettings, demoPaymentsBackend, livePaymentsBackend } from "./PaymentSettings";
 import { parseChatIntent } from "@/lib/chat-intents";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -62,6 +64,24 @@ import "./organizer.css";
 
 type View = RailView;
 const views = railViews;
+type SettingsTab = "connections" | "payments" | "helpers" | "organization";
+const settingsTabs: [SettingsTab, string][] = [
+  ["connections", "Connections"],
+  ["payments", "Payments"],
+  ["helpers", "Helper agents"],
+  ["organization", "Organization"],
+];
+/** Opens Civi's computer whenever a sign-in, take-over or agent run starts from chat. */
+function AutoOpenComputer({ onOpen }: { onOpen: () => void }) {
+  const actions = useChatActions();
+  const active = Boolean(actions?.liveSession || actions?.agentRun);
+  const open = useRef(onOpen);
+  open.current = onOpen;
+  useEffect(() => {
+    if (active) open.current();
+  }, [active]);
+  return null;
+}
 type Task = {
   id: string;
   title: string;
@@ -109,6 +129,9 @@ type WorkspaceData = {
   connected: string[];
   research: ResearchItem[];
   needs: Need[];
+  /** Every saved connection and its state, so Civi can report on each helper. */
+  connectorStatus: { connector: string; status: string; detail: string }[];
+  payments: { committedCents: number; budgetCents: number | null; waiting: number } | null;
 };
 const blank: WorkspaceData = {
   name: "Your community",
@@ -125,6 +148,8 @@ const blank: WorkspaceData = {
   connected: [],
   research: [],
   needs: [],
+  connectorStatus: [],
+  payments: null,
 };
 const demoData: WorkspaceData = {
   ...blank,
@@ -134,6 +159,12 @@ const demoData: WorkspaceData = {
   vendorCount: 18,
   goal: "Host a Neighborhood Resource Fair next month that connects 200 residents with food, housing and health partners.",
   connected: ["facebook", "google_calendar"],
+  connectorStatus: [
+    { connector: "facebook", status: "connected", detail: "Shared the pantry schedule in 2 neighborhood groups" },
+    { connector: "eventbrite", status: "connected", detail: "Resource Fair page drafted · 142 RSVPs (sample)" },
+    { connector: "instagram", status: "needs_attention", detail: "Instagram asked for a security check" },
+  ],
+  payments: { committedCents: 2_900, budgetCents: 150_000, waiting: 1 },
   research: [
     {
       id: "r1",
@@ -271,9 +302,8 @@ export function LiveOrganizerWorkspace() {
         .maybeSingle(),
       db
         .from("organization_connectors")
-        .select("connector")
-        .eq("organization_id", organizationId)
-        .eq("status", "connected"),
+        .select("connector,status,detail")
+        .eq("organization_id", organizationId),
       db
         .from("steward_research_runs")
         .select("id,input,result,created_at")
@@ -288,7 +318,19 @@ export function LiveOrganizerWorkspace() {
         .eq("status", "open")
         .order("created_at", { ascending: false })
         .limit(20),
+      db
+        .from("organization_payment_settings")
+        .select("monthly_budget_cents")
+        .eq("organization_id", organizationId)
+        .maybeSingle(),
+      db
+        .from("agent_payments")
+        .select("amount_cents,status")
+        .eq("organization_id", organizationId)
+        .eq("budget_month", new Date().toISOString().slice(0, 7) + "-01"),
     ]);
+    const connections = (r[9].data ?? []) as WorkspaceData["connectorStatus"];
+    const monthPayments = (r[13].data ?? []) as { amount_cents: number; status: string }[];
     if (r.some((x) => x.error)) {
       setError(
         "Some workspace data could not load. Refresh to try again; sample results are never substituted.",
@@ -306,7 +348,15 @@ export function LiveOrganizerWorkspace() {
       vendorCount: r[7].count ?? 0,
       webAgentId: r[8].data?.id ?? null,
       goal: r[1].data?.event_goal ?? "",
-      connected: ((r[9].data ?? []) as { connector: string }[]).map((row) => row.connector),
+      connected: connections.filter((row) => row.status === "connected").map((row) => row.connector),
+      connectorStatus: connections,
+      payments: {
+        budgetCents: r[12].data ? Number(r[12].data.monthly_budget_cents) : null,
+        committedCents: monthPayments
+          .filter((p) => p.status === "approved" || p.status === "paid")
+          .reduce((sum, p) => sum + Number(p.amount_cents), 0),
+        waiting: monthPayments.filter((p) => p.status === "needs_approval").length,
+      },
       research: (r[10].data ?? []) as ResearchItem[],
       needs: (r[11].data ?? []) as Need[],
     });
@@ -445,18 +495,42 @@ function OrganizerWorkspace({
   const pending = data.approvals.filter((a) => a.status === "pending");
   const admin = role === "admin" || role === "owner";
   const editor = role !== "viewer";
-  // Every connected community or events platform gets its own agent conversation.
-  const platformChats: RailChat[] = connectorCatalog
-    .filter(
-      (item) =>
-        (item.category === "social" || item.category === "events") &&
-        data.connected.includes(item.id),
-    )
-    .map((item) => ({
-      id: platformThread(item.id),
-      label: `${item.name} Agent`,
-      connector: item.id,
-    }));
+  // Connecting a community or events platform starts its own helper agent and conversation.
+  const helperStatus = (id: string) =>
+    data.connectorStatus.find((row) => row.connector === id)?.status ??
+    (data.connected.includes(id) ? "connected" : "");
+  const helperDefinitions = connectorCatalog.filter(
+    (item) =>
+      (item.category === "social" || item.category === "events") &&
+      ["connected", "needs_attention", "needs_verification"].includes(helperStatus(item.id)),
+  );
+  const platformChats: RailChat[] = helperDefinitions.map((item) => ({
+    id: platformThread(item.id),
+    label: `${item.name} Agent`,
+    connector: item.id,
+    status: helperStatus(item.id) === "connected" ? "connected" : "needs_attention",
+  }));
+  const helperReport = (
+    <HelperReport
+      organization={data.name}
+      helpers={helperDefinitions.map((item) => ({
+        connector: item.id,
+        name: item.name,
+        status: helperStatus(item.id),
+        detail: data.connectorStatus.find((row) => row.connector === item.id)?.detail,
+      }))}
+      pendingApprovals={pending.length}
+      spend={data.payments}
+      onOpenHelper={(id) => {
+        setThread(platformThread(id) as ChatThread);
+        setChatSeed("");
+        navigate("chat");
+      }}
+      onOpenSettings={() => openSettings("connections")}
+      onOpenApprovals={() => navigate("approvals")}
+      onOpenPayments={() => openSettings("payments")}
+    />
+  );
   const chats: RailChat[] = [{ id: "main", label: threadLabels.main }, ...platformChats];
   const topics: RailChat[] = organizerThreads
     .filter((item) => item !== "main")
@@ -542,31 +616,20 @@ function OrganizerWorkspace({
       open: () => navigate("goals"),
     })),
   ];
-  // The agent panel beside the chat is scoped to whichever agent you're talking to.
-  // Side by side on wide screens; a slide-over drawer below 1280px so it never covers the chat.
-  const [wide, setWide] = useState(true);
+  // Meta AI-style split: the conversation stays centered; Civi's computer (the live browser) or the
+  // agent panel opens on the right only when there is something to watch or review.
+  const [pane, setPane] = useState<"computer" | "panel" | null>(null);
   useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia("(min-width: 1280px)");
-    const update = () => setWide(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-  const [sideOpen, setSideOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const panelOpen = wide ? sideOpen : drawerOpen;
-  const setPanelOpen = (open: boolean) => (wide ? setSideOpen(open) : setDrawerOpen(open));
-  useEffect(() => {
-    // Approvals, activity and memory open the panel; the browser itself lives above the chat.
-    const show = (event: Event) => {
-      if ((event as CustomEvent<{ tab?: string }>).detail?.tab === "browser") return;
-      if (wide) setSideOpen(true);
-      else setDrawerOpen(true);
-    };
+    const show = (event: Event) =>
+      setPane((event as CustomEvent<{ tab?: string }>).detail?.tab === "browser" ? "computer" : "panel");
+    const browse = () => setPane("computer");
     window.addEventListener("civimeet:panel", show);
-    return () => window.removeEventListener("civimeet:panel", show);
-  }, [wide]);
+    window.addEventListener("civimeet:browse", browse);
+    return () => {
+      window.removeEventListener("civimeet:panel", show);
+      window.removeEventListener("civimeet:browse", browse);
+    };
+  }, []);
   const mentions = (text: string) =>
     platformName ? text.toLowerCase().includes(platformName.toLowerCase()) : true;
   const panelApprovals = data.approvals.filter(
@@ -624,6 +687,11 @@ function OrganizerWorkspace({
     setView(next);
     setNotice("");
   };
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("connections");
+  function openSettings(tab: SettingsTab) {
+    setSettingsTab(tab);
+    navigate("connectors");
+  }
   function openChat(text: string) {
     setChatSeed(text);
     setThread("main");
@@ -754,6 +822,12 @@ function OrganizerWorkspace({
       {!data.activity.length && <p>Your organization’s recorded actions will appear here.</p>}
     </div>
   );
+  const paymentsBackend = useMemo(
+    () =>
+      demo || !access ? demoPaymentsBackend() : livePaymentsBackend(access.db, access.organizationId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [demo, access?.db, access?.organizationId],
+  );
   const PlansProvider = demo ? DemoPlansProvider : LivePlansProvider;
   return (
     <PlansProvider
@@ -775,7 +849,7 @@ function OrganizerWorkspace({
           },
         }}
       >
-        <div className="ow-app">
+        <div className="ow-app cv-app">
           <WorkspaceRail
             view={view}
             onNavigate={navigate}
@@ -795,94 +869,57 @@ function OrganizerWorkspace({
             recent={recent}
             onArtifact={openArtifact}
             onIdentity={() => setPanel("Identity")}
+            onNewChat={() => {
+              setThread("main");
+              setChatSeed("");
+              navigate("chat");
+              window.dispatchEvent(new CustomEvent("civimeet:new-chat"));
+            }}
             footer={{
               title: demo ? "Sample administrator" : role === "organizer" ? "Editor" : role,
               detail: demo ? "Demo workspace" : "Organization workspace",
             }}
           />
           <div className="ow-body">
-            <header className="ow-top">
-              <div>
-                <span className="ow-kicker">Contribute. Connect. Meet Up.</span>
-                <h1>{views.find((v) => v[0] === view)?.[1]}</h1>
-              </div>
-              <div className="ow-search">
-                <input
-                  type="search"
-                  aria-label="Search workspace"
-                  placeholder="Search chats, events, people…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") setSearch("");
-                  }}
-                />
-                {search.trim() && (
-                  <div className="ow-search-results">
-                    {views
-                      .filter((v) => v[1].toLowerCase().includes(search.toLowerCase()))
-                      .map(([id, label]) => (
-                        <button
-                          key={id}
-                          onClick={() => {
-                            navigate(id);
-                            setSearch("");
-                          }}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    {data.tasks
-                      .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-                      .map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => {
-                            openChat(`${t.title}: ${t.follow_up}`);
-                            setSearch("");
-                          }}
-                        >
-                          {t.title}
-                        </button>
-                      ))}
-                    {data.events
-                      .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-                      .map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => {
-                            navigate("events");
-                            setSearch("");
-                          }}
-                        >
-                          {t.title}
-                        </button>
-                      ))}
-                    {!views.some((v) => v[1].toLowerCase().includes(search.toLowerCase())) &&
-                      !data.tasks.some((t) =>
-                        t.title.toLowerCase().includes(search.toLowerCase()),
-                      ) &&
-                      !data.events.some((t) =>
-                        t.title.toLowerCase().includes(search.toLowerCase()),
-                      ) && <p>No matching views or loaded plans.</p>}
-                  </div>
-                )}
-              </div>
-              <div className="ow-top-actions">
-                <button onClick={() => navigate("browser")}>Watch browser</button>
-                <button onClick={() => navigate("chat")}>Ask organizer</button>
-              </div>
-              <button
-                className="ow-identity"
-                onClick={() => setPanel(panel ? null : "Identity")}
-                aria-label="Open organizer details"
-              >
-                <img src="/brand/civimeet-mark.svg" alt="" />
-                <span>
-                  {data.name}
-                  <small>Community organizer</small>
+            <header className="cv-topbar">
+              <h1>{view === "chat" ? chatLabel(thread, platformName) : view === "connectors" ? "Settings" : views.find((v) => v[0] === view)?.[1]}</h1>
+              {view === "chat" && (
+                <span className="hidden text-[12.5px] text-muted-foreground sm:inline">
+                  {isPlatformThread(thread)
+                    ? `Helper · reports to Civi`
+                    : "Your community organizer"}
                 </span>
-              </button>
+              )}
+              <div className="ml-auto flex items-center gap-1.5">
+                {view === "chat" && (
+                  <>
+                    <button
+                      type="button"
+                      className="cv-chip"
+                      aria-pressed={pane === "computer"}
+                      onClick={() => setPane(pane === "computer" ? null : "computer")}
+                    >
+                      <Monitor size={14} /> Computer
+                    </button>
+                    <button
+                      type="button"
+                      className="cv-chip"
+                      aria-pressed={pane === "panel"}
+                      onClick={() => setPane(pane === "panel" ? null : "panel")}
+                    >
+                      <Activity size={14} /> Agent panel
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="cv-icon-btn"
+                  onClick={() => setPanel(panel ? null : "Identity")}
+                  aria-label="Open organizer details"
+                >
+                  <Users size={17} />
+                </button>
+              </div>
             </header>
             {demo && (
               <div className="ow-demo-banner">
@@ -1034,22 +1071,9 @@ function OrganizerWorkspace({
                 </>
               )}
               {view === "chat" && (
-                <div
-                  className={`grid min-h-0 ${wide && panelOpen ? "grid-cols-[minmax(0,1fr)_420px]" : ""}`}
-                >
-                  <div className="ow-chat-stack relative min-w-0">
-                    <ChatBrowser
-                      key={`browser:${thread}`}
-                      thread={thread}
-                      connector={
-                        isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
-                      }
-                      demo={demo}
-                      admin={admin}
-                      connected={data.connected}
-                      webAgentId={data.webAgentId}
-                      onShowPanel={panelOpen ? undefined : () => setPanelOpen(true)}
-                    />
+                <div className={`cv-split ${pane ? "cv-split-open" : ""}`}>
+                  <AutoOpenComputer onOpen={() => setPane("computer")} />
+                  <div className="relative min-w-0">
                     {demo ? (
                       <DemoChat
                         key={thread}
@@ -1057,6 +1081,7 @@ function OrganizerWorkspace({
                         platformName={platformName}
                         initialMessage={chatSeed}
                         onDraft={(c) => edit(undefined, c)}
+                        report={thread === "main" ? helperReport : null}
                         sent={sampleNotes[thread] ?? []}
                         onSend={(message) =>
                           setSampleNotes((notes) => ({
@@ -1073,17 +1098,45 @@ function OrganizerWorkspace({
                         initialMessage={chatSeed}
                         onDraft={(c) => edit(undefined, c)}
                         onOpenEvents={() => navigate("events")}
+                        report={helperReport}
                       />
                     )}
                   </div>
-                  {panelOpen && (
-                    <div
-                      className={
-                        wide
-                          ? "h-[calc(100dvh-125px)] min-h-[540px] border-l border-[#e4e9ec]"
-                          : "fixed inset-y-0 right-0 z-50 w-[min(420px,100vw)] border-l border-[#e4e9ec] shadow-[-16px_0_40px_-20px_rgba(15,23,42,.35)]"
-                      }
-                    >
+                  {pane === "computer" && (
+                    <aside className="cv-computer" aria-label="Civi's computer">
+                      <div className="cv-computer-head">
+                        <span className="cv-civi-avatar h-5 w-5" aria-hidden="true">
+                          <img src="/brand/civimeet-mark.svg" alt="" className="h-3 w-3 brightness-0 invert" />
+                        </span>
+                        {isPlatformThread(thread) ? `${platformName ?? "Helper"} helper’s computer` : "Civi’s computer"}
+                        <button
+                          type="button"
+                          className="cv-icon-btn ml-auto"
+                          aria-label="Close computer"
+                          onClick={() => setPane(null)}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <div className="cv-computer-body">
+                        <ChatBrowser
+                          key={`browser:${thread}`}
+                          docked
+                          thread={thread}
+                          connector={
+                            isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
+                          }
+                          demo={demo}
+                          admin={admin}
+                          connected={data.connected}
+                          webAgentId={data.webAgentId}
+                          onOpenSettings={() => openSettings("connections")}
+                        />
+                      </div>
+                    </aside>
+                  )}
+                  {pane === "panel" && (
+                    <div className="cv-computer">
                       <AgentPanel
                         key={thread}
                         demo={demo}
@@ -1100,17 +1153,17 @@ function OrganizerWorkspace({
                         browserInChat
                         onReview={review}
                         onEdit={(item) => edit(item)}
-                        onOpenConnections={() => navigate("connectors")}
-                        onClose={() => setPanelOpen(false)}
+                        onOpenConnections={() => openSettings("connections")}
+                        onClose={() => setPane(null)}
                       />
                     </div>
                   )}
-                  {panelOpen && !wide && (
+                  {pane && (
                     <button
                       type="button"
-                      aria-label="Close agent panel"
-                      onClick={() => setPanelOpen(false)}
-                      className="fixed inset-0 z-40 cursor-default bg-slate-900/20"
+                      aria-label="Close side panel"
+                      onClick={() => setPane(null)}
+                      className="fixed inset-0 z-40 cursor-default bg-foreground/20 min-[1100px]:hidden"
                     />
                   )}
                 </div>
@@ -1263,24 +1316,65 @@ function OrganizerWorkspace({
                     action={<button onClick={() => navigate("connectors")}>Open connectors</button>}
                   />
                 ))}
-              {view === "connectors" &&
-                (demo ? (
-                  <DemoConnectors />
-                ) : (
-                  <>
-                    <div className="mx-auto max-w-[980px] px-5 pt-6"><h2 className="text-xl font-semibold">Settings</h2><p className="mt-1 text-sm text-slate-500">Connect your accounts and manage encrypted sign-in information.</p></div>
-                    <LiveConnectors />
-                    <details className="mx-auto mt-6 max-w-[980px] rounded-2xl border border-slate-200 bg-white px-5 py-4"><summary className="cursor-pointer text-sm font-medium">Previous research conversations & event tools</summary><OrganizerChat thread="main" onDraft={(c) => edit(undefined, c)} onOpenEvents={() => navigate("events")} /></details>
-                    <details className="mx-auto mt-10 max-w-[980px] rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                      <summary className="cursor-pointer text-[14px] font-medium text-slate-700">
-                        Agent playbooks and memory per platform
-                      </summary>
-                      <div className="mt-4">
-                        <PlatformAgents />
+              {view === "connectors" && (
+                <div className="cv-settings">
+                  <header>
+                    <h2>Settings</h2>
+                    <p>
+                      Connect accounts, set how Civi spends, and tune each helper. Every connection
+                      starts a helper agent that reports back to Civi.
+                    </p>
+                  </header>
+                  <div className="cv-tabs" role="tablist" aria-label="Settings sections">
+                    {settingsTabs.map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        className="cv-tab"
+                        aria-selected={settingsTab === id}
+                        onClick={() => setSettingsTab(id)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {settingsTab === "connections" && (demo ? <DemoConnectors /> : <LiveConnectors />)}
+                  {settingsTab === "payments" && (
+                    <PaymentSettings
+                      backend={paymentsBackend}
+                      admin={admin}
+                      editor={editor}
+                      demo={demo}
+                    />
+                  )}
+                  {settingsTab === "helpers" &&
+                    (demo ? (
+                      <div className="cv-card">
+                        <h3 className="!mt-0">Helper playbooks · sample</h3>
+                        <p className="text-muted-foreground">
+                          Each helper follows its own playbook: the Facebook helper supports local
+                          groups, the Eventbrite helper runs event pages, the LinkedIn helper builds
+                          partnerships. Sign in to edit real playbooks and memory.
+                        </p>
                       </div>
-                    </details>
-                  </>
-                ))}
+                    ) : (
+                      <PlatformAgents />
+                    ))}
+                  {settingsTab === "organization" &&
+                    (demo ? (
+                      <div className="cv-card">
+                        <h3 className="!mt-0">{data.name}</h3>
+                        <p>{data.mission}</p>
+                        <p className="text-muted-foreground">{data.area}</p>
+                      </div>
+                    ) : (
+                      <div className="cv-card">
+                        <OrganizationBrief next="research" onNext={() => navigate("chat")} />
+                      </div>
+                    ))}
+                </div>
+              )}
               {view === "approvals" && (
                 <>
                   <div className="ow-section-title">
@@ -1480,6 +1574,7 @@ function DemoChat({
   platformName,
   initialMessage,
   onDraft,
+  report,
   sent,
   onSend,
 }: {
@@ -1487,6 +1582,7 @@ function DemoChat({
   platformName?: string | undefined;
   initialMessage: string;
   onDraft: (s: string) => void;
+  report?: ReactNode;
   sent: string[];
   onSend: (message: string) => void;
 }) {
@@ -1511,6 +1607,7 @@ function DemoChat({
         <p>Sample conversation · no AI or browser calls</p>
       </header>
       <div className="ow-messages" ref={scroller}>
+        {report && <div className="mb-7">{report}</div>}
         <div className="ow-user-message">
           {thread === "main"
             ? "Help us organize a neighborhood resource fair in Tucson next month."
