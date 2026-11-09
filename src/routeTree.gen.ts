@@ -26,6 +26,7 @@ import { Route as PlatformAgentsRouteImport } from './routes/platform-agents'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProductRouteImport } from './routes/product'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VendorsRouteImport } from './routes/vendors'
 import { Route as ApiConnectorsRouteImport } from './routes/api.connectors'
@@ -127,6 +128,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const ProductRoute = ProductRouteImport.update({
   id: '/product',
   path: '/product',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -235,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
   '/api/connectors': typeof ApiConnectorsRouteWithChildren
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
   '/api/connectors': typeof ApiConnectorsRouteWithChildren
@@ -308,6 +316,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
   '/api/connectors': typeof ApiConnectorsRouteWithChildren
@@ -346,6 +355,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/product'
+    | '/reset-password'
     | '/terms'
     | '/vendors'
     | '/api/connectors'
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/product'
+    | '/reset-password'
     | '/terms'
     | '/vendors'
     | '/api/connectors'
@@ -418,6 +429,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/product'
+    | '/reset-password'
     | '/terms'
     | '/vendors'
     | '/api/connectors'
@@ -455,6 +467,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProductRoute: typeof ProductRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
   VendorsRoute: typeof VendorsRoute
   ApiConnectorsRoute: typeof ApiConnectorsRouteWithChildren
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       path: '/product'
       fullPath: '/product'
       preLoaderRoute: typeof ProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -757,6 +777,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProductRoute: ProductRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   VendorsRoute: VendorsRoute,
   ApiConnectorsRoute: ApiConnectorsRouteWithChildren,
