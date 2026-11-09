@@ -1619,3 +1619,4 @@ body:has(.organizer-frame) { overflow:hidden; }
 .cv-app .ow-main { max-width: none; padding: 8px 28px 48px; }
 .cv-app .ow-main.ow-main-chat { padding: 0; }
 .cv-app .ow-demo-banner { margin: 0 16px 6px; border-radius: 12px; }
+.civi-chat.cv-chat { position: relative; }
