@@ -109,6 +109,9 @@ type WorkspaceData = {
   connected: string[];
   research: ResearchItem[];
   needs: Need[];
+  /** Every saved connection and its state, so Civi can report on each helper. */
+  connectorStatus: { connector: string; status: string; detail: string }[];
+  payments: { committedCents: number; budgetCents: number | null; waiting: number } | null;
 };
 const blank: WorkspaceData = {
   name: "Your community",
@@ -125,6 +128,8 @@ const blank: WorkspaceData = {
   connected: [],
   research: [],
   needs: [],
+  connectorStatus: [],
+  payments: null,
 };
 const demoData: WorkspaceData = {
   ...blank,
@@ -134,6 +139,12 @@ const demoData: WorkspaceData = {
   vendorCount: 18,
   goal: "Host a Neighborhood Resource Fair next month that connects 200 residents with food, housing and health partners.",
   connected: ["facebook", "google_calendar"],
+  connectorStatus: [
+    { connector: "facebook", status: "connected", detail: "Shared the pantry schedule in 2 neighborhood groups" },
+    { connector: "eventbrite", status: "connected", detail: "Resource Fair page drafted · 142 RSVPs (sample)" },
+    { connector: "instagram", status: "needs_attention", detail: "Instagram asked for a security check" },
+  ],
+  payments: { committedCents: 2_900, budgetCents: 150_000, waiting: 1 },
   research: [
     {
       id: "r1",
@@ -271,9 +282,8 @@ export function LiveOrganizerWorkspace() {
         .maybeSingle(),
       db
         .from("organization_connectors")
-        .select("connector")
-        .eq("organization_id", organizationId)
-        .eq("status", "connected"),
+        .select("connector,status,detail")
+        .eq("organization_id", organizationId),
       db
         .from("steward_research_runs")
         .select("id,input,result,created_at")
@@ -288,7 +298,19 @@ export function LiveOrganizerWorkspace() {
         .eq("status", "open")
         .order("created_at", { ascending: false })
         .limit(20),
+      db
+        .from("organization_payment_settings")
+        .select("monthly_budget_cents")
+        .eq("organization_id", organizationId)
+        .maybeSingle(),
+      db
+        .from("agent_payments")
+        .select("amount_cents,status")
+        .eq("organization_id", organizationId)
+        .eq("budget_month", new Date().toISOString().slice(0, 7) + "-01"),
     ]);
+    const connections = (r[9].data ?? []) as WorkspaceData["connectorStatus"];
+    const monthPayments = (r[13].data ?? []) as { amount_cents: number; status: string }[];
     if (r.some((x) => x.error)) {
       setError(
         "Some workspace data could not load. Refresh to try again; sample results are never substituted.",
@@ -306,7 +328,15 @@ export function LiveOrganizerWorkspace() {
       vendorCount: r[7].count ?? 0,
       webAgentId: r[8].data?.id ?? null,
       goal: r[1].data?.event_goal ?? "",
-      connected: ((r[9].data ?? []) as { connector: string }[]).map((row) => row.connector),
+      connected: connections.filter((row) => row.status === "connected").map((row) => row.connector),
+      connectorStatus: connections,
+      payments: {
+        budgetCents: r[12].data ? Number(r[12].data.monthly_budget_cents) : null,
+        committedCents: monthPayments
+          .filter((p) => p.status === "approved" || p.status === "paid")
+          .reduce((sum, p) => sum + Number(p.amount_cents), 0),
+        waiting: monthPayments.filter((p) => p.status === "needs_approval").length,
+      },
       research: (r[10].data ?? []) as ResearchItem[],
       needs: (r[11].data ?? []) as Need[],
     });
