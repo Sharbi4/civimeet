@@ -134,7 +134,7 @@ describe("Connections list", () => {
     );
   });
 
-  it("offers live sign-in, saved login and official sign-in where each is available", () => {
+  it("offers saved login and official sign-in without legacy browser controls", () => {
     render(
       <ConnectorList
         rows={{}}
@@ -152,7 +152,7 @@ describe("Connections list", () => {
       within(methods)
         .getAllByRole("radio")
         .map((item) => item.textContent),
-    ).toEqual(["Sign in live", "Save login", "Official sign-in"]);
+    ).toEqual(["Save login", "Official sign-in"]);
     fireEvent.click(within(methods).getByRole("radio", { name: /Official sign-in/ }));
     expect(screen.getByRole("button", { name: /Continue with Instagram/ })).toBeDisabled();
     expect(screen.getByText(/META_APP_ID and META_APP_SECRET/)).toBeInTheDocument();
@@ -172,12 +172,12 @@ describe("Connections list", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /^Facebook Groups, community comments/ }));
-    fireEvent.click(screen.getByRole("radio", { name: /Save login/ }));
+
     const identifier = screen.getByLabelText("Email or mobile number");
     const password = screen.getByLabelText("Password");
     fireEvent.change(identifier, { target: { value: "taylor@example.org" } });
     fireEvent.change(password, { target: { value: "secret-pass" } });
-    fireEvent.click(screen.getByRole("button", { name: /Save and sign in/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Save login/ }));
     await waitFor(() =>
       expect(handlers.command).toHaveBeenCalledWith({
         command: "save_credentials",
@@ -237,6 +237,7 @@ describe("Connections list", () => {
     );
     expect(screen.getByText(/Only an organization owner or administrator/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Facebook Groups, community comments/ }));
-    expect(screen.getByRole("button", { name: /Open agent browser/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Open agent browser/ })).toBeNull();
+    expect(screen.getByLabelText("Password")).toBeDisabled();
   });
 });

@@ -253,106 +253,14 @@ describe("connector commands", () => {
     expect(response.status).toBe(403);
     expect(base.claim).not.toHaveBeenCalled();
   });
-  it("opens a live sign-in browser on the platform's login page", async () => {
-    const page = { navigate: vi.fn(async () => {}) };
-    const { deps: d, finished } = deps({
-      page: vi.fn(async (_id: string, work: (p: SteelPage) => unknown) =>
-        work(page as unknown as SteelPage),
-      ) as never,
-    });
-    const response = await handleConnectorCommand(
-      request({ command: "browser_start", organizationId: org, connector: "facebook" }),
-      d,
-    );
-    const body = await response.json();
-    expect(response.status).toBe(200);
-    expect(body).toMatchObject({ status: "awaiting_sign_in", viewer });
-    expect(page.navigate).toHaveBeenCalledWith("https://www.facebook.com/login/");
-    expect(finished[0]).toMatchObject({
-      status: "awaiting_sign_in",
-      humanActor: "admin-1",
-      event: "browser_sign_in_started",
-    });
+  it.each(["browser_start", "browser_open", "browser_observe", "browser_finish"])("rejects retired %s without contacting Steel", async (command) => {
+    const { deps: d, base } = deps();
+    const response = await handleConnectorCommand(request({ command, organizationId: org, connector: "facebook" }), d);
+    expect(response.status).toBe(410);
+    expect(base.provider.create).not.toHaveBeenCalled();
+    expect(base.claim).not.toHaveBeenCalled();
   });
-  it("retries the first browser connection once before giving up", async () => {
-    const page = { navigate: vi.fn(async () => {}) };
-    let attempts = 0;
-    const { deps: d } = deps({
-      page: vi.fn(async (_id: string, work: (p: SteelPage) => unknown) => {
-        attempts += 1;
-        if (attempts === 1) throw new Error("Browser connection failed.");
-        return work(page as unknown as SteelPage);
-      }) as never,
-    });
-    const response = await handleConnectorCommand(
-      request({ command: "browser_start", organizationId: org, connector: "facebook" }),
-      d,
-    );
-    expect(response.status).toBe(200);
-    expect(attempts).toBe(2);
-    expect(page.navigate).toHaveBeenCalledWith("https://www.facebook.com/login/");
-  });
-  it("closes a browser it couldn't hand over and says what went wrong", async () => {
-    const {
-      deps: d,
-      base,
-      finished,
-    } = deps({
-      page: vi.fn(async () => {
-        throw new Error("Browser connection failed.");
-      }) as never,
-    });
-    const response = await handleConnectorCommand(
-      request({ command: "browser_start", organizationId: org, connector: "facebook" }),
-      d,
-    );
-    const body = await response.json();
-    expect(response.status).toBe(502);
-    expect(body.error).toMatch(/couldn't load the sign-in page/);
-    expect(base.provider.release).toHaveBeenCalledWith("33333333-3333-4333-8333-333333333333");
-    expect(finished.at(-1)).toMatchObject({
-      status: "not_connected",
-      detail: "The agent browser could not open. Try again.",
-    });
-  });
-  it("does not mark a connection live while the sign-in page is still showing", async () => {
-    const page = {
-      signInState: vi.fn(async () => ({
-        url: "https://www.facebook.com/login/",
-        passwordField: true,
-        challenge: false,
-      })),
-    };
-    const {
-      deps: d,
-      base,
-      finished,
-    } = deps({
-      claim: vi.fn(async () => ({
-        status: "awaiting_sign_in",
-        method: "browser",
-        connectedAt: null,
-        profileId: null,
-        providerSession: "33333333-3333-4333-8333-333333333333",
-        humanActor: "admin-1",
-        expiresAt: new Date(Date.now() + 60_000).toISOString(),
-        hasSecret: false,
-      })) as never,
-      page: vi.fn(async (_id: string, work: (p: SteelPage) => unknown) =>
-        work(page as unknown as SteelPage),
-      ) as never,
-    });
-    const body = await (
-      await handleConnectorCommand(
-        request({ command: "browser_finish", organizationId: org, connector: "facebook" }),
-        d,
-      )
-    ).json();
-    expect(body.status).toBe("awaiting_sign_in");
-    expect(base.provider.release).not.toHaveBeenCalled();
-    expect(finished.some((item) => item["status"] === "connected")).toBe(false);
-  });
-  it("saves an encrypted login, signs in and never echoes the password", async () => {
+  it("saves an encrypted login without launching a browser or claiming sign-in", async () => {
     const { page } = fakePage({ afterSubmitUrl: "https://www.facebook.com/" });
     const {
       deps: d,
@@ -372,35 +280,17 @@ describe("connector commands", () => {
       d,
     );
     const text = await response.text();
-    expect(JSON.parse(text)).toEqual({ status: "connected" });
+    expect(JSON.parse(text)).toEqual({ status: "saved" });
     expect(text).not.toContain("hunter2");
     expect(stored[0]).not.toContain("hunter2");
     expect(JSON.stringify(finished)).not.toContain("hunter2");
     expect(finished.at(-1)).toMatchObject({
-      status: "connected",
+      status: "saved",
       method: "credentials",
       accountLabel: "ta•••@example.org",
     });
-    expect(base.provider.release).toHaveBeenCalled();
-  });
-  it("keeps the browser open for a security check after a saved login", async () => {
-    const { page } = fakePage({ afterSubmitUrl: "https://www.facebook.com/checkpoint/" });
-    const { deps: d, finished } = deps({
-      page: vi.fn(async (_id: string, work: (p: SteelPage) => unknown) => work(page)) as never,
-    });
-    const body = await (
-      await handleConnectorCommand(
-        request({
-          command: "save_credentials",
-          organizationId: org,
-          connector: "facebook",
-          credentials: { identifier: "a@b.co", password: "pw" },
-        }),
-        d,
-      )
-    ).json();
-    expect(body).toMatchObject({ status: "needs_verification", viewer });
-    expect(finished.at(-1)).toMatchObject({ status: "needs_verification", humanActor: "admin-1" });
+    expect(base.provider.create).not.toHaveBeenCalled();
+    expect(base.provider.release).not.toHaveBeenCalled();
   });
   it("disconnects by deleting the saved login and browser profile", async () => {
     const { deps: d, base, finished } = deps();
@@ -455,54 +345,6 @@ describe("connector commands", () => {
       expect.any(String),
       "https://civimeet.com/api/connectors/oauth/callback",
     );
-  });
-});
-
-describe("taking over a connected account", () => {
-  it("opens the agent's signed-in browser without changing the connection status", async () => {
-    const page = { navigate: vi.fn(async () => {}) };
-    const {
-      deps: d,
-      finished,
-      base,
-    } = deps({
-      claim: vi.fn(async () => ({
-        status: "connected",
-        method: "credentials",
-        connectedAt: new Date().toISOString(),
-        profileId: "55555555-5555-4555-8555-555555555555",
-        providerSession: null,
-        humanActor: null,
-        expiresAt: null,
-        hasSecret: true,
-      })) as never,
-      page: vi.fn(async (_id: string, work: (p: SteelPage) => unknown) =>
-        work(page as unknown as SteelPage),
-      ) as never,
-    });
-    const body = await (
-      await handleConnectorCommand(
-        request({ command: "browser_open", organizationId: org, connector: "facebook" }),
-        d,
-      )
-    ).json();
-    expect(body).toMatchObject({ status: "connected", viewer });
-    expect(base.provider.create).toHaveBeenCalledWith(
-      expect.any(String),
-      true,
-      "55555555-5555-4555-8555-555555555555",
-    );
-    expect(page.navigate).toHaveBeenCalledWith("https://www.facebook.com/");
-    expect(finished.at(-1)).not.toHaveProperty("status");
-    expect(finished.at(-1)).toMatchObject({ humanActor: "admin-1" });
-  });
-  it("refuses to open an account that is not connected", async () => {
-    const { deps: d } = deps();
-    const response = await handleConnectorCommand(
-      request({ command: "browser_open", organizationId: org, connector: "facebook" }),
-      d,
-    );
-    expect(response.status).toBe(409);
   });
 });
 

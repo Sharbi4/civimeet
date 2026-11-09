@@ -768,6 +768,7 @@ function CredentialForm({
             <span className="relative block">
               <input
                 name={`${definition.id}-${field.key}`}
+                disabled={disabled}
                 type={field.type === "password" && !reveal ? "password" : "text"}
                 autoComplete={field.autoComplete === "current-password" ? "new-password" : "off"}
                 spellCheck={false}
@@ -802,7 +803,7 @@ function CredentialForm({
           busy={busy}
           icon={<KeyRound size={16} />}
         >
-          Save and sign in
+          Save login
         </PrimaryButton>
         <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-500">
           <Lock size={13} /> Encrypted (AES-256) before it’s stored. Never shown again.
