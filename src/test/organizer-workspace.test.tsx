@@ -76,7 +76,7 @@ beforeEach(() => {
       {
         id: "p1",
         organization_id: "org-1",
-        helper: "civi",
+        agent: "main",
         payee: "Reid Park Community Center",
         purpose: "Pavilion deposit",
         category: "venue",
@@ -90,7 +90,7 @@ beforeEach(() => {
       {
         id: "p2",
         organization_id: "org-1",
-        helper: "civi",
+        agent: "main",
         payee: "Tucson Print Shop",
         purpose: "Flyers",
         category: "vendor",
@@ -127,7 +127,7 @@ it("shows the real workspace with no sample or demo labels", async () => {
   expect(screen.getByRole("heading", { level: 1, name: "Civi" })).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/sample|demo/i);
   for (const name of ["Approvals", "Events", "Library", "Settings"]) {
-    fireEvent.click(screen.getByRole("button", { name }));
+    fireEvent.click(screen.getAllByRole("button", { name })[0]!);
     expect(screen.getByRole("heading", { level: 1, name })).toBeInTheDocument();
   }
   expect(document.body.textContent).not.toMatch(/sample|demo/i);
