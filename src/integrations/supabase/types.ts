@@ -189,12 +189,16 @@ export type Database = {
           created_at: string
           created_by: string
           due_at: string
+          event_id: string | null
           id: string
           lease_id: string | null
           lease_until: string | null
           objective: string
           organization_id: string
+          predecessor_id: string | null
+          research_request_id: string
           result: string
+          skill_id: string
           status: string
           updated_at: string
         }
@@ -204,12 +208,16 @@ export type Database = {
           created_at?: string
           created_by: string
           due_at?: string
+          event_id?: string | null
           id?: string
           lease_id?: string | null
           lease_until?: string | null
           objective: string
           organization_id: string
+          predecessor_id?: string | null
+          research_request_id?: string
           result?: string
+          skill_id?: string
           status?: string
           updated_at?: string
         }
@@ -219,21 +227,39 @@ export type Database = {
           created_at?: string
           created_by?: string
           due_at?: string
+          event_id?: string | null
           id?: string
           lease_id?: string | null
           lease_until?: string | null
           objective?: string
           organization_id?: string
+          predecessor_id?: string | null
+          research_request_id?: string
           result?: string
+          skill_id?: string
           status?: string
           updated_at?: string
         }
         Relationships: [
           {
+            foreignKeyName: "agent_work_event"
+            columns: ["organization_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "community_events"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
             foreignKeyName: "agent_work_items_organization_id_agent_id_fkey"
             columns: ["organization_id", "agent_id"]
             isOneToOne: false
             referencedRelation: "platform_agents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "agent_work_predecessor"
+            columns: ["organization_id", "predecessor_id"]
+            isOneToOne: false
+            referencedRelation: "agent_work_items"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -1072,6 +1098,82 @@ export type Database = {
           },
         ]
       }
+      organizer_sessions: {
+        Row: {
+          archived: boolean
+          created_at: string
+          created_by: string
+          id: string
+          lease_id: string | null
+          lease_until: string | null
+          organization_id: string
+          provider_id: string | null
+          thread: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          created_by: string
+          id?: string
+          lease_id?: string | null
+          lease_until?: string | null
+          organization_id: string
+          provider_id?: string | null
+          thread: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          created_by?: string
+          id?: string
+          lease_id?: string | null
+          lease_until?: string | null
+          organization_id?: string
+          provider_id?: string | null
+          thread?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizer_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizer_submissions: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          organization_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          message: string
+          organization_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          organization_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizer_submissions_organization_id_session_id_fkey"
+            columns: ["organization_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "organizer_sessions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       platform_agents: {
         Row: {
           created_at: string
@@ -1494,6 +1596,10 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_editor_agent_work: {
+        Args: { actor: string; target_task: string; workspace: string }
+        Returns: Json
+      }
       collect_agent_vendor: {
         Args: { agent_token: string; discovery: Json }
         Returns: Json
@@ -1568,6 +1674,17 @@ export type Database = {
         Args: { actor: string; result: Json; target: string; workspace: string }
         Returns: undefined
       }
+      finish_editor_agent_work: {
+        Args: {
+          actor: string
+          outcome: string
+          succeeded: boolean
+          target_task: string
+          task_lease: string
+          workspace: string
+        }
+        Returns: undefined
+      }
       finish_steward_discovery: {
         Args: { failure?: string; research_result: Json; target_run: string }
         Returns: Json
@@ -1602,6 +1719,7 @@ export type Database = {
         }
         Returns: string
       }
+      queue_event_groundwork: { Args: { target_event: string }; Returns: Json }
       read_connector_secret: {
         Args: { target: string; workspace: string }
         Returns: string
@@ -1636,6 +1754,17 @@ export type Database = {
         }
         Returns: string
       }
+      reserve_organizer_turn: {
+        Args: {
+          actor: string
+          chat_thread: string
+          message_text: string
+          resuming?: boolean
+          submission: string
+          workspace: string
+        }
+        Returns: Json
+      }
       reserve_steward_research: {
         Args: {
           actor: string
@@ -1648,6 +1777,10 @@ export type Database = {
       }
       resolve_community_need: {
         Args: { resolved: boolean; target_need: string }
+        Returns: undefined
+      }
+      retry_agent_research: {
+        Args: { target_task: string }
         Returns: undefined
       }
       retry_agent_task: { Args: { target_task: string }; Returns: undefined }
