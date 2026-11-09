@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
 import { OrganizerChat } from "./OrganizerChat";
+import { ManagedOrganizer } from "./ManagedOrganizer";
 import { PlatformBrowser } from "./BrowserDock";
 import { LocalDiscoveryPanel } from "./LocalDiscoveryPanel";
 import { OrganizationBrief } from "./OrganizationBrief";
@@ -609,7 +610,7 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
           <div className="ow-demo-banner">
             <strong>Demo / Sample data</strong>
             <span>No live accounts, messages, bookings, or payments. Changes reset on reload.</span>
-            <Link to="/dashboard">Open your workspace →</Link>
+            <Link to="/dashboard">Use my organization →</Link>
           </div>
         )}
         {loading && (
@@ -778,12 +779,18 @@ function OrganizerWorkspace({ data, demo, role, error, loading, refresh, review,
                   }
                 />
               ) : (
-                <OrganizerChat
-                  key={`${thread}:${chatSeed}`}
-                  thread={thread}
-                  initialMessage={chatSeed}
-                  onDraft={(c) => edit(undefined, c)}
-                />
+                <div className="min-w-0">
+                  <ManagedOrganizer
+                    key={`${thread}:${chatSeed}`}
+                    thread={thread}
+                    initialMessage={chatSeed}
+                    onDraft={(c) => edit(undefined, c)}
+                  />
+                  <details className="ow-recent mt-4">
+                    <summary>Local research tools and previous research</summary>
+                    <OrganizerChat thread={thread} onDraft={(c) => edit(undefined, c)} />
+                  </details>
+                </div>
               )}
             </div>
           )}

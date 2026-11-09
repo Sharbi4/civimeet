@@ -28,10 +28,12 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProductRouteImport } from './routes/product'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VendorsRouteImport } from './routes/vendors'
+import { Route as ApiOrganizerRouteImport } from './routes/api.organizer'
 import { Route as ApiResearchRouteImport } from './routes/api.research'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
 import { Route as ApiAgentResearchRouteImport } from './routes/api.agent.research'
+import { Route as ApiAgentWorkRouteImport } from './routes/api.agent.work'
 import { Route as ApiAnalyticsAnalyzeRouteImport } from './routes/api.analytics.analyze'
 import { Route as ApiBrowserCommandRouteImport } from './routes/api.browser.command'
 import { Route as ApiOrganizerVoiceRouteImport } from './routes/api.organizer.voice'
@@ -133,6 +135,11 @@ const VendorsRoute = VendorsRouteImport.update({
   path: '/vendors',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOrganizerRoute = ApiOrganizerRouteImport.update({
+  id: '/api/organizer',
+  path: '/api/organizer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiResearchRoute = ApiResearchRouteImport.update({
   id: '/api/research',
   path: '/api/research',
@@ -153,6 +160,11 @@ const ApiAgentResearchRoute = ApiAgentResearchRouteImport.update({
   path: '/api/agent/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentWorkRoute = ApiAgentWorkRouteImport.update({
+  id: '/api/agent/work',
+  path: '/api/agent/work',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAnalyticsAnalyzeRoute = ApiAnalyticsAnalyzeRouteImport.update({
   id: '/api/analytics/analyze',
   path: '/api/analytics/analyze',
@@ -164,9 +176,9 @@ const ApiBrowserCommandRoute = ApiBrowserCommandRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOrganizerVoiceRoute = ApiOrganizerVoiceRouteImport.update({
-  id: '/api/organizer/voice',
-  path: '/api/organizer/voice',
-  getParentRoute: () => rootRouteImport,
+  id: '/voice',
+  path: '/voice',
+  getParentRoute: () => ApiOrganizerRoute,
 } as any)
 const ApiStewardResearchRoute = ApiStewardResearchRouteImport.update({
   id: '/api/steward/research',
@@ -200,10 +212,12 @@ export interface FileRoutesByFullPath {
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/organizer': typeof ApiOrganizerRouteWithChildren
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/agent/work': typeof ApiAgentWorkRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
@@ -230,10 +244,12 @@ export interface FileRoutesByTo {
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/organizer': typeof ApiOrganizerRouteWithChildren
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/agent/work': typeof ApiAgentWorkRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
@@ -261,10 +277,12 @@ export interface FileRoutesById {
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/organizer': typeof ApiOrganizerRouteWithChildren
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/agent/work': typeof ApiAgentWorkRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
@@ -293,10 +311,12 @@ export interface FileRouteTypes {
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/organizer'
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
+    | '/api/agent/work'
     | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/organizer/voice'
@@ -323,10 +343,12 @@ export interface FileRouteTypes {
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/organizer'
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions'
     | '/api/agent/research'
+    | '/api/agent/work'
     | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/organizer/voice'
@@ -353,10 +375,12 @@ export interface FileRouteTypes {
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/organizer'
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
     | '/api/agent/research'
+    | '/api/agent/work'
     | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/organizer/voice'
@@ -384,13 +408,14 @@ export interface RootRouteChildren {
   ProductRoute: typeof ProductRoute
   TermsRoute: typeof TermsRoute
   VendorsRoute: typeof VendorsRoute
+  ApiOrganizerRoute: typeof ApiOrganizerRouteWithChildren
   ApiResearchRoute: typeof ApiResearchRoute
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
   ApiAgentResearchRoute: typeof ApiAgentResearchRoute
+  ApiAgentWorkRoute: typeof ApiAgentWorkRoute
   ApiAnalyticsAnalyzeRoute: typeof ApiAnalyticsAnalyzeRoute
   ApiBrowserCommandRoute: typeof ApiBrowserCommandRoute
-  ApiOrganizerVoiceRoute: typeof ApiOrganizerVoiceRoute
   ApiStewardResearchRoute: typeof ApiStewardResearchRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
@@ -530,6 +555,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VendorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/organizer': {
+      id: '/api/organizer'
+      path: '/api/organizer'
+      fullPath: '/api/organizer'
+      preLoaderRoute: typeof ApiOrganizerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/research': {
       id: '/api/research'
       path: '/api/research'
@@ -558,6 +590,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/work': {
+      id: '/api/agent/work'
+      path: '/api/agent/work'
+      fullPath: '/api/agent/work'
+      preLoaderRoute: typeof ApiAgentWorkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/analytics/analyze': {
       id: '/api/analytics/analyze'
       path: '/api/analytics/analyze'
@@ -574,10 +613,10 @@ declare module '@tanstack/react-router' {
     }
     '/api/organizer/voice': {
       id: '/api/organizer/voice'
-      path: '/api/organizer/voice'
+      path: '/voice'
       fullPath: '/api/organizer/voice'
       preLoaderRoute: typeof ApiOrganizerVoiceRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ApiOrganizerRoute
     }
     '/api/steward/research': {
       id: '/api/steward/research'
@@ -595,6 +634,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface ApiOrganizerRouteChildren {
+  ApiOrganizerVoiceRoute: typeof ApiOrganizerVoiceRoute
+}
+
+const ApiOrganizerRouteChildren: ApiOrganizerRouteChildren = {
+  ApiOrganizerVoiceRoute: ApiOrganizerVoiceRoute,
+}
+
+const ApiOrganizerRouteWithChildren = ApiOrganizerRoute._addFileChildren(
+  ApiOrganizerRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -616,13 +667,14 @@ const rootRouteChildren: RootRouteChildren = {
   ProductRoute: ProductRoute,
   TermsRoute: TermsRoute,
   VendorsRoute: VendorsRoute,
+  ApiOrganizerRoute: ApiOrganizerRouteWithChildren,
   ApiResearchRoute: ApiResearchRoute,
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
   ApiAgentResearchRoute: ApiAgentResearchRoute,
+  ApiAgentWorkRoute: ApiAgentWorkRoute,
   ApiAnalyticsAnalyzeRoute: ApiAnalyticsAnalyzeRoute,
   ApiBrowserCommandRoute: ApiBrowserCommandRoute,
-  ApiOrganizerVoiceRoute: ApiOrganizerVoiceRoute,
   ApiStewardResearchRoute: ApiStewardResearchRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }

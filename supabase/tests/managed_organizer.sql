@@ -1,0 +1,34 @@
+begin;
+do $$
+declare owner_id uuid:=gen_random_uuid(); outsider uuid:=gen_random_uuid(); org uuid; result jsonb; sid uuid; request_id uuid:=gen_random_uuid(); blocked boolean;
+begin
+ insert into auth.users(id,email) values(owner_id,'organizer-test@example.invalid'),(outsider,'organizer-outsider@example.invalid');
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',owner_id,'role','authenticated')::text,true);
+ execute 'set local role authenticated'; org:=public.create_vendor_workspace('Managed organizer tests'); execute 'reset role';
+ result:=public.reserve_organizer_turn(owner_id,org,'main',request_id,'Help our community',false); sid:=(result->'session'->>'id')::uuid;
+ blocked:=false; begin perform public.reserve_organizer_turn(owner_id,org,'main',gen_random_uuid(),'Overlap',false); exception when others then blocked:=true; end;
+ if not blocked then raise exception 'Concurrent submission allowed'; end if;
+ update public.organizer_sessions set lease_until=null where id=sid;
+ result:=public.reserve_organizer_turn(owner_id,org,'main',request_id,'Help our community',false);
+ if not (result->>'replayed')::boolean then raise exception 'Idempotency failed'; end if;
+ update public.organizer_sessions set lease_until=null where id=sid;
+ blocked:=false; begin perform public.reserve_organizer_turn(owner_id,org,'main',request_id,'Changed content',false); exception when others then blocked:=true; end;
+ if not blocked then raise exception 'Request identity reused with different content'; end if;
+ blocked:=false; begin perform public.reserve_organizer_turn(outsider,org,'main',gen_random_uuid(),'Cross tenant',false); exception when others then blocked:=true; end;
+ if not blocked then raise exception 'Cross-tenant submission allowed'; end if;
+ execute 'set local role authenticated';
+ blocked:=false; begin perform public.reserve_organizer_turn(owner_id,org,'main',gen_random_uuid(),'Privileged',false); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'Client bypassed server authentication'; end if;
+ blocked:=false; begin update public.organizer_sessions set provider_id='forged'; exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'Client can replace provider session'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',outsider,'role','authenticated')::text,true);
+ execute 'set local role authenticated';
+ if exists(select 1 from public.organizer_sessions where id=sid) then raise exception 'Tenant session leaked'; end if;
+ if exists(select 1 from public.organizer_submissions where organization_id=org) then raise exception 'Tenant conversation leaked'; end if;
+ execute 'reset role';
+ for i in 1..29 loop insert into public.organizer_submissions(organization_id,id,session_id,message) values(org,gen_random_uuid(),sid,'Quota fixture'); end loop;
+ blocked:=false; begin perform public.reserve_organizer_turn(owner_id,org,'main',gen_random_uuid(),'Over quota',false); exception when others then blocked:=true; end;
+ if not blocked then raise exception 'Daily quota bypassed'; end if;
+end; $$;
+rollback;

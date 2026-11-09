@@ -178,8 +178,45 @@ export function PlatformAgents() {
     setBusy(false);
     if (failure) setError(failure.message);
     else {
-      setNotice("Work queued for this agent. A connected worker is required to execute it.");
+      setNotice(
+        "Work saved. Run it as research to prepare sourced findings and drafts; no external actions will be taken.",
+      );
       setObjective("");
+      setRefresh((value) => value + 1);
+    }
+  }
+
+  async function runWork(task: Work) {
+    if (busy || role === "viewer") return;
+    setBusy(true);
+    setError("");
+    try {
+      if (task.status === "failed") {
+        const retry = await db.rpc("retry_agent_research", { target_task: task.id });
+        if (retry.error) throw new Error(retry.error.message);
+      }
+      const { data } = await db.auth.getSession();
+      if (!data.session) throw new Error("Sign in again to continue.");
+      const response = await fetch("/api/agent/work", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${data.session.access_token}`,
+        },
+        body: JSON.stringify({ organizationId, taskId: task.id }),
+        signal: AbortSignal.timeout(180000),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? body.result ?? "Agent work needs review.");
+      setNotice(
+        body.status === "completed"
+          ? "Research saved to your organization's knowledge and the agent's checkpoint memory. Nothing was published or sent."
+          : body.message,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Refresh saved work before retrying.");
+    } finally {
+      setBusy(false);
       setRefresh((value) => value + 1);
     }
   }
@@ -419,6 +456,22 @@ export function PlatformAgents() {
                         {task.status} · {task.attempts} attempts
                       </p>
                       <p className="mt-2 text-sm">{task.objective}</p>
+                      {role !== "viewer" &&
+                        (task.status === "queued" ||
+                          task.status === "failed" ||
+                          (task.status === "running" &&
+                            task.lease_until &&
+                            Date.parse(task.lease_until) < Date.now())) && (
+                          <Button
+                            className="mt-3"
+                            size="sm"
+                            variant="outline"
+                            disabled={busy || selected.paused || !selected.selected}
+                            onClick={() => void runWork(task)}
+                          >
+                            {task.status === "failed" ? "Retry as research" : "Run as research"}
+                          </Button>
+                        )}
                       {task.result && (
                         <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
                           {task.result}

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { dollarsToCents, formatMoney } from "@/lib/event-money";
 import { LocalDiscoveryPanel } from "@/components/workspace/LocalDiscoveryPanel";
 import { OrganizerChat } from "@/components/workspace/OrganizerChat";
+import { EventAgentWork } from "@/components/workspace/EventAgentWork";
 export const Route = createFileRoute("/events")({
   head: () => ({
     meta: [{ title: "Community Gatherings — CiviMeet" }, { name: "robots", content: "noindex" }],
@@ -445,6 +446,10 @@ export function Events() {
                 </article>
                 {selected.geographic_area && ["draft", "approved"].includes(selected.status) && (
                   <section className="space-y-4" aria-label="Event community research">
+                    <EventAgentWork
+                      key={`work:${selected.id}:${selected.revision}`}
+                      eventId={selected.id}
+                    />
                     <h3 className="text-lg font-semibold">
                       Build connections in {selected.geographic_area}
                     </h3>
