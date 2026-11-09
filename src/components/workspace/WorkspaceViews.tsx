@@ -97,11 +97,9 @@ const quiet =
 
 export function FeedView({
   entries,
-  demo,
   onDiscuss,
 }: {
   entries: FeedEntry[];
-  demo: boolean;
   onDiscuss: (prompt: string) => void;
 }) {
   return (
@@ -120,7 +118,6 @@ export function FeedView({
               <div className="mb-2 flex items-center gap-2 text-[12px] text-[#8191a3]">
                 <Pill>{entry.label}</Pill>
                 <span>{when(entry.time)}</span>
-                {demo && <span>· sample</span>}
               </div>
               <h3 className="!mb-1 text-[16px] font-semibold text-[#142d40]">{entry.title}</h3>
               {entry.text && (
@@ -171,12 +168,10 @@ export function FeedView({
 
 export function IdeasView({
   ideas,
-  demo,
   onDevelop,
   onEvent,
 }: {
   ideas: IdeaEntry[];
-  demo: boolean;
   onDevelop: (prompt: string) => void;
   onEvent: () => void;
 }) {
@@ -208,7 +203,6 @@ export function IdeasView({
                   {idea.status === "draft" ? "New idea" : idea.status}
                 </span>
                 {idea.followUpOn && <span>· revisit {idea.followUpOn}</span>}
-                {demo && <span>· sample</span>}
               </div>
               <h3 className="!mb-2 text-[16px] font-semibold text-[#142d40]">{idea.title}</h3>
               <p className="!mb-2 text-[14px] text-[#475569]">{idea.contribution}</p>
@@ -254,7 +248,6 @@ export function GoalsView({
   area,
   stats,
   needs,
-  demo,
   onEdit,
   onDiscuss,
 }: {
@@ -263,7 +256,6 @@ export function GoalsView({
   area: string;
   stats: [string, string][];
   needs: GoalNeed[];
-  demo: boolean;
   onEdit: () => void;
   onDiscuss: (prompt: string) => void;
 }) {
@@ -307,7 +299,6 @@ export function GoalsView({
               </strong>
               <span className="text-[12px] text-[#64717a]">
                 {label}
-                {demo ? " · sample" : ""}
               </span>
             </div>
           ))}
@@ -435,11 +426,9 @@ const libraryKinds = [
 ] as const;
 export function AgentLibrary({
   work,
-  demo,
   onOpen,
 }: {
   work: AgentWork[];
-  demo: boolean;
   onOpen: (item: AgentWork) => void;
 }) {
   const [kind, setKind] = useState<(typeof libraryKinds)[number][0]>("all");
@@ -486,7 +475,6 @@ export function AgentLibrary({
               </span>
               <span className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8191a3]">
                 {item.kind}
-                {demo ? " · sample" : ""}
               </span>
               <span className="line-clamp-2 text-[14px] font-medium text-[#142d40]">
                 {item.title}
