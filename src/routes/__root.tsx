@@ -78,8 +78,25 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   );
 }
 
+type AnalyticsConfig = { measurementId: string | null };
+let browserAnalyticsConfig: AnalyticsConfig | undefined;
+
+// The root loader re-runs on every sign-in/sign-out. Analytics is optional, so a dropped
+// request (network blip, preview restart) must never take the whole page down.
+async function loadAnalyticsConfig(): Promise<AnalyticsConfig> {
+  if (browserAnalyticsConfig) return browserAnalyticsConfig;
+  try {
+    const config = await getGoogleAnalyticsConfig();
+    if (typeof window !== "undefined") browserAnalyticsConfig = config;
+    return config;
+  } catch (error) {
+    console.warn("Analytics settings could not be loaded; continuing without analytics.", error);
+    return { measurementId: null };
+  }
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  loader: () => getGoogleAnalyticsConfig(),
+  loader: loadAnalyticsConfig,
   head: ({ loaderData }) => ({
     scripts: loaderData?.measurementId ? [
       { children: googleTagBootstrap(loaderData.measurementId) },
@@ -106,7 +123,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: brandFont.url,
         as: "font",
         type: "font/otf",
-        crossorigin: "anonymous",
+        crossOrigin: "anonymous",
       },
     ],
   }),
