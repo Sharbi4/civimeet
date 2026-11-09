@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { getDatabase } from "@/lib/database";
@@ -12,13 +12,8 @@ import { Label } from "@/components/ui/label";
 import { useBrowserScope } from "./BrowserDock";
 
 type Membership = { role: string; organization: { id: string; name: string } };
-type Workspace = { db: SupabaseClient; organizationId: string; role: string };
-const WorkspaceContext = createContext<Workspace | null>(null);
-export function useWorkspace() {
-  const value = useContext(WorkspaceContext);
-  if (!value) throw new Error("A signed-in organization workspace is required.");
-  return value;
-}
+import { WorkspaceContext, useWorkspace } from "./workspace-context";
+export { useWorkspace };
 
 export function WorkspaceGate({
   children,
