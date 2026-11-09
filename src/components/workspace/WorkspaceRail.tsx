@@ -7,7 +7,7 @@ import {
   Inbox,
   LayoutDashboard,
   Lightbulb,
-  Link2,
+  Settings,
   MessageCircle,
   Monitor,
   Newspaper,
@@ -48,7 +48,7 @@ export const primaryViews: [RailView, string, Icon][] = [
 ];
 export const workspaceViews: [RailView, string, Icon][] = [
   ["approvals", "Approvals", Inbox],
-  ["connectors", "Connections", Link2],
+  ["connectors", "Settings", Settings],
   ["browser", "Live browser", Monitor],
   ["dashboard", "Overview", LayoutDashboard],
   ["people", "People", Users],

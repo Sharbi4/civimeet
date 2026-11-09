@@ -40,7 +40,7 @@ export function ChatBrowser({
   const actions = useChatActions();
   const session = actions?.liveSession ?? null;
   const run = actions?.agentRun ?? null;
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(demo);
   const [web, setWeb] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const stage = useRef<HTMLElement>(null);
@@ -94,6 +94,9 @@ export function ChatBrowser({
         ? "Public websites"
         : "Agent browser";
   const dot = session || running ? "bg-emerald-500" : "bg-slate-300";
+
+  // The workspace starts as a conversation. Reveal the browser only for a task or explicit request.
+  if (!demo && !session && !run && !web && !open) return null;
 
   return (
     <section

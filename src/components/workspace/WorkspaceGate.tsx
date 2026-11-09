@@ -317,6 +317,7 @@ export function WorkspaceGate({
                     </option>
                   ))}
                 </select>
+                {compact && <button type="button" className="ml-auto text-xs text-slate-500" onClick={async () => { const r = await db.auth.signOut(); if (r.error) setError(r.error.message); }}>Sign out</button>}
                 <nav
                   hidden={compact}
                   aria-label="Workspace"
@@ -331,7 +332,7 @@ export function WorkspaceGate({
                 </nav>
               </div>
               <WorkspaceContext.Provider value={{ db, organizationId, role: membership.role }}>
-                <div key={organizationId}>{children}</div>
+                <div key={organizationId} className={compact ? "organizer-frame" : undefined}>{children}</div>
               </WorkspaceContext.Provider>
             </>
           )}

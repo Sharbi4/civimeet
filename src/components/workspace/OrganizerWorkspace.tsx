@@ -553,7 +553,7 @@ function OrganizerWorkspace({
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
-  const [sideOpen, setSideOpen] = useState(true);
+  const [sideOpen, setSideOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const panelOpen = wide ? sideOpen : drawerOpen;
   const setPanelOpen = (open: boolean) => (wide ? setSideOpen(open) : setDrawerOpen(open));
@@ -1268,7 +1268,9 @@ function OrganizerWorkspace({
                   <DemoConnectors />
                 ) : (
                   <>
+                    <div className="mx-auto max-w-[980px] px-5 pt-6"><h2 className="text-xl font-semibold">Settings</h2><p className="mt-1 text-sm text-slate-500">Connect your accounts and manage encrypted sign-in information.</p></div>
                     <LiveConnectors />
+                    <details className="mx-auto mt-6 max-w-[980px] rounded-2xl border border-slate-200 bg-white px-5 py-4"><summary className="cursor-pointer text-sm font-medium">Previous research conversations & event tools</summary><OrganizerChat thread="main" onDraft={(c) => edit(undefined, c)} onOpenEvents={() => navigate("events")} /></details>
                     <details className="mx-auto mt-10 max-w-[980px] rounded-2xl border border-slate-200 bg-white px-5 py-4">
                       <summary className="cursor-pointer text-[14px] font-medium text-slate-700">
                         Agent playbooks and memory per platform

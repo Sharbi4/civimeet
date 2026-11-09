@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, RotateCcw, Square, Sparkles } from "lucide-react";
+import { ArrowUp, Square, Sparkles, MoreHorizontal } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
 import type { OrganizerThread } from "@/lib/organizer";
 import { parseChatIntent } from "@/lib/chat-intents";
@@ -30,8 +30,19 @@ export function ManagedOrganizer({
   const [actionRows, setActionRows] = useState<ChatActionRecord[]>([]);
   useEffect(() => {
     let active = true;
-    void db.from("organizer_chat_actions").select("id,thread_key,message,action,status,reply,resume_goal,created_at").eq("organization_id", organizationId).eq("thread_key", thread).order("created_at", { ascending: false }).limit(20).then(r => { if (active && r.data) setActionRows((r.data as ChatActionRecord[]).reverse()); });
-    return () => { active = false; };
+    void db
+      .from("organizer_chat_actions")
+      .select("id,thread_key,message,action,status,reply,resume_goal,created_at")
+      .eq("organization_id", organizationId)
+      .eq("thread_key", thread)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then((r) => {
+        if (active && r.data) setActionRows((r.data as ChatActionRecord[]).reverse());
+      });
+    return () => {
+      active = false;
+    };
   }, [db, organizationId, thread, actions?.version]);
   const [state, setState] = useState<State>({ status: "loading", messages: [] });
   const [message, setMessage] = useState(initialMessage),
@@ -88,10 +99,16 @@ export function ManagedOrganizer({
     if (busy || role === "viewer" || (action === "send" && !message.trim())) return;
     const intent = action === "send" ? parseChatIntent(message.trim()) : null;
     if (intent && actions) {
-      setBusy(true); setError("");
-      try { await actions.run(intent, message.trim(), thread); setMessage(""); }
-      catch { setError("The workspace action could not complete. Check its saved status."); }
-      finally { if (alive.current) setBusy(false); }
+      setBusy(true);
+      setError("");
+      try {
+        await actions.run(intent, message.trim(), thread);
+        setMessage("");
+      } catch {
+        setError("The workspace action could not complete. Check its saved status.");
+      } finally {
+        if (alive.current) setBusy(false);
+      }
       return;
     }
     setBusy(true);
@@ -186,23 +203,31 @@ export function ManagedOrganizer({
     active =
       busy || ["in_progress", "requires_action", "cancellation_requested"].includes(state.status);
   return (
-    <section className="ow-live-chat" aria-label="AI community organizer">
+    <section className="civi-chat" aria-label="AI community organizer">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
         <div>
           <strong className="flex items-center gap-2">
-            <Sparkles size={18} /> Your community organizer
+            <Sparkles size={18} /> Civi
           </strong>
-          <p className="mt-1 text-sm text-slate-500">Contribute. Connect. Convene.</p>
+          <p className="mt-1 text-sm text-slate-500">Your AI community organizer</p>
         </div>
         <div className="flex gap-2">
-          <button
-            type="button"
-            className="ow-button"
-            onClick={() => void refresh()}
-            disabled={busy}
-          >
-            <RotateCcw size={14} /> Refresh saved work
-          </button>
+          <details className="civi-chat-menu">
+            <summary aria-label="Conversation options">
+              <MoreHorizontal size={20} />
+            </summary>
+            <div>
+              <button onClick={() => void refresh()} disabled={busy}>
+                Refresh saved work
+              </button>
+              <button onClick={() => void newConversation()} disabled={active}>
+                New conversation
+              </button>
+              {state.usage && (
+                <small>{state.usage.total_tokens.toLocaleString()} tokens used</small>
+              )}
+            </div>
+          </details>
           {active && (
             <button type="button" className="ow-button" onClick={() => void stop()}>
               <Square size={14} /> Stop task
@@ -219,21 +244,50 @@ export function ManagedOrganizer({
           </p>
         </div>
       )}
-      <div className="space-y-4 p-4" aria-live="polite">
+      <div className="civi-chat-scroll" aria-live="polite">
         {ready && !state.messages.length && !busy && (
-          <p>
-            Tell me what you want to bring to your community. I can work from your saved mission,
-            research local options, and help shape the next gathering.
-          </p>
+          <div className="civi-chat-welcome">
+            <span>
+              <Sparkles size={26} />
+            </span>
+            <h2>What shall we bring to life?</h2>
+            <p>
+              Tell me what you have in mind. We’ll work from your community’s mission and take it
+              from there.
+            </p>
+            <div>
+              <button onClick={() => setMessage("Help us plan our next community event.")}>
+                Plan a gathering
+              </button>
+              <button onClick={() => setMessage("Find local partners who fit our mission.")}>
+                Find local partners
+              </button>
+            </div>
+          </div>
         )}
         {state.hasOlderMessages && (
           <p className="text-xs text-slate-500">Showing the most recent saved messages.</p>
         )}
-        {actionRows.map(action => <ActionTurn key={action.id} action={action} busy={busy || Boolean(actions?.busy)} onContinue={text => setMessage(text)} onRetry={() => { void actions?.run(action.action, action.message, thread); }} />)}
+        {actionRows.length > 0 && (
+          <details className="civi-chat-history">
+            <summary>Workspace activity</summary>
+            {actionRows.map((action) => (
+              <ActionTurn
+                key={action.id}
+                action={action}
+                busy={busy || Boolean(actions?.busy)}
+                onContinue={(text) => setMessage(text)}
+                onRetry={() => {
+                  void actions?.run(action.action, action.message, thread);
+                }}
+              />
+            ))}
+          </details>
+        )}
         {state.messages.map((m) => (
           <article
             key={m.id}
-            className={`rounded-xl p-4 ${m.role === "user" ? "bg-blue-50" : "border bg-white"}`}
+            className={`civi-message ${m.role === "user" ? "civi-message-user" : "civi-message-agent"}`}
           >
             <small className="font-semibold text-blue-700">
               {m.role === "user" ? "Your team" : "Civi · AI organizer"}
@@ -266,7 +320,7 @@ export function ManagedOrganizer({
         )}
       </div>
       {ready && (
-        <div className="border-t p-4">
+        <div className="civi-composer">
           {state.needsResume && !busy && (
             <button className="ow-button mb-3" onClick={() => void run("resume")}>
               Continue saved task
@@ -289,9 +343,15 @@ export function ManagedOrganizer({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               maxLength={6000}
-              rows={3}
+              rows={2}
               className="min-w-0 flex-1 rounded-xl border p-3"
-              placeholder="Help us plan a resource fair for our community…"
+              placeholder="Message Civi…"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  if (!active) void run("send");
+                }
+              }}
               disabled={role === "viewer"}
             />
             <button
@@ -302,22 +362,9 @@ export function ManagedOrganizer({
               <ArrowUp size={18} />
             </button>
           </form>
-          <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
-            <span>
-              Research and planning are live when configured. Posts, messages, bookings and payments
-              are not sent here.
-            </span>
-            <button type="button" onClick={() => void newConversation()} disabled={active}>
-              New conversation
-            </button>
-          </div>
-          {state.usage && (
-            <details className="mt-3 text-xs text-slate-500">
-              <summary>Conversation usage</summary>
-              {state.usage.total_tokens.toLocaleString()} tokens
-              {state.spend && <> · provider-reported spend {JSON.stringify(state.spend)}</>}
-            </details>
-          )}
+          <p className="mt-2 text-center text-[11px] text-slate-400">
+            Your community. Your voice. Your final say.
+          </p>
         </div>
       )}
     </section>

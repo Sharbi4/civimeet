@@ -26,10 +26,12 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-it("puts the accounts the agent can open on the chat screen and opens them through chat actions", async () => {
+it("keeps idle chat simple and reveals accounts only when the browser is requested", async () => {
   render(
     <ChatBrowser thread="main" demo={false} admin connected={["facebook"]} webAgentId={null} />,
   );
+  expect(screen.queryByRole("region", { name: "Agent browser" })).not.toBeInTheDocument();
+  fireEvent(window, new CustomEvent("civimeet:panel", { detail: { tab: "browser" } }));
   const browser = screen.getByRole("region", { name: "Agent browser" });
   expect(within(browser).getByRole("button", { name: /^Facebook.*Signed in/ })).toBeEnabled();
   expect(within(browser).getByRole("button", { name: /^Instagram.*Sign in/ })).toBeEnabled();
@@ -73,6 +75,7 @@ it("keeps account buttons off for people who can't connect accounts", () => {
       webAgentId={null}
     />,
   );
+  fireEvent(window, new CustomEvent("civimeet:panel", { detail: { tab: "browser" } }));
   const browser = screen.getByRole("region", { name: "Agent browser" });
   expect(within(browser).getAllByRole("button", { name: /Sign in/ })).toHaveLength(1);
   expect(within(browser).getByRole("button", { name: /^Facebook/ })).toBeDisabled();
