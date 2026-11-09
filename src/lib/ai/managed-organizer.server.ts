@@ -678,26 +678,37 @@ export async function handleManagedOrganizer(
     if (e instanceof OrganizerError) return json({ error: e.message }, e.status);
     if (e instanceof z.ZodError || e instanceof SyntaxError)
       return json({ error: "Check the message and organization." }, 400);
+    // Never answer 502/504: hosting proxies replace those bodies with their own HTML page,
+    // so the chat would lose the explanation. 503 and 424 pass through intact.
+    if (isTransientProviderError(e))
+      return json(
+        {
+          error: "Civi's AI service is busy right now and couldn't reply. Try again in a moment.",
+          retryable: true,
+          providerStatus: e instanceof OpenAI.APIError ? (e.status ?? null) : null,
+        },
+        503,
+      );
     if (e instanceof OpenAI.APIError) {
       const code = typeof e.code === "string" && /^[a-z0-9_-]{1,80}$/i.test(e.code) ? e.code : null;
       const param =
         typeof e.param === "string" && /^[a-z0-9_.\[\]-]{1,120}$/i.test(e.param) ? e.param : null;
       return json(
         {
-          error: `OpenAI returned HTTP ${e.status ?? 502}${code ? ` (${code})` : ""}${param ? ` for ${param}` : ""}. Check Agents API access, billing and the configured model.`,
+          error: `OpenAI returned HTTP ${e.status ?? "error"}${code ? ` (${code})` : ""}${param ? ` for ${param}` : ""}. Check Agents API access, billing and the configured model.`,
           providerStatus: e.status,
           providerCode: code,
           providerParam: param,
         },
-        502,
+        424,
       );
     }
     return json(
       {
         error:
-          "OpenAI could not start or recover this conversation. Check the server key, model and Agents permissions; refresh before retrying.",
+          "Civi couldn't start or recover this conversation. Refresh saved work, then try again.",
       },
-      502,
+      503,
     );
   }
 }
