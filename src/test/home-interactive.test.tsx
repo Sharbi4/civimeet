@@ -19,13 +19,13 @@ describe("homepage interactive controls", () => {
   it("steward demo switches tasks by click and keyboard without network", async () => {
     const net = vi.spyOn(globalThis, "fetch");
     await withRouter(<StewardMiniDemo />);
-    expect(screen.getByText("Illustrative demo · no live actions")).toBeInTheDocument();
+    expect(screen.getByText("Product tour · Your team stays in control")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Draft for approval" }));
     expect(screen.getByRole("button", { name: "Draft for approval" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Waiting for a human")).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole("button", { name: "Draft for approval" }), { key: "ArrowRight" });
     expect(screen.getByRole("button", { name: "Plan a gathering" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("link", { name: /six-scene demo/ })).toHaveAttribute("href", "/product#interactive-demo");
+    expect(screen.getByRole("link", { name: /six-scene tour/ })).toHaveAttribute("href", "/product#how-it-works-tour");
     expect(net).not.toHaveBeenCalled();
     net.mockRestore();
   });

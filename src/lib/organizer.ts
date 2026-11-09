@@ -2,7 +2,7 @@ import type { ResearchResult } from "./research";
 export const organizerThreads = ["main", "venue", "outreach", "volunteers"] as const;
 export type OrganizerThread = (typeof organizerThreads)[number];
 export const threadLabels: Record<OrganizerThread, string> = {
-  main: "Main Agent",
+  main: "Civi",
   venue: "Venue Research",
   outreach: "Outreach",
   volunteers: "Volunteers",
@@ -49,46 +49,4 @@ export type ReviewItem = {
   revision: number;
   reviewed_at?: string;
   reviewed_by?: string;
-};
-export const demoApprovals: ReviewItem[] = [
-  {
-    id: "sample-post",
-    title: "Facebook Group draft post",
-    content:
-      "Neighbors, we’re planning a Neighborhood Resource Fair in Tucson next month. What resources would be most useful to you? We’d love your input before finalizing the plan.",
-    destination: "Tucson Community Alliance · sample Facebook Group",
-    kind: "post",
-    status: "pending",
-    revision: 1,
-  },
-  {
-    id: "sample-venue",
-    title: "Reid Park Community Center hold",
-    content:
-      "Request an accessible space for the proposed resource fair. Date, capacity, availability, and price require confirmation. No reservation has been made.",
-    destination: "Reid Park Community Center · illustrative request",
-    kind: "booking",
-    status: "pending",
-    revision: 1,
-  },
-  {
-    id: "sample-deposit",
-    title: "$250 food truck deposit",
-    content:
-      "Proposed deposit: $250 USD. Vendor, quote, refund terms, and payment account must be verified before any payment. This sample never moves money.",
-    destination: "Sample food truck · no payment account connected",
-    kind: "payment",
-    status: "pending",
-    revision: 1,
-  },
-];
-export const demoReplies: Record<OrganizerThread, string> = {
-  main: "Love it. A resource fair in Tucson next month is a great way to meet neighbors.\n\nAre you picturing it in person, and roughly how many people? And do you already have a spot in mind, or should I start looking at venues near you?\n\n(Sample conversation. The draft post, venue hold and $250 deposit in Approvals are illustrative; nothing has been posted, booked or paid.)",
-  venue:
-    "Compare Reid Park Community Center and other accessible community spaces. Confirm capacity for 200, availability, permits, accessibility, and full cost directly. The prototype has no verified venue quotes or citations; run live Discover research in your organization for evidence.",
-  outreach:
-    demoApprovals[0]!.content +
-    "\n\nDraft only. Review the audience and final event details before publishing.",
-  volunteers:
-    "Suggested roles: welcome desk, partner support, accessibility support, setup, and cleanup. Ask volunteers to opt in, confirm their preferred shifts, and prepare a short briefing. No volunteer has been contacted.",
 };

@@ -608,10 +608,10 @@ function BrowserDock({
                     disabled={busy}
                     onClick={() => {
                       setUrl("https://example.com");
-                      setTask("Demo: review an approved public resource");
+                      setTask("Review an approved public resource");
                     }}
                   >
-                    Try the public-page demo
+                    Try it on a public page
                   </Button>
                 )}
                 <label className="block text-sm">

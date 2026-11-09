@@ -79,7 +79,6 @@ type ListProps = {
   events: ConnectorEvent[];
   capabilities: Capabilities | null;
   admin: boolean;
-  demo: boolean;
   live: boolean;
   loadError: string;
   actions: Actions;
@@ -247,116 +246,11 @@ export function LiveConnectors() {
       events={events}
       capabilities={capabilities}
       admin={role === "owner" || role === "admin"}
-      demo={false}
       live={live}
       loadError={loadError}
       actions={actions}
       initialOpen={initial.connector}
       initialNotice={initial.notice}
-    />
-  );
-}
-
-const day = 86_400_000;
-const sampleRows = (): Record<string, ConnectorRow> => {
-  const now = Date.now();
-  const row = (
-    connector: string,
-    status: ConnectorStatus,
-    method: ConnectMethod,
-    label: string,
-    connectedDaysAgo: number | null,
-    detail = "",
-  ): ConnectorRow => ({
-    connector,
-    status,
-    method,
-    account_label: label,
-    detail,
-    settings: {},
-    connected_at:
-      connectedDaysAgo === null ? null : new Date(now - connectedDaysAgo * day).toISOString(),
-    last_checked_at: new Date(now - 6 * 60_000).toISOString(),
-    updated_at: new Date(now - 6 * 60_000).toISOString(),
-  });
-  return {
-    facebook: row("facebook", "connected", "browser", "Tucson Community Alliance", 21),
-    instagram: row(
-      "instagram",
-      "needs_verification",
-      "credentials",
-      "tu•••",
-      null,
-      "Instagram wants to confirm it’s you. Finish the check in the live browser.",
-    ),
-    google_calendar: row("google_calendar", "connected", "oauth", "events@tucsonalliance.org", 9),
-    eventbrite: row(
-      "eventbrite",
-      "saved",
-      "credentials",
-      "ev•••@tucsonalliance.org",
-      null,
-      "Login saved. Open the live browser once to finish the first sign-in.",
-    ),
-  };
-};
-export function DemoConnectors() {
-  const [rows] = useState(sampleRows);
-  const events = useMemo<ConnectorEvent[]>(
-    () => [
-      {
-        id: "e1",
-        connector: "facebook",
-        action: "verified",
-        message: "Agent confirmed it is still signed in",
-        created_at: new Date(Date.now() - 6 * 60_000).toISOString(),
-      },
-      {
-        id: "e2",
-        connector: "instagram",
-        action: "verification_needed",
-        message: "Security check needed",
-        created_at: new Date(Date.now() - 42 * 60_000).toISOString(),
-      },
-      {
-        id: "e3",
-        connector: "google_calendar",
-        action: "oauth_connected",
-        message: "Connected events@tucsonalliance.org",
-        created_at: new Date(Date.now() - 9 * day).toISOString(),
-      },
-    ],
-    [],
-  );
-  const actions = useMemo<Actions>(
-    () => ({
-      command: async () => ({
-        message: "Sample workspace. Sign in to your organization to connect real accounts.",
-      }),
-      saveSettings: async () => {},
-    }),
-    [],
-  );
-  return (
-    <ConnectorList
-      rows={rows}
-      events={events}
-      capabilities={{
-        browser: true,
-        oauth: {
-          google: true,
-          meta_pages: true,
-          meta_instagram: true,
-          linkedin: true,
-          eventbrite: true,
-          zoom: true,
-        },
-      }}
-      admin
-      demo
-      live
-      loadError=""
-      actions={actions}
     />
   );
 }
@@ -374,7 +268,6 @@ export function ConnectorList({
   events,
   capabilities,
   admin,
-  demo,
   live,
   loadError,
   actions,
@@ -462,7 +355,7 @@ export function ConnectorList({
           {loadError}
         </p>
       )}
-      {!admin && !demo && (
+      {!admin && (
         <p className="mt-4 rounded-xl bg-slate-100 px-4 py-3 text-[13px] text-slate-600">
           Only an organization owner or administrator can connect or change accounts.
         </p>
@@ -491,7 +384,6 @@ export function ConnectorList({
                   events={events.filter((event) => event.connector === definition.id).slice(0, 5)}
                   capabilities={capabilities}
                   admin={admin}
-                  demo={demo}
                   open={open === definition.id}
                   onToggle={() =>
                     setOpen((current) => (current === definition.id ? null : definition.id))
@@ -525,7 +417,6 @@ function ConnectorItem({
   events,
   capabilities,
   admin,
-  demo,
   open,
   onToggle,
   actions,
@@ -537,7 +428,6 @@ function ConnectorItem({
   events: ConnectorEvent[];
   capabilities: Capabilities | null;
   admin: boolean;
-  demo: boolean;
   open: boolean;
   onToggle: () => void;
   actions: Actions;
@@ -578,7 +468,7 @@ function ConnectorItem({
       else if (body.command === "browser_cancel" || result.status === "connected") setViewer(null);
       const next =
         success?.(result) ??
-        (result.message ? { tone: demo ? "info" : "warn", text: result.message } : null);
+        (result.message ? { tone: "warn", text: result.message } : null);
       setNotice(next);
     } catch (error) {
       setNotice({
@@ -689,7 +579,6 @@ function ConnectorItem({
               }}
               onCancelDisconnect={() => setConfirmDisconnect(false)}
               actions={actions}
-              demo={demo}
             />
           ) : (
             <>
@@ -937,7 +826,6 @@ function ConnectedPanel({
   onDisconnect,
   onCancelDisconnect,
   actions,
-  demo,
 }: {
   definition: ConnectorDefinition;
   row: ConnectorRow;
@@ -951,7 +839,6 @@ function ConnectedPanel({
   onDisconnect: () => void;
   onCancelDisconnect: () => void;
   actions: Actions;
-  demo: boolean;
 }) {
   const via =
     row.method === "oauth"
@@ -1016,7 +903,6 @@ function ConnectedPanel({
           row={row}
           admin={admin}
           actions={actions}
-          demo={demo}
         />
       )}
       {events.length > 0 && <Timeline events={events} now={now} />}
@@ -1031,14 +917,12 @@ function CommentControls({
   row,
   admin,
   actions,
-  demo,
 }: {
   connector: string;
   name: string;
   row: ConnectorRow;
   admin: boolean;
   actions: Actions;
-  demo: boolean;
 }) {
   const saved = useMemo(() => readCommentSettings(row.settings), [row.settings]);
   const [draft, setDraft] = useState<CommentSettings>(saved);
@@ -1054,7 +938,7 @@ function CommentControls({
     setState({ busy: true, message: "" });
     try {
       await actions.saveSettings(connector, draft);
-      setState({ busy: false, message: demo ? "Sample settings are not saved." : "Saved." });
+      setState({ busy: false, message: "Saved." });
     } catch (error) {
       setState({
         busy: false,

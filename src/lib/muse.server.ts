@@ -5,12 +5,22 @@ import "@tanstack/react-start/server-only";
 // batched actions; each turn sends a computer_call_output with a fresh screenshot. The key is
 // read only on the server (MUSE_API_KEY, or META_MODEL_API_KEY) and never sent to clients,
 // prompts or logs.
+//
+// ChatGPT (OpenAI Responses API) offers the same computer tool and turn shape, so the browser
+// agent runs on OpenAI whenever OPENAI_API_KEY is configured and falls back to Muse otherwise.
 export const MUSE_ENDPOINT = "https://api.meta.ai/v1/responses";
-export const museModels = ["muse-wonder-1.0", "muse-spark-1.3"] as const;
+export const OPENAI_ENDPOINT = "https://api.openai.com/v1/responses";
+export const openaiComputerModels = ["gpt-5.5", "gpt-5.4", "gpt-6-sol"] as const;
+export const museModels = [...openaiComputerModels, "muse-wonder-1.0", "muse-spark-1.3"] as const;
 export type MuseModel = (typeof museModels)[number];
+export const isOpenAIModel = (model: string) =>
+  (openaiComputerModels as readonly string[]).includes(model);
 
-// Standard (non-training) pricing per 1M tokens. Muse Wonder is Standard-only on Model API.
+// Per 1M tokens. OpenAI figures are planning estimates for the run cost display only.
 const pricing: Record<MuseModel, { input: number; cached: number; output: number }> = {
+  "gpt-5.5": { input: 5, cached: 0.5, output: 30 },
+  "gpt-5.4": { input: 2.5, cached: 0.25, output: 15 },
+  "gpt-6-sol": { input: 5, cached: 0.5, output: 30 },
   "muse-wonder-1.0": { input: 4, cached: 0.2, output: 20 },
   "muse-spark-1.3": { input: 1.25, cached: 0.15, output: 4.25 },
 };
@@ -61,9 +71,16 @@ export class MuseError extends Error {
   }
 }
 
+const openaiKey = (env: Record<string, string | undefined>) => env["OPENAI_API_KEY"]?.trim() || "";
+/** ChatGPT drives the browser when an OpenAI key is configured; Muse remains the fallback. */
 export function museModel(env: Record<string, string | undefined> = process.env): MuseModel {
+  if (openaiKey(env)) {
+    const configured = env["OPENAI_COMPUTER_USE_MODEL"]?.trim();
+    return isOpenAIModel(configured ?? "") ? (configured as MuseModel) : "gpt-5.5";
+  }
   const configured = env["META_COMPUTER_USE_MODEL"]?.trim();
-  return (museModels as readonly string[]).includes(configured ?? "")
+  return (museModels as readonly string[]).includes(configured ?? "") &&
+    !isOpenAIModel(configured ?? "")
     ? (configured as MuseModel)
     : "muse-wonder-1.0";
 }
@@ -71,14 +88,40 @@ export function museModel(env: Record<string, string | undefined> = process.env)
 export function museKey(env: Record<string, string | undefined> = process.env) {
   return env["MUSE_API_KEY"]?.trim() || env["META_MODEL_API_KEY"]?.trim() || "";
 }
+/** The key for a model's provider. */
+export function computerKey(model: MuseModel, env: Record<string, string | undefined> = process.env) {
+  return isOpenAIModel(model) ? openaiKey(env) : museKey(env);
+}
+export function computerProviderName(model: string) {
+  return isOpenAIModel(model) ? "ChatGPT" : "Meta Muse";
+}
 export function museConfigured(env: Record<string, string | undefined> = process.env) {
-  return Boolean(museKey(env));
+  return Boolean(openaiKey(env) || museKey(env));
 }
 
 /** Meta rejects the computer tool for a model that doesn't offer computer use on this account. */
 export class ComputerToolUnsupported extends Error {}
-function errorFor(status: number, body: { error?: { code?: string | null; message?: string } }) {
+function errorFor(
+  status: number,
+  body: { error?: { code?: string | null; message?: string } },
+  model: MuseModel,
+) {
   const code = body.error?.code ?? "";
+  if (isOpenAIModel(model)) {
+    if (status === 401)
+      return new MuseError(401, "OpenAI rejected the API key. Check OPENAI_API_KEY in the server secrets.");
+    if (status === 429 && /quota|billing/i.test(body.error?.message ?? ""))
+      return new MuseError(402, "The OpenAI account is out of credit. Add billing at platform.openai.com, then try again.");
+    if (status === 429)
+      return new MuseError(429, "OpenAI's rate limit was reached. The agent will try again shortly.", true);
+    if (status === 404 || code === "model_not_found")
+      return new MuseError(404, "This OpenAI account can't use the selected computer-use model.");
+    if (status >= 500)
+      return new MuseError(status, "ChatGPT's computer-use service is busy. The agent will try again.", true);
+    if (status === 400 && /safety check/i.test(body.error?.message ?? ""))
+      return new MuseError(400, "ChatGPT won't continue until a person decides on the flagged step. Start the task again.");
+    return new MuseError(status, "ChatGPT could not process this browser step.");
+  }
   if (status === 400 && /unsupported tool type:\s*'?computer'?/i.test(body.error?.message ?? ""))
     return new ComputerToolUnsupported(
       "This Muse model doesn't accept computer use on this account.",
@@ -213,13 +256,15 @@ export async function museTurn(
   } = {},
 ): Promise<MuseTurn> {
   const env = options.env ?? process.env;
-  const key = museKey(env);
+  const preferred = options.model ?? museModel(env);
+  const key = computerKey(preferred, env);
   if (!key)
     throw new MuseError(
       503,
-      "Muse Wonder isn't set up yet. Add MUSE_API_KEY to the server secrets.",
+      isOpenAIModel(preferred)
+        ? "ChatGPT browser use isn't set up yet. Add OPENAI_API_KEY to the server secrets."
+        : "Muse Wonder isn't set up yet. Add MUSE_API_KEY to the server secrets.",
     );
-  const preferred = options.model ?? museModel(env);
   try {
     return await museRequest(request, preferred, key, options);
   } catch (failure) {
@@ -286,7 +331,7 @@ async function museRequest(
   for (let attempt = 0; attempt <= retries; attempt++) {
     let response: Response;
     try {
-      response = await (options.fetcher ?? fetch)(MUSE_ENDPOINT, {
+      response = await (options.fetcher ?? fetch)(isOpenAIModel(model) ? OPENAI_ENDPOINT : MUSE_ENDPOINT, {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -294,7 +339,11 @@ async function museRequest(
         redirect: "error",
       });
     } catch {
-      last = new MuseError(504, "Meta didn't respond in time. The agent will try again.", true);
+      last = new MuseError(
+        504,
+        `${computerProviderName(model)} didn't respond in time. The agent will try again.`,
+        true,
+      );
       continue;
     }
     // Error bodies can echo submitted content; only their code is used, never logged.
@@ -303,10 +352,11 @@ async function museRequest(
     const failure = errorFor(
       response.status,
       payload as { error?: { code?: string | null; message?: string } },
+      model,
     );
     if (failure instanceof ComputerToolUnsupported || !failure.retryable) throw failure;
     last = failure;
     await new Promise((resolve) => setTimeout(resolve, Math.min(4000, 800 * 2 ** attempt)));
   }
-  throw last ?? new MuseError(502, "Meta could not process this browser step.");
+  throw last ?? new MuseError(502, `${computerProviderName(model)} could not process this browser step.`);
 }

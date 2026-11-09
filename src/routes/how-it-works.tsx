@@ -62,8 +62,8 @@ export const Route = createFileRoute("/how-it-works")({
             </article>
           ))}
         </div>
-        <Link className="mt-7 inline-block font-semibold text-blue-600" to="/demo">
-          Explore the workspace demo →
+        <Link className="mt-7 inline-block font-semibold text-blue-600" to="/get-started">
+          Get started →
         </Link>
       </div>
       <AgentVision />

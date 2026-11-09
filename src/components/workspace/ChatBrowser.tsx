@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ChevronDown, ChevronUp, Globe, PanelRightOpen } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Globe, PanelRightOpen, Settings } from "lucide-react";
 import { connectors } from "@/lib/connectors";
 import { BrandLogo } from "./BrandLogo";
 import { BrowserRun } from "./BrowserRun";
@@ -23,24 +23,27 @@ const frame = "block h-[clamp(300px,52dvh,620px)] w-full bg-slate-100";
 export function ChatBrowser({
   thread,
   connector,
-  demo,
   admin,
   connected,
   webAgentId,
   onShowPanel,
+  docked = false,
+  onOpenSettings,
 }: {
   thread: string;
   connector?: string | undefined;
-  demo: boolean;
   admin: boolean;
   connected: string[];
   webAgentId: string | null;
   onShowPanel?: (() => void) | undefined;
+  /** Shown in the side "computer" pane: always open, and sign-ins live in Settings. */
+  docked?: boolean;
+  onOpenSettings?: (() => void) | undefined;
 }) {
   const actions = useChatActions();
   const session = actions?.liveSession ?? null;
   const run = actions?.agentRun ?? null;
-  const [open, setOpen] = useState(demo);
+  const [open, setOpen] = useState(docked);
   const [web, setWeb] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const stage = useRef<HTMLElement>(null);
@@ -69,10 +72,10 @@ export function ChatBrowser({
     if (session || runId) setOpen(true);
   }, [session, runId]);
 
-  const platforms = connector
-    ? browserPlatforms.filter((item) => item.id === connector)
-    : browserPlatforms;
-  const canOpen = demo || admin;
+  const platforms = (
+    connector ? browserPlatforms.filter((item) => item.id === connector) : browserPlatforms
+  ).filter((item) => !docked || connected.includes(item.id));
+  const canOpen = admin;
   async function openPlatform(id: string, name: string) {
     if (!actions) return;
     setOpening(id);
@@ -96,13 +99,17 @@ export function ChatBrowser({
   const dot = session || running ? "bg-emerald-500" : "bg-slate-300";
 
   // The workspace starts as a conversation. Reveal the browser only for a task or explicit request.
-  if (!demo && !session && !run && !web && !open) return null;
+  if (!session && !run && !web && !open) return null;
 
   return (
     <section
       ref={stage}
       aria-label="Agent browser"
-      className="mx-auto w-full max-w-[960px] shrink-0 border-b border-[#e4e9ec] bg-[#f8fafb] px-4 pb-3 pt-3 md:px-6"
+      className={
+        docked
+          ? "w-full px-4 pb-4 pt-3"
+          : "mx-auto w-full max-w-[960px] shrink-0 border-b border-[#e4e9ec] bg-[#f8fafb] px-4 pb-3 pt-3 md:px-6"
+      }
     >
       <div className="flex items-center gap-2">
         <span className="flex gap-1.5" aria-hidden="true">
@@ -124,7 +131,7 @@ export function ChatBrowser({
             <ArrowLeft size={13} /> Accounts
           </button>
         )}
-        <button
+        {!docked && <button
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
@@ -132,7 +139,7 @@ export function ChatBrowser({
         >
           {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           {open ? "Hide browser" : "Show browser"}
-        </button>
+        </button>}
         {onShowPanel && (
           <button
             type="button"
@@ -166,19 +173,27 @@ export function ChatBrowser({
                 onControl={(command) => void actions.controlRun(command)}
               />
             </div>
-          ) : web && webAgentId && !demo ? (
+          ) : web && webAgentId ? (
             <div className="max-h-[clamp(320px,56dvh,660px)] overflow-y-auto rounded-2xl border border-[#e4e9ec] bg-white">
               <PlatformBrowser agentId={webAgentId} />
             </div>
           ) : (
             <div className="rounded-2xl border border-[#e4e9ec] bg-white p-4">
+              {docked ? (
+                <p className="!mb-3 text-[13px] text-muted-foreground">
+                  {platforms.length
+                    ? "Civi’s computer is idle. Open a connected account to watch, take over or give a task. You sign in yourself; Civi never sees your password."
+                    : "Civi’s computer is idle. Connect an account in Settings and its helper can work here while you watch."}
+                </p>
+              ) : (
               <p className="!mb-3 text-[13px] text-[#475569]">
                 {connector
                   ? "Open this account in the agent’s secure browser. It appears right here."
                   : "Open an account in the agent’s secure browser. It appears right here, and you can watch, take over or stop."}{" "}
                 You sign in yourself; Civi never sees your password.
               </p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+              )}
+              <div className={`grid grid-cols-2 gap-2 ${docked ? "" : "sm:grid-cols-3 lg:grid-cols-5"}`}>
                 {platforms.map((item) => {
                   const signedIn = connected.includes(item.id);
                   return (
@@ -205,7 +220,7 @@ export function ChatBrowser({
                     </button>
                   );
                 })}
-                {!connector && webAgentId && !demo && (
+                {!connector && webAgentId && (
                   <button
                     type="button"
                     onClick={() => setWeb(true)}
@@ -223,6 +238,15 @@ export function ChatBrowser({
                   </button>
                 )}
               </div>
+              {docked && onOpenSettings && (
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="cv-chip mt-3"
+                >
+                  <Settings size={14} /> Manage connections in Settings
+                </button>
+              )}
               {!canOpen && (
                 <p className="!mb-0 mt-3 text-[12px] text-[#64717a]">
                   Only an organization owner or administrator can open accounts in the agent

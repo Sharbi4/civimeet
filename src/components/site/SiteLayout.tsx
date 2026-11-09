@@ -96,7 +96,7 @@ export function SiteLayout({ children }: { children: ReactNode }) {
               Contact
             </Link>
             <Link to="/agent" className="hover:text-foreground">
-              Research Preview
+              Research
             </Link>
             <Link to="/dashboard" className="hover:text-foreground">
               Community Dashboard

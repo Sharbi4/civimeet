@@ -85,7 +85,7 @@ export async function handleOrganizerVoice(request: Request, authorize = authori
     await authorize(bearer, parsed.data.organizationId);
     const key = process.env["ELEVENLABS_API_KEY"];
     const agentId = process.env["ELEVENLABS_AGENT_ID"];
-    if (!key || !agentId) return json({ configured: false, mode: "disabled-demo", reason: "Voice demo disabled — a private, tool-free ElevenLabs agent is not configured." });
+    if (!key || !agentId) return json({ configured: false, mode: "disabled-demo", reason: "Voice isn't set up for this workspace yet." });
     const call = async (path: string) => {
       const response = await provider(`https://api.elevenlabs.io/v1${path}`, { headers: { "xi-api-key": key }, signal: request.signal });
       if (!response.ok) {
@@ -95,7 +95,7 @@ export async function handleOrganizerVoice(request: Request, authorize = authori
       return response.json();
     };
     const agent = await call(`/convai/agents/${encodeURIComponent(agentId)}`);
-    if (!isIsolatedVoiceAgent(agent)) return json({ configured: false, mode: "disabled-demo", reason: "Voice demo disabled — agent authentication, tools, knowledge, or workflow configuration needs review." });
+    if (!isIsolatedVoiceAgent(agent)) return json({ configured: false, mode: "disabled-demo", reason: "Voice is turned off while its agent settings are reviewed." });
     if (parsed.data.action === "status") return json({ configured: true, mode: "ready" });
     const issued = await call(`/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`);
     if (typeof issued.token !== "string" || !issued.token) throw new VoiceAccessError(502, "ElevenLabs returned no conversation token.");

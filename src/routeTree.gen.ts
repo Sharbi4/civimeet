@@ -16,7 +16,6 @@ import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as DemoRouteImport } from './routes/demo'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as GetStartedRouteImport } from './routes/get-started'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -26,6 +25,7 @@ import { Route as PlatformAgentsRouteImport } from './routes/platform-agents'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProductRouteImport } from './routes/product'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VendorsRouteImport } from './routes/vendors'
 import { Route as ApiConnectorsRouteImport } from './routes/api.connectors'
@@ -79,11 +79,6 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DemoRoute = DemoRouteImport.update({
-  id: '/demo',
-  path: '/demo',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const EventsRoute = EventsRouteImport.update({
   id: '/events',
   path: '/events',
@@ -127,6 +122,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const ProductRoute = ProductRouteImport.update({
   id: '/product',
   path: '/product',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -225,7 +225,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
-  '/demo': typeof DemoRoute
   '/events': typeof EventsRoute
   '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -235,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
   '/api/connectors': typeof ApiConnectorsRouteWithChildren
@@ -261,7 +261,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
-  '/demo': typeof DemoRoute
   '/events': typeof EventsRoute
   '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -271,6 +270,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
   '/api/connectors': typeof ApiConnectorsRouteWithChildren
@@ -298,7 +298,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
-  '/demo': typeof DemoRoute
   '/events': typeof EventsRoute
   '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -308,6 +307,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
   '/api/connectors': typeof ApiConnectorsRouteWithChildren
@@ -336,7 +336,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/dashboard'
-    | '/demo'
     | '/events'
     | '/get-started'
     | '/how-it-works'
@@ -346,6 +345,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/product'
+    | '/reset-password'
     | '/terms'
     | '/vendors'
     | '/api/connectors'
@@ -372,7 +372,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/dashboard'
-    | '/demo'
     | '/events'
     | '/get-started'
     | '/how-it-works'
@@ -382,6 +381,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/product'
+    | '/reset-password'
     | '/terms'
     | '/vendors'
     | '/api/connectors'
@@ -408,7 +408,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/dashboard'
-    | '/demo'
     | '/events'
     | '/get-started'
     | '/how-it-works'
@@ -418,6 +417,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/product'
+    | '/reset-password'
     | '/terms'
     | '/vendors'
     | '/api/connectors'
@@ -445,7 +445,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
-  DemoRoute: typeof DemoRoute
   EventsRoute: typeof EventsRoute
   GetStartedRoute: typeof GetStartedRoute
   HowItWorksRoute: typeof HowItWorksRoute
@@ -455,6 +454,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProductRoute: typeof ProductRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
   VendorsRoute: typeof VendorsRoute
   ApiConnectorsRoute: typeof ApiConnectorsRouteWithChildren
@@ -523,13 +523,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo': {
-      id: '/demo'
-      path: '/demo'
-      fullPath: '/demo'
-      preLoaderRoute: typeof DemoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/events': {
       id: '/events'
       path: '/events'
@@ -591,6 +584,13 @@ declare module '@tanstack/react-router' {
       path: '/product'
       fullPath: '/product'
       preLoaderRoute: typeof ProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -747,7 +747,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
-  DemoRoute: DemoRoute,
   EventsRoute: EventsRoute,
   GetStartedRoute: GetStartedRoute,
   HowItWorksRoute: HowItWorksRoute,
@@ -757,6 +756,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProductRoute: ProductRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   VendorsRoute: VendorsRoute,
   ApiConnectorsRoute: ApiConnectorsRouteWithChildren,

@@ -23,7 +23,7 @@ export const Route = createFileRoute("/product")({
       {
         name: "description",
         content:
-          "Explore how CiviMeet connects community research, thoughtful engagement, event planning, and follow-through. Try the interactive guided demo.",
+          "Explore how CiviMeet connects community research, thoughtful engagement, event planning, and follow-through. Explore the guided product tour.",
       },
       { property: "og:title", content: "Your community, with a Steward. | CiviMeet" },
       {
@@ -68,7 +68,7 @@ function Sculpture({ kind }: { kind: "people" | "knowledge" | "calendar" | "memo
 function Note({
   title,
   children,
-  tag = "Illustrative workspace",
+  tag = "Inside the workspace",
 }: {
   title: string;
   children: React.ReactNode;
@@ -120,8 +120,8 @@ function ProductPage() {
               first members or grow the community you already have.
             </p>
             <div className="cm-cta-stack">
-              <a className="cm-button" href="#interactive-demo">
-                Explore the Interactive Demo <ArrowRight size={18} />
+              <a className="cm-button" href="#how-it-works-tour">
+                Explore the product tour <ArrowRight size={18} />
               </a>
               <Link className="cm-text-link" to="/how-it-works">
                 See How CiviMeet Works <ArrowRight size={16} />
@@ -144,7 +144,7 @@ function ProductPage() {
                   <strong>to a shared afternoon.</strong>
                 </span>
               </div>
-              <small>ILLUSTRATIVE WORKSPACE</small>
+              <small>INSIDE THE WORKSPACE</small>
               <div className="cm-mini-step">
                 <Search size={17} />
                 <span>Community need identified</span>
@@ -176,7 +176,7 @@ function ProductPage() {
           <span>Follow through</span>
           <span className="cm-cycle-return">↺</span>
         </div>
-        <section id="interactive-demo" className="cm-demo-section cm-wrap cm-reveal">
+        <section id="how-it-works-tour" className="cm-demo-section cm-wrap cm-reveal">
           <p className="cm-eyebrow">One question. A world of possibility.</p>
           <h2>See what happens when your community has a Steward.</h2>
           <p className="cm-lede">
@@ -185,8 +185,7 @@ function ProductPage() {
           </p>
           <ProductDemo />
           <p className="cm-fineprint">
-            A guided product story with illustrative data and future workflow previews. No account
-            needed. No external actions.
+            Explore how Civi researches, drafts, and prepares. Your team approves before anything is posted, sent, booked, or paid.
           </p>
         </section>
         <section className="cm-capability cm-wrap cm-reveal">
@@ -229,7 +228,7 @@ function ProductPage() {
               <div className="cm-research-header">
                 <BookOpen size={20} />
                 <span>Community knowledge</span>
-                <span className="cm-label">Sample workspace</span>
+                <span className="cm-label">Community workspace</span>
               </div>
               <h3>
                 Good decisions start
@@ -288,7 +287,7 @@ function ProductPage() {
               alt="Volunteers working together with wheelbarrows in a community garden"
             />
             <div className="cm-plan">
-              <span className="cm-label">Illustrative planning preview</span>
+              <span className="cm-label">Event planning</span>
               <h3>Make room for connection.</h3>
               <div>
                 <span>Where</span>
@@ -313,9 +312,7 @@ function ProductPage() {
             <Sculpture kind="calendar" />
           </div>
           <p className="cm-fineprint">
-            Event concepts, vendor research, and task planning support coordination. Automated
-            bookings, RSVP operations, and payments are previews—not live actions in this
-            demonstration.
+            Civi prepares event concepts, vendor research, and coordination tasks. Your team confirms details and approves before invitations are sent, bookings are made, or payments are authorized.
           </p>
         </section>
         <section className="cm-momentum cm-wrap cm-reveal">
@@ -330,7 +327,7 @@ function ProductPage() {
             </p>
           </div>
           <div className="cm-continuity">
-            <p className="cm-eyebrow">Illustrative follow-through plan</p>
+            <p className="cm-eyebrow">Follow-through plan</p>
             <h3>Carry the good forward.</h3>
             {[
               ["Remember", "Save access needs and lessons from the gathering."],
@@ -370,7 +367,7 @@ function ProductPage() {
                 <div className="cm-windowbar">
                   <span aria-hidden="true">● ● ●</span>
                   <span>example.com</span>
-                  <span>UI preview</span>
+                  <span>Research workspace</span>
                 </div>
                 <div className="cm-example">
                   <h3>Example Domain</h3>
@@ -455,7 +452,7 @@ function ProductPage() {
             consistent follow-through. CiviMeet brings that work into one intelligent workspace.
           </p>
           <div className="cm-final-actions">
-            <Link className="cm-button" to="/auth" search={{ mode: "signup" }}>
+            <Link className="cm-button" to="/get-started">
               Experience CiviMeet <ArrowRight size={18} />
             </Link>
             <Link className="cm-text-link" to="/dashboard">

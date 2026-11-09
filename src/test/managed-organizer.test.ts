@@ -8,7 +8,7 @@ const req = (body: Record<string, unknown> = {}, headers: Record<string, string>
 function dependencies() {
   const events = Object.assign((async function* () { yield { type: "agent.session.turn.output_text.delta", item_id: "answer", content_index: 0, delta: "Hello" }; yield { type: "agent.session.turn.output_text.done", item_id: "answer", content_index: 0, text: "Hello community" }; yield { type: "agent.session.turn.completed", turn: { subagent_id: null } }; })(), { controller: new AbortController() });
   const api = { retrieve: vi.fn().mockResolvedValue({ status: "idle", required_actions: [], usage: { total_tokens: 10 } }), create: vi.fn().mockResolvedValue({ id: "new-provider" }), delete: vi.fn().mockResolvedValue({}), events: { create: vi.fn().mockResolvedValue(undefined), stream: vi.fn().mockResolvedValue(events) }, items: { list: vi.fn().mockResolvedValue({ data: [{ id: "m", type: "message", role: "assistant", content: [{ type: "output_text", text: "Saved venue" }] }], has_more: false }) } };
-  const d = { configuration: () => ({ ready: true, enabled: true, provider: "openai", browserEnabled: false, dailyMessageLimit: 30 }), provider: () => api as unknown as ReturnType<OrganizerDependencies["provider"]>, authorize: vi.fn().mockResolvedValue("actor"), current: vi.fn().mockResolvedValue({ ...row }), reserve: vi.fn().mockResolvedValue({ session: { ...row }, replayed: false }), update: vi.fn().mockResolvedValue(undefined), archive: vi.fn().mockResolvedValue(undefined), context: vi.fn().mockResolvedValue('{"mission":"Community service"}'), researchAgent: vi.fn().mockResolvedValue("web-agent"), research: vi.fn().mockResolvedValue(Response.json({ run: { status: "completed" } })) };
+  const d = { configuration: () => ({ ready: true, enabled: true, provider: "openai", browserEnabled: false, dailyMessageLimit: 30 }), provider: () => api as unknown as ReturnType<OrganizerDependencies["provider"]>, authorize: vi.fn().mockResolvedValue("actor"), current: vi.fn().mockResolvedValue({ ...row }), reserve: vi.fn().mockResolvedValue({ session: { ...row }, replayed: false }), update: vi.fn().mockResolvedValue(undefined), archive: vi.fn().mockResolvedValue(undefined), context: vi.fn().mockResolvedValue('{"mission":"Community service"}'), researchAgent: vi.fn().mockResolvedValue("web-agent"), research: vi.fn().mockResolvedValue(Response.json({ run: { status: "completed" } })), helpers: vi.fn().mockResolvedValue('{"helpers":[]}'), requestPayment: vi.fn().mockResolvedValue('{"status":"needs_approval"}') };
   return { d, api };
 }
 describe("managed organizer authorization and execution", () => {
@@ -57,5 +57,21 @@ describe("managed organizer authorization and execution", () => {
     const body = await d.research.mock.calls[0]![0].json(); expect(body).toMatchObject({ organizationId: org, agentId: "web-agent", requestId: toolRequestId("call-1"), collectVendors: true, purpose: "vendors" });
     await expect(executeOrganizerTool("send_message", {}, scope, d)).rejects.toThrow("not available");
     await expect(executeOrganizerTool("research_local", { question: "Find venues", location: "Tucson", organizationId: "other" }, scope, d)).rejects.toThrow();
+  });
+  it("routes Civi's payment requests through the signed-in person's budget check", async () => {
+    const { d } = dependencies();
+    const scope = { org, actor: "actor", token: "fixture", url: "https://civimeet.example", callId: "call_1" };
+    await executeOrganizerTool("request_payment", { payee: "Reid Park", purpose: "Pavilion deposit", category: "venue", amount_usd: 250 }, scope, d);
+    expect(d.authorize).toHaveBeenCalledWith("fixture", org);
+    expect(d.requestPayment).toHaveBeenCalledWith("fixture", org, expect.objectContaining({ amount_usd: 250, category: "venue" }));
+    await expect(executeOrganizerTool("request_payment", { payee: "X", purpose: "?", category: "venue", amount_usd: -5 }, scope, d)).rejects.toThrow();
+  });
+});
+import { organizerModel } from "@/lib/ai/managed-organizer.server";
+describe("organizer model setting", () => {
+  it("uses the configured model name and ignores text that isn't one", () => {
+    expect(organizerModel({ OPENAI_ORGANIZER_MODEL: "gpt-5.5" })).toBe("gpt-5.5");
+    expect(organizerModel({ OPENAI_ORGANIZER_MODEL: "please use the newest chat gpt model for our community agent ".repeat(3) })).toBe("gpt-6-sol");
+    expect(organizerModel({})).toBe("gpt-6-sol");
   });
 });

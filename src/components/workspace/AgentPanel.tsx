@@ -38,7 +38,6 @@ type AgentState = {
   memory: PanelMemory[];
 };
 type Props = {
-  demo: boolean;
   label: string;
   connector?: string | undefined;
   platformName?: string | undefined;
@@ -72,34 +71,7 @@ const isToday = (iso: string) => {
 };
 
 export function AgentPanel(props: Props) {
-  return props.demo ? <DemoAgentPanel {...props} /> : <LiveAgentPanel {...props} />;
-}
-
-function DemoAgentPanel(props: Props) {
-  const [paused, setPaused] = useState(false);
-  const memory: PanelMemory[] = props.connector
-    ? [
-        {
-          id: "m1",
-          kind: "fact",
-          content: "Midvale Park Neighbors group allows event posts on weekends only.",
-        },
-        {
-          id: "m2",
-          kind: "conversation_summary",
-          content:
-            "Families keep asking about weekend meals; the mobile pantry schedule got the most replies.",
-        },
-      ]
-    : props.mainMemory;
-  return (
-    <PanelView
-      {...props}
-      state={{ status: paused ? "stopped" : "connected", paused, canStop: true, memory }}
-      onTogglePause={async () => setPaused((value) => !value)}
-      browser={<DemoBrowserFrame name={props.platformName ?? "the web"} paused={paused} />}
-    />
-  );
+  return <LiveAgentPanel {...props} />;
 }
 
 function LiveAgentPanel(props: Props) {
@@ -707,37 +679,6 @@ function PlatformAgentBrowser({
   );
 }
 
-function DemoBrowserFrame({ name, paused }: { name: string; paused: boolean }) {
-  const [control, setControl] = useState<"agent" | "you">("agent");
-  return (
-    <div className="overflow-hidden rounded-2xl border border-[#e4e9ec]">
-      <div className="flex items-center gap-2 border-b border-[#eef2f5] bg-[#f8fafb] px-3 py-2 text-[12px] text-[#64717a]">
-        <span className={`h-2 w-2 rounded-full ${paused ? "bg-amber-500" : "bg-emerald-500"}`} />
-        {paused
-          ? "Agent stopped"
-          : control === "you"
-            ? "You’re in control"
-            : "Agent is browsing"} · {name} · sample
-      </div>
-      <div className="space-y-2 p-4 text-[13px] text-[#475569]">
-        <p className="!mb-0 font-medium text-[#142d40]">Midvale Park Neighbors</p>
-        <p className="!mb-0">“Does anyone know where families can get weekend meals?”</p>
-        <p className="!mb-0 rounded-lg bg-[#edf3ff] p-2 text-[#0640d4]">
-          Draft reply waiting in Approvals · not posted
-        </p>
-      </div>
-      <div className="flex gap-2 border-t border-[#eef2f5] px-3 py-2">
-        <SmallButton
-          primary
-          disabled={paused}
-          onClick={() => setControl(control === "you" ? "agent" : "you")}
-        >
-          {control === "you" ? "Give back to agent" : "Take over"}
-        </SmallButton>
-      </div>
-    </div>
-  );
-}
 
 function Callout({
   icon,

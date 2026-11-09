@@ -1,5 +1,20 @@
 # CiviMeet roadmap
 
+## Live product voice (Nov 9)
+- [x] Remove demo/sample/preview/proposed/draft wording from the website, pricing, legal pages and workspace; remove the public sample workspace
+- [ ] Legal review of the new Terms and Privacy pages
+
+## Dashboard refinement (Nov 9)
+- [x] Simplified premium chat-first workspace (ChatGPT / Meta AI style): slim sidebar, centered conversation, browser opens on the right only when working
+- [x] Connections and sign-ins live only in Settings → Connections; connecting an account opens its helper agent in the sidebar
+- [x] Helper agents for Facebook, Instagram, Threads, Reddit, Eventbrite and LinkedIn (add Threads)
+- [ ] Saved helper memory for Threads and LinkedIn (platform agent records only cover web, X, Eventbrite, Facebook, Reddit, Nextdoor, Instagram)
+- [ ] First real ChatGPT computer-use run in a Steel browser (tested on a sample screen only)
+- [x] Civi reports on every helper (status, waiting approvals, spend) in a friendly community voice
+- [x] Browser agent runs on ChatGPT (OpenAI computer use) instead of Meta Muse
+- [x] Payments: monthly budget, automatic approval for small amounts, person approval above; Civi can request payments; Settings → Payments
+- [ ] Live money movement through the organization's own Stripe or Plaid account (needs those accounts' credentials)
+
 - [x] Organizer Chat voice controls through linked ElevenLabs: authorized token endpoint, explicit microphone start, cleanup, disabled unconfigured demo, tests and setup documentation; no outbound actions
 - [x] Configure existing private ElevenLabs planning agent and server agent setting; updated isolation check passed and authenticated preview voice status returned ready
 - [ ] Verify actual voice/audio in a separately authorized session (not attempted: no token or microphone started); voice is isolated discussion, not the organization-memory/orchestrator path, and phone outreach stays disabled
@@ -13,7 +28,8 @@
 - [x] Public site: home, product, how it works, solutions, pricing, about, contact, draft legal pages
 - [x] Uploaded logo in header/footer/sign-in + tab icon
 - [x] Enable Lovable Cloud; sign up/in/out, organization creation and role-enforced vendor workspace
-- [ ] Password reset, team invitations and membership management UI
+- [x] Members-only sign-in: email/password, Continue with Google, forgot-password and reset page (no Lovable login, no public sign-up)
+- [ ] Team invitations and membership management UI
 - [ ] 7-step organization onboarding → /dashboard
 - [x] Community dashboard: real overview counts, community needs, plans, follow-up dates, research history, activity, quick actions
 - [x] Chat-first workspace: expandable sidebar (Chat, Search, Feed, Ideas, Goals, Events, Library, agent-made work), Main Agent plus one agent chat per connected platform

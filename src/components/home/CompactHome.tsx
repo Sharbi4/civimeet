@@ -53,12 +53,12 @@ export function CompactHome() {
                 <DialogContent className="cm-home cm-quick-demo">
                   <DialogTitle>See your Community Steward at work</DialogTitle>
                   <DialogDescription>
-                    Choose a task to explore. This is an illustrative demo; no messages, bookings,
-                    or account actions occur.
+                    Choose a task to see how Civi researches, drafts, and prepares. Your team approves
+                    before anything is posted, sent, booked, or paid.
                   </DialogDescription>
                   <StewardMiniDemo />
-                  <Link to="/demo" className="cmc-more">
-                    Try the full dashboard demo <ArrowRight size={16} />
+                  <Link to="/get-started" className="cmc-more">
+                    Get started <ArrowRight size={16} />
                   </Link>
                 </DialogContent>
               </Dialog>
@@ -67,7 +67,7 @@ export function CompactHome() {
               <span>
                 <ShieldCheck size={15} /> Your mission. Your accounts. Your approval.
               </span>
-              <Link to="/pricing">Proposed plans from $250/month →</Link>
+              <Link to="/pricing">View plans and pricing →</Link>
             </div>
           </div>
           <div className="cmc-visual">
@@ -160,7 +160,7 @@ export function CompactHome() {
               <summary>What happens when we get started?</summary>
               <p>
                 Tell us your organization, location, and goals through the demo request form. We’ll
-                help you explore the fit. Proposed pricing is published separately; requesting a
+                help you explore the fit. Pricing is published separately; requesting a
                 demo does not start a paid subscription.
               </p>
               <Link to="/get-started">Request a demo →</Link>

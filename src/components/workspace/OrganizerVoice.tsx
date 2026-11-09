@@ -50,7 +50,7 @@ export function OrganizerVoice({ thread }: { thread: OrganizerThread | "discover
     setStatus(
       allowed
         ? "Checking voice configuration…"
-        : "Voice demo disabled — organization editor access required.",
+        : "Organization editor access is required to use voice.",
     );
     if (allowed)
       void request("status", abort.signal)
@@ -83,7 +83,7 @@ export function OrganizerVoice({ thread }: { thread: OrganizerThread | "discover
       if (current !== generation.current) return;
       if (!body.configured || !body.conversationToken) {
         setReady(false);
-        throw new Error(body.reason ?? "Voice demo disabled.");
+        throw new Error(body.reason ?? "Voice isn't set up for this workspace yet.");
       }
       if (body.organizationId !== organizationId || body.thread !== thread)
         throw new Error("Voice conversation scope changed.");

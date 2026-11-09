@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { ConnectorList, DemoConnectors } from "@/components/workspace/Connectors";
+import { ConnectorList } from "@/components/workspace/Connectors";
+import { useMemo, useState, type ComponentProps } from "react";
+type Props = ComponentProps<typeof ConnectorList>;
+type Row = Props["rows"][string];
+
 
 globalThis.ResizeObserver ??= class {
   observe() {}
@@ -13,9 +17,113 @@ const actions = () => ({
   saveSettings: vi.fn(async () => {}),
 });
 
+const day = 86_400_000;
+const sampleRows = (): Record<string, Row> => {
+  const now = Date.now();
+  const row = (
+    connector: string,
+    status: Row["status"],
+    method: Row["method"],
+    label: string,
+    connectedDaysAgo: number | null,
+    detail = "",
+  ): Row => ({
+    connector,
+    status,
+    method,
+    account_label: label,
+    detail,
+    settings: {},
+    connected_at:
+      connectedDaysAgo === null ? null : new Date(now - connectedDaysAgo * day).toISOString(),
+    last_checked_at: new Date(now - 6 * 60_000).toISOString(),
+    updated_at: new Date(now - 6 * 60_000).toISOString(),
+  });
+  return {
+    facebook: row("facebook", "connected", "browser", "Tucson Community Alliance", 21),
+    instagram: row(
+      "instagram",
+      "needs_verification",
+      "credentials",
+      "tu•••",
+      null,
+      "Instagram wants to confirm it’s you. Finish the check in the live browser.",
+    ),
+    google_calendar: row("google_calendar", "connected", "oauth", "events@tucsonalliance.org", 9),
+    eventbrite: row(
+      "eventbrite",
+      "saved",
+      "credentials",
+      "ev•••@tucsonalliance.org",
+      null,
+      "Login saved. Open the live browser once to finish the first sign-in.",
+    ),
+  };
+};
+function FixtureConnectors() {
+  const [rows] = useState(sampleRows);
+  const events = useMemo<Props["events"]>(
+    () => [
+      {
+        id: "e1",
+        connector: "facebook",
+        action: "verified",
+        message: "Agent confirmed it is still signed in",
+        created_at: new Date(Date.now() - 6 * 60_000).toISOString(),
+      },
+      {
+        id: "e2",
+        connector: "instagram",
+        action: "verification_needed",
+        message: "Security check needed",
+        created_at: new Date(Date.now() - 42 * 60_000).toISOString(),
+      },
+      {
+        id: "e3",
+        connector: "google_calendar",
+        action: "oauth_connected",
+        message: "Connected events@tucsonalliance.org",
+        created_at: new Date(Date.now() - 9 * day).toISOString(),
+      },
+    ],
+    [],
+  );
+  const actions = useMemo<Props["actions"]>(
+    () => ({
+      command: async () => ({
+        message: "Fixture workspace.",
+      }),
+      saveSettings: async () => {},
+    }),
+    [],
+  );
+  return (
+    <ConnectorList
+      rows={rows}
+      events={events}
+      capabilities={{
+        browser: true,
+        oauth: {
+          google: true,
+          meta_pages: true,
+          meta_instagram: true,
+          linkedin: true,
+          eventbrite: true,
+          zoom: true,
+        },
+      }}
+      admin
+      live
+      loadError=""
+      actions={actions}
+    />
+  );
+}
+
+
 describe("Connections list", () => {
   it("lists platforms by group with live status instead of tiles", () => {
-    render(<DemoConnectors />);
+    render(<FixtureConnectors />);
     expect(screen.getByRole("heading", { name: "Connections" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Community presence" })).toBeInTheDocument();
     expect(screen.getAllByRole("list").length).toBeGreaterThanOrEqual(4);
@@ -33,7 +141,6 @@ describe("Connections list", () => {
         events={[]}
         capabilities={{ browser: true, oauth: { meta_instagram: false } }}
         admin
-        demo={false}
         live
         loadError=""
         actions={actions()}
@@ -59,7 +166,6 @@ describe("Connections list", () => {
         events={[]}
         capabilities={{ browser: true, oauth: {} }}
         admin
-        demo={false}
         live
         loadError=""
         actions={handlers}
@@ -102,7 +208,6 @@ describe("Connections list", () => {
         events={[]}
         capabilities={{ browser: true, oauth: {} }}
         admin
-        demo={false}
         live
         loadError=""
         actions={actions()}
@@ -111,7 +216,7 @@ describe("Connections list", () => {
     );
     expect(screen.getByRole("radio", { name: /Autopilot · locked/ })).toBeDisabled();
     unmount();
-    render(<DemoConnectors />);
+    render(<FixtureConnectors />);
     fireEvent.click(screen.getByRole("button", { name: /^Facebook · Tucson Community Alliance/ }));
     expect(screen.getByRole("radio", { name: /Autopilot/ })).not.toBeDisabled();
     expect(screen.getByText(/Daily comment limit/)).toBeInTheDocument();
@@ -125,7 +230,6 @@ describe("Connections list", () => {
         events={[]}
         capabilities={{ browser: true, oauth: {} }}
         admin={false}
-        demo={false}
         live
         loadError=""
         actions={actions()}
