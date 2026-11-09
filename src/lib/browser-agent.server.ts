@@ -34,7 +34,7 @@ import {
   type SteelPage,
 } from "./steel.server";
 
-// Computer-use execution: Muse Wonder decides, Steel runs the browser, Civi enforces the
+// Computer-use execution: ChatGPT (or Muse Wonder as fallback) decides, Steel runs the browser, Civi enforces the
 // permissions. Each request performs one verified step (screenshot → model → policy check →
 // actions → evidence) so pause, stop, take-over and safety checks apply between steps.
 type Run = {
@@ -210,7 +210,7 @@ export type AgentBrowserDeps = typeof defaults;
 
 export function agentBrowserStatus(env: Record<string, string | undefined> = process.env) {
   const missing = [
-    ...(museConfigured(env) ? [] : ["MUSE_API_KEY"]),
+    ...(museConfigured(env) ? [] : ["OPENAI_API_KEY"]),
     ...(env["STEEL_API_KEY"] ? [] : ["STEEL_API_KEY"]),
   ];
   return json({ configured: missing.length === 0, model: museModel(env), missing });
@@ -409,7 +409,7 @@ async function start(
   if (!museConfigured(deps.env))
     throw new AgentBrowserError(
       503,
-      "Muse Wonder isn't set up yet. Add MUSE_API_KEY to the server secrets to let Civi work in the browser.",
+      "Civi's browser brain isn't set up yet. Add OPENAI_API_KEY (ChatGPT) to the server secrets to let Civi work in the browser.",
     );
   if (!deps.env["STEEL_API_KEY"])
     throw new AgentBrowserError(
