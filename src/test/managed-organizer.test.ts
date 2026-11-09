@@ -75,3 +75,31 @@ describe("organizer model setting", () => {
     expect(organizerModel({})).toBe("gpt-6-sol");
   });
 });
+import OpenAI from "openai";
+import { retryTransient } from "@/lib/ai/managed-organizer.server";
+const providerError = (status: number) => OpenAI.APIError.generate(status, { message: "fixture", type: "fixture", code: status === 503 ? "service_unavailable_error" : "fixture" }, "fixture", new Headers());
+describe("organizer provider hiccups", () => {
+  it("retries a safe provider call after a temporary 503 and then succeeds", async () => {
+    const call = vi.fn().mockRejectedValueOnce(providerError(503)).mockResolvedValue("ok");
+    await expect(retryTransient(call, [0, 0])).resolves.toBe("ok");
+    expect(call).toHaveBeenCalledTimes(2);
+  });
+  it("does not retry configuration errors such as a bad model", async () => {
+    const call = vi.fn().mockRejectedValue(providerError(400));
+    await expect(retryTransient(call, [0, 0])).rejects.toBeInstanceOf(OpenAI.APIError);
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+  it("answers a lasting OpenAI outage with 503 and a JSON explanation, never 502", async () => {
+    const { d, api } = dependencies(); api.retrieve.mockRejectedValue(providerError(503));
+    const r = await handleManagedOrganizer(req(), d);
+    expect(r.status).toBe(503);
+    expect(await r.json()).toMatchObject({ retryable: true, error: expect.stringContaining("busy") });
+    expect(api.retrieve).toHaveBeenCalledTimes(3);
+    expect(d.update).toHaveBeenCalledWith(expect.objectContaining({ id: "local" }), { lease_id: null, lease_until: null });
+  });
+  it("reports OpenAI configuration problems as 424 without retrying", async () => {
+    const { d, api } = dependencies(); api.retrieve.mockRejectedValue(providerError(404));
+    const r = await handleManagedOrganizer(req(), d);
+    expect(r.status).toBe(424); expect(api.retrieve).toHaveBeenCalledTimes(1);
+  });
+});

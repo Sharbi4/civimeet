@@ -49,8 +49,13 @@ export function ManagedOrganizer({
         signal: signal ?? null,
       });
       if (!response.ok) {
-        const body = await response.json();
-        throw new Error(body.error || "The organizer could not complete that request.");
+        // Proxies can answer with an HTML error page, so never assume a JSON body.
+        const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+        const fallback =
+          response.status >= 500
+            ? "Civi couldn't be reached just now. Try again in a moment."
+            : "The organizer could not complete that request.";
+        throw new Error(typeof body?.error === "string" && body.error ? body.error : fallback);
       }
       return response;
     },
