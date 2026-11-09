@@ -125,7 +125,7 @@ export function PlatformExplorer() {
           <span className="cmh-pill">
             <span className="cmh-pill-dot" /> {active.status}
           </span>
-          <span className="cmh-platform-preview-tag">INTERACTIVE PREVIEW</span>
+          <span className="cmh-platform-preview-tag">INSIDE CIVIMEET</span>
         </div>
         <div className="cmh-platform-content" key={active.id}>
           <div className="cmh-platform-description">
@@ -147,7 +147,7 @@ export function PlatformExplorer() {
             </div>
             <div className="cmh-screen-body">
               <div className="cmh-screen-label">
-                <BookOpen size={17} /> COMMUNITY ACTION PLAN <span>Sample data</span>
+                <BookOpen size={17} /> COMMUNITY ACTION PLAN
               </div>
               {active.actions.map((action, index) => (
                 <div className="cmh-screen-task" key={action}>
