@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   MessageCircle,
@@ -27,6 +27,8 @@ import { AgentPanel, type PanelActivity, type PanelMemory } from "./AgentPanel";
 import { ChatBrowser } from "./ChatBrowser";
 import { DemoPlansProvider, LivePlansProvider, PlanCard } from "./AgentPlans";
 import { ChatActionsProvider, useChatActions } from "./ChatActions";
+import { HelperReport } from "./HelperReport";
+import { PaymentSettings, demoPaymentsBackend, livePaymentsBackend } from "./PaymentSettings";
 import { parseChatIntent } from "@/lib/chat-intents";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -62,6 +64,24 @@ import "./organizer.css";
 
 type View = RailView;
 const views = railViews;
+type SettingsTab = "connections" | "payments" | "helpers" | "organization";
+const settingsTabs: [SettingsTab, string][] = [
+  ["connections", "Connections"],
+  ["payments", "Payments"],
+  ["helpers", "Helper agents"],
+  ["organization", "Organization"],
+];
+/** Opens Civi's computer whenever a sign-in, take-over or agent run starts from chat. */
+function AutoOpenComputer({ onOpen }: { onOpen: () => void }) {
+  const actions = useChatActions();
+  const active = Boolean(actions?.liveSession || actions?.agentRun);
+  const open = useRef(onOpen);
+  open.current = onOpen;
+  useEffect(() => {
+    if (active) open.current();
+  }, [active]);
+  return null;
+}
 type Task = {
   id: string;
   title: string;
@@ -802,6 +822,12 @@ function OrganizerWorkspace({
       {!data.activity.length && <p>Your organization’s recorded actions will appear here.</p>}
     </div>
   );
+  const paymentsBackend = useMemo(
+    () =>
+      demo || !access ? demoPaymentsBackend() : livePaymentsBackend(access.db, access.organizationId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [demo, access?.db, access?.organizationId],
+  );
   const PlansProvider = demo ? DemoPlansProvider : LivePlansProvider;
   return (
     <PlansProvider
@@ -823,7 +849,7 @@ function OrganizerWorkspace({
           },
         }}
       >
-        <div className="ow-app">
+        <div className="ow-app cv-app">
           <WorkspaceRail
             view={view}
             onNavigate={navigate}
@@ -843,6 +869,12 @@ function OrganizerWorkspace({
             recent={recent}
             onArtifact={openArtifact}
             onIdentity={() => setPanel("Identity")}
+            onNewChat={() => {
+              setThread("main");
+              setChatSeed("");
+              navigate("chat");
+              window.dispatchEvent(new CustomEvent("civimeet:new-chat"));
+            }}
             footer={{
               title: demo ? "Sample administrator" : role === "organizer" ? "Editor" : role,
               detail: demo ? "Demo workspace" : "Organization workspace",
@@ -1542,6 +1574,7 @@ function DemoChat({
   platformName,
   initialMessage,
   onDraft,
+  report,
   sent,
   onSend,
 }: {
@@ -1549,6 +1582,7 @@ function DemoChat({
   platformName?: string | undefined;
   initialMessage: string;
   onDraft: (s: string) => void;
+  report?: ReactNode;
   sent: string[];
   onSend: (message: string) => void;
 }) {
@@ -1573,6 +1607,7 @@ function DemoChat({
         <p>Sample conversation · no AI or browser calls</p>
       </header>
       <div className="ow-messages" ref={scroller}>
+        {report && <div className="mb-7">{report}</div>}
         <div className="ow-user-message">
           {thread === "main"
             ? "Help us organize a neighborhood resource fair in Tucson next month."
