@@ -378,14 +378,33 @@ const request = (body: unknown) =>
 const usage = { input_tokens: 2000, cached_tokens: 0, output_tokens: 50, cost_usd: 0.009 };
 
 describe("computer-use executor", () => {
-  it("won't start without the Muse key, and says how to fix it", async () => {
+  it("won't start without a browser model key, and says how to fix it", async () => {
     const { deps } = harness();
     const response = await handleAgentBrowser(
       request({ command: "start", platform: "facebook", objective: "Show me our Facebook Page" }),
       { ...deps, env: { STEEL_API_KEY: "s" } },
     );
     expect(response.status).toBe(503);
-    expect((await response.json()).error).toContain("MUSE_API_KEY");
+    expect((await response.json()).error).toContain("OPENAI_API_KEY");
+  });
+  it("drives the browser with ChatGPT when an OpenAI key is configured", async () => {
+    const calls: string[] = [];
+    const fetcher = async (url: string) => {
+      calls.push(url);
+      return Response.json({
+        id: "resp_1",
+        output: [
+          { type: "computer_call", call_id: "c1", actions: [{ type: "screenshot" }], pending_safety_checks: [] },
+        ],
+        usage: { input_tokens: 10, output_tokens: 2 },
+      });
+    };
+    const turn = await museTurn(
+      { kind: "start", instructions: "Read-only.", task: "Look", screenshot: "data:image/png;base64,AA" },
+      { env: { OPENAI_API_KEY: "o", MUSE_API_KEY: "m" }, fetcher: fetcher as never },
+    );
+    expect(calls).toEqual(["https://api.openai.com/v1/responses"]);
+    expect(turn.model).toBe("gpt-5.5");
   });
   it("only browses social platforms through their own connection", async () => {
     const { deps, raw } = harness({
