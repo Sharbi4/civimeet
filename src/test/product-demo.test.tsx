@@ -23,7 +23,7 @@ describe("public guided product demo", () => {
     expect(screen.getByRole("button", { name: "Previous scene" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Prepare" }));
     fireEvent.click(screen.getByRole("button", { name: "Review draft" }));
-    expect(screen.getByText("Reviewed in demo · Nothing has been published")).toBeInTheDocument();
+    expect(screen.getByText("Draft review selected · Not published")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Follow through" }));
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "6");
     expect(screen.getByRole("button", { name: "Next scene" })).toBeDisabled();

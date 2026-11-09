@@ -47,13 +47,13 @@ export function StewardMiniDemo() {
             {t.label}
           </button>
         ))}
-        <Link className="cm-text-link cmh-demo-more" to="/product" hash="interactive-demo">
-          See the full six-scene demo <ArrowRight size={16} />
+        <Link className="cm-text-link cmh-demo-more" to="/product" hash="how-it-works-tour">
+          See the full six-scene tour <ArrowRight size={16} />
         </Link>
       </div>
       <div className="cmh-panel" aria-live="polite">
         <div className="cmh-panel-bar">
-          <span className="cmh-badge">Illustrative demo · no live actions</span>
+          <span className="cmh-badge">Product tour · Your team stays in control</span>
           <span className="cmh-status">
             <Sparkles size={14} aria-hidden="true" /> {task.status}
           </span>

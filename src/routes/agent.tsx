@@ -95,7 +95,7 @@ function AgentResearch() {
   return (
     <SiteLayout>
       <PageHeader
-        eyebrow="Community Steward · Private preview"
+        eyebrow="Community Steward"
         title="Research that helps your community"
         intro="Find useful local resources, compare venues and vendors, and explore gathering ideas with Perplexity."
       />

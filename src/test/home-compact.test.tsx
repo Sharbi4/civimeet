@@ -17,7 +17,7 @@ it("keeps the walkthrough optional and dismissible while exposing the main next 
   render(<RouterProvider router={router} />);
   const trigger = await screen.findByRole("button", { name: "See how it works" });
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Proposed plans/ })).toHaveAttribute("href", "/pricing");
+  expect(screen.getByRole("link", { name: /View plans and pricing/ })).toHaveAttribute("href", "/pricing");
   expect(screen.getAllByRole("link", { name: /Request a demo/ })[0]).toHaveAttribute(
     "href",
     "/get-started",
