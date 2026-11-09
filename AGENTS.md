@@ -36,6 +36,8 @@
 
 - OpenAI is the only organizer runtime. Browser sign-in and takeover remain unavailable until implemented and verified against the OpenAI agent API; stored credentials must never be sent in prompts or treated as proof of a connected account.
 
+- Civi's browser is OpenAI's hosted `computer_use` browser with live `web_search`, created with automatic fallback (browser → search → none) so conversations never break on an unsupported setup. Social networks are blocked in the environment and denied by `browserApproval`; sign-in requests are always declined; screenshots stream to the chat and are never stored. Opening a running conversation resumes it, and long tasks reconnect instead of being cancelled. Why: the agent must browse visibly and safely, and a dropped connection must never leave the chat stuck.
+
 - Workspace is chat-first: Civi is the main conversation, each connected account appears as a helper chat that reports back to Civi, and every connection/sign-in lives only in Settings → Connections (`OrganizerWorkspace.tsx`, `WorkspaceRail.tsx`). Why: one place to manage access keeps account permissions auditable and the chat uncluttered.
 
 - Agent payments are requests, not money movement: `request_agent_payment` (editors) auto-approves only within the organization's monthly budget and automatic limit, everything else waits for an administrator via `review_agent_payment`, and `src/lib/agent-payments.ts` mirrors that rule for UI and chat. "Approved" never means "paid" until an organization-owned payment account executes and confirms it. Why: Civi and its helpers must never spend or claim spending beyond what a person authorized and a provider confirmed.

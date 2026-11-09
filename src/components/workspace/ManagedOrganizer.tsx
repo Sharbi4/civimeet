@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowUp, Square, MoreHorizontal, Copy, FileCheck2 } from "lucide-react";
+import { ArrowUp, Square, MoreHorizontal, Copy, FileCheck2, Globe } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
 import type { ChatThread } from "@/lib/organizer";
 
@@ -32,8 +32,13 @@ export function ManagedOrganizer({
   const [error, setError] = useState(""),
     [activity, setActivity] = useState("");
   const [parts, setParts] = useState<Record<string, string>>({});
+  // What Civi's browser is showing right now (screenshots stream in; nothing is stored).
+  const [browser, setBrowser] = useState<{ title: string; screenshot?: string } | null>(null);
   const alive = useRef(true),
     connection = useRef<AbortController | null>(null);
+  // Automatic reconnects in a row, so a task that keeps dropping doesn't loop forever.
+  const reconnects = useRef(0);
+  const resumedOnOpen = useRef(false);
   const submission = useRef<{ text: string; id: string } | null>(null);
   const call = useCallback(
     async (action: string, extra: Record<string, unknown> = {}, signal?: AbortSignal) => {
@@ -87,7 +92,12 @@ export function ManagedOrganizer({
     setBusy(true);
     setError("");
     setParts({});
-    setActivity("Connecting to your organizer…");
+    if (action === "send") {
+      reconnects.current = 0;
+      setBrowser(null);
+    }
+    setActivity(action === "resume" ? "Reconnecting to Civi…" : "Connecting to your organizer…");
+    let reconnect = false;
     const text = message.trim();
     if (action === "send" && submission.current?.text !== text)
       submission.current = { text, id: crypto.randomUUID() };
@@ -120,11 +130,22 @@ export function ManagedOrganizer({
             const event = JSON.parse(buffer.slice(0, newline));
             buffer = buffer.slice(newline + 1);
             if (!alive.current) continue;
+            if (event.type === "ping") continue;
             if (event.type === "delta" || event.type === "text")
               setParts((p) => ({
                 ...p,
                 [event.id]: event.type === "text" ? event.text : (p[event.id] || "") + event.text,
               }));
+            if (event.type === "browser")
+              setBrowser((current) => ({
+                title: typeof event.title === "string" ? event.title : "Using the browser",
+                ...(typeof event.screenshot === "string"
+                  ? { screenshot: event.screenshot }
+                  : current?.screenshot
+                    ? { screenshot: current.screenshot }
+                    : {}),
+              }));
+            if (event.type === "continue" || event.type === "interrupted") reconnect = true;
             if (event.message) setActivity(event.message);
             if (event.type === "outcome" || event.type === "saved") {
               submission.current = null;
@@ -143,13 +164,34 @@ export function ManagedOrganizer({
       }
       await refresh();
     } catch (e) {
-      if (alive.current)
-        setError(e instanceof Error ? e.message : "Connection interrupted. Refresh saved work.");
+      const text = e instanceof Error ? e.message : "Connection interrupted. Refresh saved work.";
+      // Civi may still be finishing on the server: wait a moment and pick it back up.
+      if (/still finishing|already responding/i.test(text)) reconnect = true;
+      else if (alive.current) setError(text);
     } finally {
       if (alive.current) setBusy(false);
       connection.current = null;
     }
+    if (reconnect && alive.current && reconnects.current < 4) {
+      reconnects.current += 1;
+      setTimeout(() => {
+        if (alive.current) void runRef.current("resume");
+      }, 1500 * reconnects.current);
+    } else if (reconnect && alive.current) {
+      setActivity("");
+      setError("Civi lost the connection a few times. Use “Reconnect to live task” to try again.");
+    }
   }
+  const runRef = useRef(run);
+  runRef.current = run;
+  // Opening a conversation picks up a task that is still running or waiting on Civi's tools.
+  useEffect(() => {
+    if (resumedOnOpen.current || busy || role === "viewer") return;
+    if (state.status === "in_progress" || state.needsResume) {
+      resumedOnOpen.current = true;
+      void runRef.current("resume");
+    } else if (state.status !== "loading") resumedOnOpen.current = true;
+  }, [state.status, state.needsResume, busy, role]);
   async function stop() {
     setError("");
     try {
@@ -184,10 +226,26 @@ export function ManagedOrganizer({
   });
   const empty = !state.messages.length && !busy;
   const suggestions: [string, string, string][] = [
-    ["How are my helpers doing?", "A check-in on every connected account", "Give me today's report on all my helpers: what each one did, what needs me, and our spending."],
-    ["Plan a gathering", "Format, place, date and budget", "Help us plan our next community event."],
-    ["Find local partners", "Vendors, venues and nonprofits nearby", "Find local partners who fit our mission."],
-    ["Pay a vendor", "Within this month's budget", "Request a $250 deposit for the Reid Park pavilion."],
+    [
+      "How are my helpers doing?",
+      "A check-in on every connected account",
+      "Give me today's report on all my helpers: what each one did, what needs me, and our spending.",
+    ],
+    [
+      "Plan a gathering",
+      "Format, place, date and budget",
+      "Help us plan our next community event.",
+    ],
+    [
+      "Find local partners",
+      "Vendors, venues and nonprofits nearby",
+      "Find local partners who fit our mission.",
+    ],
+    [
+      "Pay a vendor",
+      "Within this month's budget",
+      "Request a $250 deposit for the Reid Park pavilion.",
+    ],
   ];
   return (
     <section className="civi-chat cv-chat" aria-label="AI community organizer">
@@ -240,7 +298,12 @@ export function ManagedOrganizer({
             {report}
             <div className="cv-suggestions">
               {suggestions.map(([title, hint, prompt]) => (
-                <button key={title} type="button" className="cv-suggestion" onClick={() => setMessage(prompt)}>
+                <button
+                  key={title}
+                  type="button"
+                  className="cv-suggestion"
+                  onClick={() => setMessage(prompt)}
+                >
                   <b>{title}</b>
                   <small>{hint}</small>
                 </button>
@@ -251,7 +314,9 @@ export function ManagedOrganizer({
         {!empty && (
           <div className="cv-thread">
             {state.hasOlderMessages && (
-              <p className="text-center text-xs text-muted-foreground">Showing the most recent saved messages.</p>
+              <p className="text-center text-xs text-muted-foreground">
+                Showing the most recent saved messages.
+              </p>
             )}
             {state.messages.map((m) =>
               m.role === "user" ? (
@@ -261,12 +326,19 @@ export function ManagedOrganizer({
               ) : (
                 <article key={m.id} className="cv-msg-agent" aria-label="Civi">
                   <span className="cv-civi-avatar mt-0.5 h-7 w-7" aria-hidden="true">
-                    <img src="/brand/civimeet-mark.svg" alt="" className="h-4 w-4 brightness-0 invert" />
+                    <img
+                      src="/brand/civimeet-mark.svg"
+                      alt=""
+                      className="h-4 w-4 brightness-0 invert"
+                    />
                   </span>
                   <div>
                     {m.text}
                     <div className="cv-msg-actions">
-                      <button type="button" onClick={() => void navigator.clipboard?.writeText(m.text)}>
+                      <button
+                        type="button"
+                        onClick={() => void navigator.clipboard?.writeText(m.text)}
+                      >
                         <Copy size={13} className="mr-1 inline" /> Copy
                       </button>
                       {onDraft && (
@@ -284,6 +356,22 @@ export function ManagedOrganizer({
                 <span className="cv-civi-avatar mt-0.5 h-7 w-7 animate-pulse" aria-hidden="true" />
                 <div>{Object.values(parts).join("\n\n")}</div>
               </article>
+            )}
+            {browser && (
+              <figure className="cv-card !m-0 overflow-hidden" aria-label="Civi's browser">
+                <figcaption className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Globe size={13} aria-hidden="true" /> Civi’s browser · {browser.title}
+                </figcaption>
+                {browser.screenshot ? (
+                  <img
+                    src={browser.screenshot}
+                    alt={`What Civi's browser shows: ${browser.title}`}
+                    className="mt-2 w-full rounded-lg border"
+                  />
+                ) : (
+                  <p className="!mb-0 mt-2 text-sm text-muted-foreground">Opening the page…</p>
+                )}
+              </figure>
             )}
             {activity && (
               <p className="text-sm text-muted-foreground" role="status">

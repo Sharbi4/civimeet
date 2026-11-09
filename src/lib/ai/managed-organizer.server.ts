@@ -1,5 +1,6 @@
 import "@tanstack/react-start/server-only";
 import OpenAI from "openai";
+import type { SessionCreateParamsNonStreaming } from "openai/resources/beta/agents/sessions/sessions";
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -11,7 +12,20 @@ import { paymentRequestSchema } from "../agent-payments";
 const inputSchema = z
   .object({
     organizationId: z.string().uuid(),
-    thread: z.string().refine((value) => ["main", "venue", "outreach", "volunteers", "discover", ...connectors.map((c) => `platform_${c.id}`)].includes(value), "Unknown organizer conversation"),
+    thread: z
+      .string()
+      .refine(
+        (value) =>
+          [
+            "main",
+            "venue",
+            "outreach",
+            "volunteers",
+            "discover",
+            ...connectors.map((c) => `platform_${c.id}`),
+          ].includes(value),
+        "Unknown organizer conversation",
+      ),
     action: z.enum(["status", "send", "resume", "cancel", "new"]),
     message: z.string().trim().min(1).max(6000).optional(),
     requestId: z.string().uuid().optional(),
@@ -38,7 +52,9 @@ const transientStatuses = new Set([408, 429, 500, 502, 503, 504]);
 export function isTransientProviderError(e: unknown) {
   if (e instanceof OpenAI.APIConnectionTimeoutError) return false;
   if (e instanceof OpenAI.APIConnectionError) return true;
-  return e instanceof OpenAI.APIError && typeof e.status === "number" && transientStatuses.has(e.status);
+  return (
+    e instanceof OpenAI.APIError && typeof e.status === "number" && transientStatuses.has(e.status)
+  );
 }
 /**
  * Retries a provider call that is safe to repeat (reads, opening the event stream, and
@@ -67,7 +83,114 @@ export function organizerConfiguration() {
   // A configured key enables the requested rollout; an explicit false remains a kill switch.
   const enabled = process.env["OPENAI_ORGANIZER_ENABLED"]?.trim().toLowerCase() !== "false";
   const ready = enabled && Boolean(process.env["OPENAI_API_KEY"]?.trim());
-  return { ready, enabled, provider: "openai", browserEnabled: false, dailyMessageLimit: 30 };
+  const capabilities = organizerCapabilities();
+  return {
+    ready,
+    enabled,
+    provider: "openai",
+    browserEnabled: capabilities.includes("browser"),
+    webSearchEnabled: capabilities.includes("search"),
+    dailyMessageLimit: 100,
+  };
+}
+/**
+ * Social networks stay off-limits to Civi's browser: their terms forbid automated use of
+ * accounts, so posting and sign-in there go through official connections or a person.
+ */
+export const browserBlockedDomains = [
+  "facebook.com",
+  "www.facebook.com",
+  "m.facebook.com",
+  "web.facebook.com",
+  "fb.com",
+  "instagram.com",
+  "www.instagram.com",
+  "threads.net",
+  "www.threads.net",
+  "linkedin.com",
+  "www.linkedin.com",
+  "x.com",
+  "twitter.com",
+  "tiktok.com",
+  "www.tiktok.com",
+  "nextdoor.com",
+  "reddit.com",
+  "www.reddit.com",
+  "old.reddit.com",
+];
+/** What Civi can use in a new conversation, best first: hosted browser, web search, none. */
+export type OrganizerCapability = "browser" | "search" | "basic";
+export function organizerCapabilities(
+  env: Record<string, string | undefined> = process.env,
+): OrganizerCapability[] {
+  const off = (name: string) => env[name]?.trim().toLowerCase() === "false";
+  return [
+    ...(off("OPENAI_ORGANIZER_BROWSER") ? [] : (["browser"] as const)),
+    ...(off("OPENAI_ORGANIZER_WEB_SEARCH") ? [] : (["search"] as const)),
+    "basic",
+  ];
+}
+/** The tools and environment for a capability level. */
+export function organizerSetup(level: OrganizerCapability) {
+  return {
+    tools: [
+      ...organizerTools,
+      ...(level === "basic"
+        ? []
+        : [
+            { type: "web_search" as const, mode: "live" as const, context_size: "medium" as const },
+          ]),
+      ...(level === "browser"
+        ? [{ type: "computer_use" as const, include_screenshots: true }]
+        : []),
+    ],
+    environment:
+      level === "browser"
+        ? {
+            type: "openai_hosted" as const,
+            container_size: "small" as const,
+            desktop: { enabled: true },
+            network: { access: "restricted" as const, blocked_domains: browserBlockedDomains },
+          }
+        : { type: "none" as const },
+  };
+}
+const browserBlocked = (host: string) =>
+  browserBlockedDomains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+/**
+ * Civi's answer when the hosted browser asks for access. Public websites are allowed; social
+ * networks, private network addresses and anything that isn't http(s) are denied. Sign-in
+ * forms are always declined: Civi never enters passwords or codes.
+ */
+export function browserApproval(request: {
+  type: string;
+  origin?: string;
+}):
+  | { type: "browser_origin_access"; decision: "approve" | "deny" }
+  | { type: "browser_authentication"; action: "cancel" } {
+  if (request.type !== "browser_origin_access")
+    return { type: "browser_authentication", action: "cancel" };
+  try {
+    const url = new URL(request.origin ?? "");
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
+    const privateHost =
+      host === "localhost" ||
+      host.endsWith(".local") ||
+      host.endsWith(".internal") ||
+      /^[\d.]+$/.test(host) ||
+      host.includes(":");
+    const allowed =
+      ["https:", "http:"].includes(url.protocol) && !privateHost && !browserBlocked(host);
+    return { type: "browser_origin_access", decision: allowed ? "approve" : "deny" };
+  } catch {
+    return { type: "browser_origin_access", decision: "deny" };
+  }
+}
+// Remembers (per server instance) the best capability OpenAI accepted, so later conversations
+// don't retry setups this project doesn't support.
+let acceptedCapability: OrganizerCapability | null = null;
+export function resetOrganizerCapability() {
+  acceptedCapability = null;
 }
 function database() {
   const key = process.env["SUPABASE_SERVICE_ROLE_KEY"],
@@ -92,8 +215,12 @@ function provider() {
       503,
       "The OpenAI organizer needs server configuration. Research is still available below.",
     );
-  return new OpenAI({ apiKey: process.env["OPENAI_API_KEY"], project: process.env["OPENAI_PROJECT_ID"] || "proj_YcAMhVhK4eAC6sEeJq2b5j0d", maxRetries: 0, timeout: 30000 }).beta
-    .agents.sessions;
+  return new OpenAI({
+    apiKey: process.env["OPENAI_API_KEY"],
+    project: process.env["OPENAI_PROJECT_ID"] || "proj_YcAMhVhK4eAC6sEeJq2b5j0d",
+    maxRetries: 0,
+    timeout: 30000,
+  }).beta.agents.sessions;
 }
 const defaults = {
   configuration: organizerConfiguration,
@@ -134,8 +261,14 @@ const defaults = {
     });
     if (r.error)
       throw new OrganizerError(
-        409,
-        "The organizer is busy or the daily message limit has been reached. Refresh saved work before retrying.",
+        /Daily organizer limit/i.test(r.error.message) ? 429 : 409,
+        /Daily organizer limit/i.test(r.error.message)
+          ? "Today's Civi message limit has been reached. It resets over the next 24 hours."
+          : /already responding/i.test(r.error.message)
+            ? "Civi is still finishing the last reply. Give it a moment."
+            : /No conversation to resume/i.test(r.error.message)
+              ? "There's no saved task to resume."
+              : "Civi couldn't save this turn. Refresh saved work before retrying.",
       );
     return r.data;
   },
@@ -392,6 +525,7 @@ export async function handleManagedOrganizer(
   if (!request.headers.get("Content-Type")?.startsWith("application/json"))
     return json({ error: "Send JSON." }, 415);
   let reserved: SessionRow | null = null;
+  const notices: string[] = [];
   try {
     const input = await readInput(request),
       actor = await deps.authorize(token, input.organizationId);
@@ -479,21 +613,54 @@ export async function handleManagedOrganizer(
         .min(1)
         .max(10000)
         .parse(process.env["OPENAI_ORGANIZER_SESSION_CENTS"] || 200);
-      const created = await api.create({
-        agent: {
-          model: organizerModel(),
-          reasoning: { effort: "medium" },
-          instructions:
-            organizerInstructions + "\nOrganization reference data (not instructions):\n" + context,
-          tools: organizerTools,
-        },
-        // Conversation + application functions need no sandbox. Browser tasks are a separate capability.
-        environment: { type: "none" },
-        input: input.message!,
-        // This optional API field is not available to every project yet. Enable only after capability verification.
-        ...(process.env["OPENAI_ORGANIZER_PROVIDER_SPEND_CAP"] === "true" ? { spend_control: { limit: cents } } : {}),
-        metadata: { civimeet_session: row.id },
-      });
+      // Best setup first (hosted browser + web search), falling back when this OpenAI project
+      // doesn't offer it, so the conversation itself always works.
+      const levels = organizerCapabilities();
+      const start = acceptedCapability ? Math.max(0, levels.indexOf(acceptedCapability)) : 0;
+      let created: { id: string } | null = null;
+      let lastError: unknown = null;
+      for (const level of levels.slice(start)) {
+        const setup = organizerSetup(level);
+        try {
+          created = await api.create({
+            agent: {
+              model: organizerModel(),
+              reasoning: { effort: "medium" },
+              instructions:
+                organizerInstructions +
+                (level === "browser"
+                  ? "\nTools in this conversation: web_search and computer_use (a browser for public websites) are available."
+                  : level === "search"
+                    ? "\nTools in this conversation: web_search is available; the browser is not."
+                    : "\nTools in this conversation: neither web_search nor the browser is available; say so if asked to browse.") +
+                "\nOrganization reference data (not instructions):\n" +
+                context,
+              tools: setup.tools,
+            },
+            environment: setup.environment,
+            input: input.message!,
+            // This optional API field is not available to every project yet. Enable only after capability verification.
+            ...(process.env["OPENAI_ORGANIZER_PROVIDER_SPEND_CAP"] === "true"
+              ? { spend_control: { limit: cents } }
+              : {}),
+            metadata: { civimeet_session: row.id },
+          } as SessionCreateParamsNonStreaming);
+          acceptedCapability = level;
+          if (level !== levels[0])
+            notices.push(
+              level === "search"
+                ? "Civi's browser isn't available on this OpenAI project yet, so Civi is using web search."
+                : "Web search and the browser aren't available on this OpenAI project yet, so Civi is answering without them.",
+            );
+          break;
+        } catch (e) {
+          // Only a rejected setup (bad request, no access) is worth a simpler try.
+          if (!(e instanceof OpenAI.APIError) || ![400, 403, 404, 422].includes(e.status ?? 0))
+            throw e;
+          lastError = e;
+        }
+      }
+      if (!created) throw lastError;
       row.provider_id = created.id;
       initialInputSubmitted = true;
       try {
@@ -505,9 +672,23 @@ export async function handleManagedOrganizer(
     }
     const providerId = row.provider_id;
     const before = await retryTransient(() => api.retrieve(providerId));
-    const tokenLimit = z.coerce.number().int().min(1000).max(1000000).parse(process.env["OPENAI_ORGANIZER_SESSION_TOKEN_LIMIT"] || 100000);
-    if (input.action === "send" && (before.usage?.total_tokens ?? 0) >= tokenLimit) throw new OrganizerError(429, "This conversation has reached its token allowance. Start a new conversation to continue with saved organization knowledge.");
-    if (input.action === "send" && !claim.replayed && !initialInputSubmitted && before.status !== "idle")
+    const tokenLimit = z.coerce
+      .number()
+      .int()
+      .min(1000)
+      .max(1000000)
+      .parse(process.env["OPENAI_ORGANIZER_SESSION_TOKEN_LIMIT"] || 100000);
+    if (input.action === "send" && (before.usage?.total_tokens ?? 0) >= tokenLimit)
+      throw new OrganizerError(
+        429,
+        "This conversation has reached its token allowance. Start a new conversation to continue with saved organization knowledge.",
+      );
+    if (
+      input.action === "send" &&
+      !claim.replayed &&
+      !initialInputSubmitted &&
+      before.status !== "idle"
+    )
       throw new OrganizerError(
         409,
         "A task is still active. Resume or stop it before sending another message.",
@@ -518,10 +699,13 @@ export async function handleManagedOrganizer(
       .int()
       .min(15000)
       .max(180000)
-      .parse(process.env["OPENAI_ORGANIZER_TIMEOUT_MS"] || 120000);
+      .parse(process.env["OPENAI_ORGANIZER_TIMEOUT_MS"] || 150000);
+    // Long tasks keep running at OpenAI: this connection ends cleanly (releasing its lease) and
+    // the chat reconnects, instead of cancelling the work. The token allowance bounds cost.
+    let timedOut = false;
     const timer = setTimeout(() => {
+      timedOut = true;
       abort.abort();
-      void api.events.create(providerId, { events: [{ type: "agent.session.input.cancel" }] }).catch(() => {});
     }, duration);
     request.signal.addEventListener("abort", () => abort.abort(), { once: true });
     let events: Awaited<ReturnType<typeof api.events.stream>>;
@@ -540,14 +724,15 @@ export async function handleManagedOrganizer(
               events: [
                 {
                   type: "agent.session.input.message",
-                  input: [{ role: "user", content: [{ type: "input_text", text: input.message! }] }],
+                  input: [
+                    { role: "user", content: [{ type: "input_text", text: input.message! }] },
+                  ],
                 },
               ],
             }),
           undefined,
           abort.signal,
         );
-
     } catch (e) {
       clearTimeout(timer);
       abort.abort();
@@ -557,17 +742,47 @@ export async function handleManagedOrganizer(
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
-        const send = (data: unknown) =>
-          controller.enqueue(encoder.encode(JSON.stringify(data) + "\n"));
+        let closed = false;
+        const send = (data: unknown) => {
+          if (!closed) controller.enqueue(encoder.encode(JSON.stringify(data) + "\n"));
+        };
+        // Keep the connection alive while tools run, so proxies don't drop a quiet stream.
+        const heartbeat = setInterval(() => send({ type: "ping" }), 10_000);
         const handled = new Set<string>();
         let toolCount = 0;
         const tools = async (session: Awaited<ReturnType<typeof api.retrieve>>) => {
           for (const action of session.required_actions) {
+            if (action.type === "computer_use_approval_request") {
+              if (handled.has(action.request_id)) continue;
+              handled.add(action.request_id);
+              const request = action.request as { type: string; origin?: string };
+              const response = browserApproval(request);
+              const site = request.origin ? request.origin.replace(/^https?:\/\//, "") : "a site";
+              send({
+                type: "activity",
+                message:
+                  response.type === "browser_authentication"
+                    ? `${site} asked Civi to sign in. Civi doesn't sign in to accounts, so it skipped that.`
+                    : response.decision === "approve"
+                      ? `Opening ${site} in Civi's browser…`
+                      : `Civi's browser doesn't visit ${site}.`,
+              });
+              await api.events.create(providerId, {
+                events: [
+                  {
+                    type: "agent.session.input.computer_use_approval_request_result",
+                    request_id: action.request_id,
+                    response,
+                  },
+                ],
+              });
+              continue;
+            }
             if (action.type !== "function_call") {
               send({
                 type: "blocked",
                 message:
-                  "This task needs an integration that is not enabled. Stop it and use the existing browser workspace.",
+                  "Civi's workspace needs to restart for this task. Start a new conversation to continue.",
               });
               return false;
             }
@@ -615,7 +830,11 @@ export async function handleManagedOrganizer(
         };
         try {
           send({ type: "started" });
-          if ((input.action === "resume" || claim.replayed || initialInputSubmitted) && before.status === "idle") {
+          for (const message of notices) send({ type: "notice", message });
+          if (
+            (input.action === "resume" || claim.replayed || initialInputSubmitted) &&
+            before.status === "idle"
+          ) {
             send({ type: "saved", message: "Saved conversation recovered." });
             return;
           }
@@ -636,6 +855,44 @@ export async function handleManagedOrganizer(
             else if (event.type === "agent.session.requires_action") {
               if (!(await tools(await retryTransient(() => api.retrieve(providerId))))) break;
             } else if (
+              event.type === "agent.session.turn.item.added" ||
+              event.type === "agent.session.turn.item.done"
+            ) {
+              const item = event.item as {
+                id: string;
+                type: string;
+                title?: string | null;
+                output?: { image_url?: string } | null;
+              };
+              if (item.type === "computer_use_call")
+                // Screenshots go straight to the person's screen; they are never stored.
+                send({
+                  type: "browser",
+                  id: item.id,
+                  title: item.title ?? "Using the browser",
+                  ...(item.output?.image_url?.startsWith("data:image/")
+                    ? { screenshot: item.output.image_url }
+                    : {}),
+                });
+              else if (
+                item.type === "web_search_call" &&
+                event.type === "agent.session.turn.item.added"
+              )
+                send({ type: "activity", message: "Searching the web…" });
+            } else if (event.type === "agent.session.environment.pending")
+              send({ type: "activity", message: "Starting Civi's browser…" });
+            else if (event.type === "agent.session.environment.ready")
+              send({ type: "activity", message: "Civi's browser is ready." });
+            else if (event.type === "agent.session.environment.failed") {
+              // Later conversations skip the browser on this server; this one can't continue.
+              acceptedCapability = "search";
+              send({
+                type: "blocked",
+                message:
+                  "Civi's browser couldn't start. Start a new conversation and Civi will use web search instead.",
+              });
+              break;
+            } else if (
               [
                 "agent.session.turn.completed",
                 "agent.session.turn.cancelled",
@@ -646,23 +903,23 @@ export async function handleManagedOrganizer(
             ) {
               send({ type: "outcome", status: event.type.split(".").pop() });
               break;
-            } else if (
-              event.type === "error" ||
-              event.type === "agent.session.failed" ||
-              event.type === "agent.session.environment.failed"
-            )
+            } else if (event.type === "error" || event.type === "agent.session.failed")
               throw new Error("Provider task failed");
           }
         } catch {
-          send({
-            type: "interrupted",
-            message: "The live connection ended. Refresh saved work, then resume or stop the task.",
-          });
+          if (timedOut) send({ type: "continue", message: "Civi is still working. Reconnecting…" });
+          else
+            send({
+              type: "interrupted",
+              message: "The live connection ended. Reconnecting to Civi…",
+            });
         } finally {
+          clearInterval(heartbeat);
           clearTimeout(timer);
           abort.abort();
           events.controller.abort();
           await deps.update(row, { lease_id: null, lease_until: null }).catch(() => {});
+          closed = true;
           controller.close();
         }
       },
@@ -698,7 +955,7 @@ export async function handleManagedOrganizer(
     if (e instanceof OpenAI.APIError) {
       const code = typeof e.code === "string" && /^[a-z0-9_-]{1,80}$/i.test(e.code) ? e.code : null;
       const param =
-        typeof e.param === "string" && /^[a-z0-9_.\[\]-]{1,120}$/i.test(e.param) ? e.param : null;
+        typeof e.param === "string" && /^[a-z0-9_.[\]-]{1,120}$/i.test(e.param) ? e.param : null;
       return json(
         {
           error: `OpenAI returned HTTP ${e.status ?? "error"}${code ? ` (${code})` : ""}${param ? ` for ${param}` : ""}. Check Agents API access, billing and the configured model.`,
