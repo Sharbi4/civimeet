@@ -108,6 +108,9 @@
   --color-warning: var(--warning);
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
+  --color-google-button: var(--google-button);
+  --color-google-button-border: var(--google-button-border);
+  --color-google-button-foreground: var(--google-button-foreground);
 }
 
 :root {
@@ -149,12 +152,19 @@
   --warning: oklch(0.74 0.16 70);
   --surface-raised: oklch(1 0 0);
   --surface-sunken: oklch(0.975 0.004 255);
+  /* Google sign-in button colors are fixed by Google's branding rules. */
+  --google-button: #ffffff;
+  --google-button-border: #747775;
+  --google-button-foreground: #1f1f1f;
   --gradient-civi: linear-gradient(135deg, oklch(0.53 0.24 262), oklch(0.62 0.2 240));
   --shadow-composer: 0 1px 2px oklch(0.2 0.02 260 / 0.04), 0 12px 32px -12px oklch(0.2 0.02 260 / 0.14);
   --shadow-soft: 0 1px 2px oklch(0.2 0.02 260 / 0.05), 0 6px 18px -10px oklch(0.2 0.02 260 / 0.18);
 }
 
 .dark {
+  --google-button: #131314;
+  --google-button-border: #8e918f;
+  --google-button-foreground: #e3e3e3;
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
