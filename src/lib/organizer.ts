@@ -2,7 +2,7 @@ import type { ResearchResult } from "./research";
 export const organizerThreads = ["main", "venue", "outreach", "volunteers"] as const;
 export type OrganizerThread = (typeof organizerThreads)[number];
 export const threadLabels: Record<OrganizerThread, string> = {
-  main: "Main Agent",
+  main: "Civi",
   venue: "Venue Research",
   outreach: "Outreach",
   volunteers: "Volunteers",
