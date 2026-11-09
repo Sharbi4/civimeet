@@ -1620,3 +1620,12 @@ body:has(.organizer-frame) { overflow:hidden; }
 .cv-app .ow-main.ow-main-chat { padding: 0; }
 .cv-app .ow-demo-banner { margin: 0 16px 6px; border-radius: 12px; }
 .civi-chat.cv-chat { position: relative; }
+/* The page never scrolls as a whole: the conversation, the computer and each view scroll on their own. */
+.cv-app .ow-body { display: flex; flex: 1; min-width: 0; flex-direction: column; height: 100dvh; overflow: hidden; }
+.cv-app .ow-main { flex: 1; min-height: 0; overflow-y: auto; width: 100%; }
+.cv-app .ow-main.ow-main-chat { display: flex; flex-direction: column; overflow: hidden; }
+.cv-app .cv-split { height: 100%; }
+.cv-app .cv-split > div { min-height: 0; height: 100%; }
+.cv-app .ow-chat-thread, .civi-chat.cv-chat { height: 100%; }
+.cv-app .cv-computer { height: 100%; }
+@media (max-width: 1099px) { .cv-app .cv-computer { height: 100dvh; } }
