@@ -1,5 +1,9 @@
 # CiviMeet roadmap
 
+## Live product voice (Nov 9)
+- [x] Remove demo/sample/preview/proposed/draft wording from the website, pricing, legal pages and workspace; remove the public sample workspace
+- [ ] Legal review of the new Terms and Privacy pages
+
 ## Dashboard refinement (Nov 9)
 - [x] Simplified premium chat-first workspace (ChatGPT / Meta AI style): slim sidebar, centered conversation, browser opens on the right only when working
 - [x] Connections and sign-ins live only in Settings → Connections; connecting an account opens its helper agent in the sidebar

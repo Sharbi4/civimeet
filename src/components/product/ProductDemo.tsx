@@ -17,7 +17,7 @@ const scenes = [
     label: "Listen",
     title: "A community need emerges",
     caption:
-      "A recurring question becomes a place to contribute. In this illustrative workflow, the Steward brings the need into your workspace.",
+      "Explore how a recurring community question becomes a research task for your Steward.",
     heading: "More ways to spend time together",
     rows: [
       "Resident · Are there any accessible activities for families nearby?",
@@ -31,12 +31,12 @@ const scenes = [
     label: "Research",
     title: "A stronger starting point",
     caption:
-      "Sourced research helps your team explore resources. These sample source cards are fictional; availability and accessibility still need verification.",
+      "Civi researches resources and prepares source references for review. Confirm availability and accessibility with each provider.",
     heading: "Resources worth exploring",
     rows: [
-      "[1] Community center · Program directory · Sample source",
-      "[2] Parks department · Accessible spaces · Sample source",
-      "[3] Neighborhood food truck · Vendor listing · Sample source",
+      "Research task · Check community center program directories",
+      "Research task · Check parks department accessibility information",
+      "Research task · Find local food truck vendor listings",
     ],
     outcome: "Research note · Confirm details with each provider",
     icon: Search,
@@ -45,7 +45,7 @@ const scenes = [
     label: "Prepare",
     title: "Useful words. Your judgment.",
     caption:
-      "The Steward prepares a helpful response. Review the wording locally in this demo; nothing is published or sent.",
+      "The Steward drafts a helpful response. Your team reviews and approves the exact wording before anything is published or sent.",
     heading: "A response for your community",
     rows: [
       "We’re exploring an accessible, low-cost family afternoon in the neighborhood.",
@@ -59,7 +59,7 @@ const scenes = [
     label: "Connect",
     title: "Shared interest becomes a possibility",
     caption:
-      "Illustrative resident responses help shape an event concept. Automated social listening is a preview, not a connected live service.",
+      "Use community input your team brings into the workspace to shape an event concept. Civi helps organize needs and prepare next steps.",
     heading: "An afternoon built around people",
     rows: [
       "Shared interest · A welcoming place for families",
@@ -73,27 +73,27 @@ const scenes = [
     label: "Plan",
     title: "Give a good idea a practical plan",
     caption:
-      "Compare options and prepare the work. These are sample estimates and proposals—not confirmed bookings, vendor quotes, or financial commitments.",
+      "Compare options and prepare the work. Confirm estimates and provider details, then obtain approval before booking or paying.",
     heading: "Neighborhood family afternoon",
     rows: [
       "Venue · Community center courtyard · Availability to confirm",
-      "Vendor · Local food truck · Quote requested in sample plan",
-      "Date · A Saturday next month · Proposed",
+      "Vendor · Local food truck · Request a quote after approval",
+      "Date · A Saturday next month · To confirm",
       "Budget · $600 working estimate · Approval required",
       "Volunteers · Welcome desk, games, accessibility check",
       "Timeline · Confirm venue → Invite neighbors → Prepare",
     ],
-    outcome: "Planning preview · Organization approval required",
+    outcome: "Event plan · Organization approval required",
     icon: CalendarDays,
   },
   {
     label: "Follow through",
     title: "The event ends. The connection continues.",
     caption:
-      "An illustrative operational view connects preparation, participation, feedback, and the next useful step. No real registrations or messages are created.",
+      "Prepare registration checklists, volunteer assignments, and follow-up drafts in one place. Your team approves messages before they are sent.",
     heading: "Keep the relationship going",
     rows: [
-      "RSVP coordination · Registration list prepared in sample plan",
+      "RSVP coordination · Prepare a registration checklist",
       "Volunteer assignments · Welcome team and activity hosts",
       "Event preparation · Access checklist ready for review",
       "Follow-up · Thank-you message drafted",
@@ -135,12 +135,12 @@ export function ProductDemo() {
   const current = scenes[scene] ?? scenes[0]!;
   const Icon = current.icon;
   return (
-    <div className="cm-demo" aria-label="Interactive guided demonstration">
+    <div className="cm-demo" aria-label="Guided product tour">
       <div className="cm-demo-top">
         <span>
           <img src="/brand/civimeet-mark.svg" width="28" height="28" alt="" /> Community Steward
         </span>
-        <span className="cm-label">Illustrative demo · No live actions</span>
+        <span className="cm-label">Product tour · Your team stays in control</span>
       </div>
       <div className="cm-demo-layout">
         <nav className="cm-scenes" aria-label="Walkthrough scenes">
@@ -167,10 +167,10 @@ export function ProductDemo() {
             </span>
             <span>
               {scene === 0
-                ? "Community discussion · Simulation"
+                ? "Example: Community discussion"
                 : "CiviMeet / Neighborhood workspace"}
             </span>
-            <span className="cm-label">Sample data</span>
+            <span className="cm-label">Example: Family afternoon</span>
           </div>
           <div
             key={scene}
@@ -197,7 +197,7 @@ export function ProductDemo() {
               <ArrowUpRight size={19} />
               <span>
                 {scene === 2 && reviewed
-                  ? "Reviewed in demo · Nothing has been published"
+                  ? "Draft review selected · Not published"
                   : current.outcome}
               </span>
               {scene === 2 && (

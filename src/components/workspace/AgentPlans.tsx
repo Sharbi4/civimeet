@@ -48,7 +48,6 @@ export type AgentPlan = {
 type Navigate = (view: "approvals" | "connectors" | "events") => void;
 type PlansValue = {
   plans: AgentPlan[];
-  demo: boolean;
   canEdit: boolean;
   control: (planId: string, action: "pause" | "resume" | "cancel") => Promise<void>;
   retry: (taskId: string) => Promise<void>;
@@ -199,7 +198,6 @@ export function LivePlansProvider({
   const value = useMemo<PlansValue>(
     () => ({
       plans,
-      demo: false,
       canEdit,
       navigate,
       async control(planId, action) {
@@ -218,140 +216,6 @@ export function LivePlansProvider({
   return <PlansContext.Provider value={value}>{children}</PlansContext.Provider>;
 }
 
-const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
-const samplePlan = (): AgentPlan => ({
-  id: "sample-plan",
-  title: "Tucson single parents community",
-  goal: "Start a community for single parents in Tucson and host monthly meetups.",
-  status: "active",
-  thread_key: "main",
-  created_at: minutesAgo(12),
-  tasks: [
-    {
-      id: "s1",
-      plan_id: "sample-plan",
-      position: 1,
-      title: "Research single-parent communities in Tucson",
-      detail: "",
-      agent: "main",
-      kind: "research",
-      level: "research",
-      depends_on: [],
-      status: "done",
-      status_detail: "Research saved with 8 sources.",
-      result: {
-        summary:
-          "Sample: several active parent groups exist, but none focus on single parents on the south side. Parents ask most about childcare swaps and weekend activities.",
-      },
-      lease_until: null,
-      updated_at: minutesAgo(9),
-    },
-    {
-      id: "s2",
-      plan_id: "sample-plan",
-      position: 2,
-      title: "Draft the group name, description and rules",
-      detail: "",
-      agent: "facebook",
-      kind: "draft_content",
-      level: "prepare",
-      depends_on: [1],
-      status: "done",
-      status_detail: "Draft ready for your review in Approvals. Not published.",
-      result: { approvalId: "sample-post" },
-      lease_until: null,
-      updated_at: minutesAgo(6),
-    },
-    {
-      id: "s3",
-      plan_id: "sample-plan",
-      position: 3,
-      title: "Find family-friendly meetup spaces",
-      detail: "",
-      agent: "main",
-      kind: "find_venues",
-      level: "research",
-      depends_on: [],
-      status: "working",
-      status_detail: "",
-      result: null,
-      lease_until: minutesAgo(-2),
-      updated_at: minutesAgo(1),
-    },
-    {
-      id: "s4",
-      plan_id: "sample-plan",
-      position: 4,
-      title: "Create the Facebook group",
-      detail: "",
-      agent: "facebook",
-      kind: "platform_action",
-      level: "communicate",
-      depends_on: [2],
-      status: "waiting_approval",
-      status_detail: "Waiting for your approval to create group on Facebook.",
-      result: { approvalId: "sample-post", needs: "approval" },
-      lease_until: null,
-      updated_at: minutesAgo(5),
-    },
-    {
-      id: "s5",
-      plan_id: "sample-plan",
-      position: 5,
-      title: "Draft the first meetup invitation",
-      detail: "",
-      agent: "facebook",
-      kind: "draft_content",
-      level: "prepare",
-      depends_on: [3],
-      status: "queued",
-      status_detail: "",
-      result: null,
-      lease_until: null,
-      updated_at: minutesAgo(12),
-    },
-  ],
-});
-export function DemoPlansProvider({
-  children,
-  navigate,
-}: {
-  children: ReactNode;
-  navigate: Navigate;
-  approvalsKey?: string;
-}) {
-  const [plans, setPlans] = useState<AgentPlan[]>(() => [samplePlan()]);
-  const value = useMemo<PlansValue>(
-    () => ({
-      plans,
-      demo: true,
-      canEdit: true,
-      navigate,
-      async control(planId, action) {
-        setPlans((current) =>
-          current.map((plan) =>
-            plan.id !== planId
-              ? plan
-              : action === "cancel"
-                ? {
-                    ...plan,
-                    status: "cancelled",
-                    tasks: plan.tasks.map((task) =>
-                      ["done", "failed"].includes(task.status)
-                        ? task
-                        : { ...task, status: "cancelled", status_detail: "Stopped by the team." },
-                    ),
-                  }
-                : { ...plan, status: action === "pause" ? "paused" : "active" },
-          ),
-        );
-      },
-      async retry() {},
-    }),
-    [plans, navigate],
-  );
-  return <PlansContext.Provider value={value}>{children}</PlansContext.Provider>;
-}
 
 function planState(plan: AgentPlan) {
   if (plan.status === "paused")
@@ -564,7 +428,7 @@ export function PlanCard({ planId }: { planId: string }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="!mb-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8191a3]">
-            Plan{value.demo ? " · sample" : ""}
+            Plan
           </p>
           <h3 className="!m-0 text-[15px] font-semibold text-[#142d40]">{plan.title}</h3>
           <p className="!mb-0 mt-0.5 text-[12px] text-[#64717a]">

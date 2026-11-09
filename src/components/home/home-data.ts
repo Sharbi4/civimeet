@@ -9,7 +9,7 @@ export type StewardTask = {
   footer: string;
 };
 
-// Illustrative content only — no real residents, accounts or outcomes.
+// Product-tour examples, not customer activity or outcomes.
 export const stewardTasks: StewardTask[] = [
   {
     id: "discover",
@@ -17,11 +17,11 @@ export const stewardTasks: StewardTask[] = [
     status: "Pattern noticed",
     title: "Families keep asking where to find weekend food support",
     lines: [
-      { k: "Signal", v: "Similar questions appeared in sample conversations" },
+      { k: "Signal", v: "Example: Recurring questions about weekend food support" },
       { k: "Who it affects", v: "Parents near the east-side library (example)" },
       { k: "Steward note", v: "Worth a sourced answer before suggesting an event" },
     ],
-    footer: "Noted in organization memory · example data",
+    footer: "Example workflow · Save the need in organization memory",
   },
   {
     id: "research",
@@ -29,7 +29,7 @@ export const stewardTasks: StewardTask[] = [
     status: "Sources attached",
     title: "Three weekend food resources, with references",
     lines: [
-      { k: "Source 1", v: "County food bank directory — hours verified" },
+      { k: "Source 1", v: "County food bank directory — confirm current hours" },
       { k: "Source 2", v: "Library community board — Saturday pantry" },
       { k: "Unknown", v: "Holiday hours not published — flagged" },
     ],
@@ -50,7 +50,7 @@ export const stewardTasks: StewardTask[] = [
   {
     id: "gather",
     label: "Plan a gathering",
-    status: "Plan proposed",
+    status: "Plan awaiting approval",
     title: "A Saturday resource fair at the library courtyard",
     lines: [
       { k: "Venue", v: "Accessible entrance, shade, nearby transit (example)" },
