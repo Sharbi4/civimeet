@@ -32,10 +32,9 @@ export class OrganizerError extends Error {
   }
 }
 export function organizerConfiguration() {
-  const enabled = process.env["OPENAI_ORGANIZER_ENABLED"] === "true";
-  const ready =
-    enabled &&
-    Boolean(process.env["OPENAI_API_KEY"]?.trim() && process.env["OPENAI_ORGANIZER_MODEL"]?.trim());
+  // A configured key enables the requested rollout; an explicit false remains a kill switch.
+  const enabled = process.env["OPENAI_ORGANIZER_ENABLED"]?.trim().toLowerCase() !== "false";
+  const ready = enabled && Boolean(process.env["OPENAI_API_KEY"]?.trim());
   return { ready, enabled, provider: "openai", browserEnabled: false, dailyMessageLimit: 30 };
 }
 function database() {
@@ -551,6 +550,10 @@ export async function handleManagedOrganizer(
     if (e instanceof OrganizerError) return json({ error: e.message }, e.status);
     if (e instanceof z.ZodError || e instanceof SyntaxError)
       return json({ error: "Check the message and organization." }, 400);
+    if (e instanceof OpenAI.APIError) {
+      const code = typeof e.code === "string" && /^[a-z0-9_-]{1,80}$/i.test(e.code) ? e.code : null;
+      return json({ error: `OpenAI returned HTTP ${e.status ?? 502}${code ? ` (${code})` : ""}. Check Agents API access, billing and the configured model.`, providerStatus: e.status, providerCode: code }, 502);
+    }
     return json(
       {
         error:
