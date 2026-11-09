@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getDatabase } from "@/lib/database";
+import { newPasswordProblem } from "@/lib/auth-rules";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -21,13 +22,6 @@ export const Route = createFileRoute("/reset-password")({
   }),
   component: ResetPassword,
 });
-
-/** Passwords must be at least 8 characters and both entries must match. */
-export function newPasswordProblem(password: string, confirm: string) {
-  if (password.length < 8) return "Use at least 8 characters.";
-  if (password !== confirm) return "The two passwords don’t match.";
-  return null;
-}
 
 function ResetPassword() {
   const navigate = useNavigate();
