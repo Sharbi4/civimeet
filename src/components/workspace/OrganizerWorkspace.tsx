@@ -849,88 +849,45 @@ function OrganizerWorkspace({
             }}
           />
           <div className="ow-body">
-            <header className="ow-top">
-              <div>
-                <span className="ow-kicker">Contribute. Connect. Meet Up.</span>
-                <h1>{views.find((v) => v[0] === view)?.[1]}</h1>
-              </div>
-              <div className="ow-search">
-                <input
-                  type="search"
-                  aria-label="Search workspace"
-                  placeholder="Search chats, events, people…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") setSearch("");
-                  }}
-                />
-                {search.trim() && (
-                  <div className="ow-search-results">
-                    {views
-                      .filter((v) => v[1].toLowerCase().includes(search.toLowerCase()))
-                      .map(([id, label]) => (
-                        <button
-                          key={id}
-                          onClick={() => {
-                            navigate(id);
-                            setSearch("");
-                          }}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    {data.tasks
-                      .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-                      .map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => {
-                            openChat(`${t.title}: ${t.follow_up}`);
-                            setSearch("");
-                          }}
-                        >
-                          {t.title}
-                        </button>
-                      ))}
-                    {data.events
-                      .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-                      .map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => {
-                            navigate("events");
-                            setSearch("");
-                          }}
-                        >
-                          {t.title}
-                        </button>
-                      ))}
-                    {!views.some((v) => v[1].toLowerCase().includes(search.toLowerCase())) &&
-                      !data.tasks.some((t) =>
-                        t.title.toLowerCase().includes(search.toLowerCase()),
-                      ) &&
-                      !data.events.some((t) =>
-                        t.title.toLowerCase().includes(search.toLowerCase()),
-                      ) && <p>No matching views or loaded plans.</p>}
-                  </div>
-                )}
-              </div>
-              <div className="ow-top-actions">
-                <button onClick={() => navigate("browser")}>Watch browser</button>
-                <button onClick={() => navigate("chat")}>Ask organizer</button>
-              </div>
-              <button
-                className="ow-identity"
-                onClick={() => setPanel(panel ? null : "Identity")}
-                aria-label="Open organizer details"
-              >
-                <img src="/brand/civimeet-mark.svg" alt="" />
-                <span>
-                  {data.name}
-                  <small>Community organizer</small>
+            <header className="cv-topbar">
+              <h1>{view === "chat" ? chatLabel(thread, platformName) : view === "connectors" ? "Settings" : views.find((v) => v[0] === view)?.[1]}</h1>
+              {view === "chat" && (
+                <span className="hidden text-[12.5px] text-muted-foreground sm:inline">
+                  {isPlatformThread(thread)
+                    ? `Helper · reports to Civi`
+                    : "Your community organizer"}
                 </span>
-              </button>
+              )}
+              <div className="ml-auto flex items-center gap-1.5">
+                {view === "chat" && (
+                  <>
+                    <button
+                      type="button"
+                      className="cv-chip"
+                      aria-pressed={pane === "computer"}
+                      onClick={() => setPane(pane === "computer" ? null : "computer")}
+                    >
+                      <Monitor size={14} /> Computer
+                    </button>
+                    <button
+                      type="button"
+                      className="cv-chip"
+                      aria-pressed={pane === "panel"}
+                      onClick={() => setPane(pane === "panel" ? null : "panel")}
+                    >
+                      <Activity size={14} /> Agent panel
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="cv-icon-btn"
+                  onClick={() => setPanel(panel ? null : "Identity")}
+                  aria-label="Open organizer details"
+                >
+                  <Users size={17} />
+                </button>
+              </div>
             </header>
             {demo && (
               <div className="ow-demo-banner">
@@ -1082,22 +1039,9 @@ function OrganizerWorkspace({
                 </>
               )}
               {view === "chat" && (
-                <div
-                  className={`grid min-h-0 ${wide && panelOpen ? "grid-cols-[minmax(0,1fr)_420px]" : ""}`}
-                >
-                  <div className="ow-chat-stack relative min-w-0">
-                    <ChatBrowser
-                      key={`browser:${thread}`}
-                      thread={thread}
-                      connector={
-                        isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
-                      }
-                      demo={demo}
-                      admin={admin}
-                      connected={data.connected}
-                      webAgentId={data.webAgentId}
-                      onShowPanel={panelOpen ? undefined : () => setPanelOpen(true)}
-                    />
+                <div className={`cv-split ${pane ? "cv-split-open" : ""}`}>
+                  <AutoOpenComputer onOpen={() => setPane("computer")} />
+                  <div className="relative min-w-0">
                     {demo ? (
                       <DemoChat
                         key={thread}
@@ -1105,6 +1049,7 @@ function OrganizerWorkspace({
                         platformName={platformName}
                         initialMessage={chatSeed}
                         onDraft={(c) => edit(undefined, c)}
+                        report={thread === "main" ? helperReport : null}
                         sent={sampleNotes[thread] ?? []}
                         onSend={(message) =>
                           setSampleNotes((notes) => ({
@@ -1121,17 +1066,45 @@ function OrganizerWorkspace({
                         initialMessage={chatSeed}
                         onDraft={(c) => edit(undefined, c)}
                         onOpenEvents={() => navigate("events")}
+                        report={helperReport}
                       />
                     )}
                   </div>
-                  {panelOpen && (
-                    <div
-                      className={
-                        wide
-                          ? "h-[calc(100dvh-125px)] min-h-[540px] border-l border-[#e4e9ec]"
-                          : "fixed inset-y-0 right-0 z-50 w-[min(420px,100vw)] border-l border-[#e4e9ec] shadow-[-16px_0_40px_-20px_rgba(15,23,42,.35)]"
-                      }
-                    >
+                  {pane === "computer" && (
+                    <aside className="cv-computer" aria-label="Civi's computer">
+                      <div className="cv-computer-head">
+                        <span className="cv-civi-avatar h-5 w-5" aria-hidden="true">
+                          <img src="/brand/civimeet-mark.svg" alt="" className="h-3 w-3 brightness-0 invert" />
+                        </span>
+                        {isPlatformThread(thread) ? `${platformName ?? "Helper"} helper’s computer` : "Civi’s computer"}
+                        <button
+                          type="button"
+                          className="cv-icon-btn ml-auto"
+                          aria-label="Close computer"
+                          onClick={() => setPane(null)}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <div className="cv-computer-body">
+                        <ChatBrowser
+                          key={`browser:${thread}`}
+                          docked
+                          thread={thread}
+                          connector={
+                            isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
+                          }
+                          demo={demo}
+                          admin={admin}
+                          connected={data.connected}
+                          webAgentId={data.webAgentId}
+                          onOpenSettings={() => openSettings("connections")}
+                        />
+                      </div>
+                    </aside>
+                  )}
+                  {pane === "panel" && (
+                    <div className="cv-computer">
                       <AgentPanel
                         key={thread}
                         demo={demo}
@@ -1148,17 +1121,17 @@ function OrganizerWorkspace({
                         browserInChat
                         onReview={review}
                         onEdit={(item) => edit(item)}
-                        onOpenConnections={() => navigate("connectors")}
-                        onClose={() => setPanelOpen(false)}
+                        onOpenConnections={() => openSettings("connections")}
+                        onClose={() => setPane(null)}
                       />
                     </div>
                   )}
-                  {panelOpen && !wide && (
+                  {pane && (
                     <button
                       type="button"
-                      aria-label="Close agent panel"
-                      onClick={() => setPanelOpen(false)}
-                      className="fixed inset-0 z-40 cursor-default bg-slate-900/20"
+                      aria-label="Close side panel"
+                      onClick={() => setPane(null)}
+                      className="fixed inset-0 z-40 cursor-default bg-foreground/20 min-[1100px]:hidden"
                     />
                   )}
                 </div>
@@ -1311,24 +1284,65 @@ function OrganizerWorkspace({
                     action={<button onClick={() => navigate("connectors")}>Open connectors</button>}
                   />
                 ))}
-              {view === "connectors" &&
-                (demo ? (
-                  <DemoConnectors />
-                ) : (
-                  <>
-                    <div className="mx-auto max-w-[980px] px-5 pt-6"><h2 className="text-xl font-semibold">Settings</h2><p className="mt-1 text-sm text-slate-500">Connect your accounts and manage encrypted sign-in information.</p></div>
-                    <LiveConnectors />
-                    <details className="mx-auto mt-6 max-w-[980px] rounded-2xl border border-slate-200 bg-white px-5 py-4"><summary className="cursor-pointer text-sm font-medium">Previous research conversations & event tools</summary><OrganizerChat thread="main" onDraft={(c) => edit(undefined, c)} onOpenEvents={() => navigate("events")} /></details>
-                    <details className="mx-auto mt-10 max-w-[980px] rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                      <summary className="cursor-pointer text-[14px] font-medium text-slate-700">
-                        Agent playbooks and memory per platform
-                      </summary>
-                      <div className="mt-4">
-                        <PlatformAgents />
+              {view === "connectors" && (
+                <div className="cv-settings">
+                  <header>
+                    <h2>Settings</h2>
+                    <p>
+                      Connect accounts, set how Civi spends, and tune each helper. Every connection
+                      starts a helper agent that reports back to Civi.
+                    </p>
+                  </header>
+                  <div className="cv-tabs" role="tablist" aria-label="Settings sections">
+                    {settingsTabs.map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        className="cv-tab"
+                        aria-selected={settingsTab === id}
+                        onClick={() => setSettingsTab(id)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {settingsTab === "connections" && (demo ? <DemoConnectors /> : <LiveConnectors />)}
+                  {settingsTab === "payments" && (
+                    <PaymentSettings
+                      backend={paymentsBackend}
+                      admin={admin}
+                      editor={editor}
+                      demo={demo}
+                    />
+                  )}
+                  {settingsTab === "helpers" &&
+                    (demo ? (
+                      <div className="cv-card">
+                        <h3 className="!mt-0">Helper playbooks · sample</h3>
+                        <p className="text-muted-foreground">
+                          Each helper follows its own playbook: the Facebook helper supports local
+                          groups, the Eventbrite helper runs event pages, the LinkedIn helper builds
+                          partnerships. Sign in to edit real playbooks and memory.
+                        </p>
                       </div>
-                    </details>
-                  </>
-                ))}
+                    ) : (
+                      <PlatformAgents />
+                    ))}
+                  {settingsTab === "organization" &&
+                    (demo ? (
+                      <div className="cv-card">
+                        <h3 className="!mt-0">{data.name}</h3>
+                        <p>{data.mission}</p>
+                        <p className="text-muted-foreground">{data.area}</p>
+                      </div>
+                    ) : (
+                      <div className="cv-card">
+                        <OrganizationBrief next="research" onNext={() => navigate("chat")} />
+                      </div>
+                    ))}
+                </div>
+              )}
               {view === "approvals" && (
                 <>
                   <div className="ow-section-title">
