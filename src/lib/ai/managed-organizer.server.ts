@@ -32,7 +32,7 @@ export class OrganizerError extends Error {
     super(message);
   }
 }
-const transientStatuses = new Set([408, 409, 429, 500, 502, 503, 504]);
+const transientStatuses = new Set([408, 429, 500, 502, 503, 504]);
 /** OpenAI hiccups (busy, overloaded, dropped connection) that are worth one more try. */
 export function isTransientProviderError(e: unknown) {
   if (e instanceof OpenAI.APIConnectionTimeoutError) return false;
@@ -415,11 +415,14 @@ export async function handleManagedOrganizer(
         }
         return json({ configuration, status: row ? "interrupted" : "ready", messages: [] });
       }
-      const session = await api.retrieve(row.provider_id);
+      const providerId = row.provider_id;
+      const session = await retryTransient(() => api.retrieve(providerId));
       if (input.action === "cancel") {
-        await api.events.create(row.provider_id, {
-          events: [{ type: "agent.session.input.cancel" }],
-        });
+        await retryTransient(() =>
+          api.events.create(providerId, {
+            events: [{ type: "agent.session.input.cancel" }],
+          }),
+        );
         return json({ status: "cancellation_requested" });
       }
       if (input.action === "new") {
@@ -431,7 +434,9 @@ export async function handleManagedOrganizer(
         await deps.archive(row);
         return json({ status: "ready" });
       }
-      const items = await api.items.list(row.provider_id, { order: "desc", limit: 100 });
+      const items = await retryTransient(() =>
+        api.items.list(providerId, { order: "desc", limit: 100 }),
+      );
       const messages = items.data
         .filter((item) => item.type === "message")
         .map((item) => ({
@@ -494,7 +499,7 @@ export async function handleManagedOrganizer(
       }
     }
     const providerId = row.provider_id;
-    const before = await api.retrieve(providerId);
+    const before = await retryTransient(() => api.retrieve(providerId));
     const tokenLimit = z.coerce.number().int().min(1000).max(1000000).parse(process.env["OPENAI_ORGANIZER_SESSION_TOKEN_LIMIT"] || 100000);
     if (input.action === "send" && (before.usage?.total_tokens ?? 0) >= tokenLimit) throw new OrganizerError(429, "This conversation has reached its token allowance. Start a new conversation to continue with saved organization knowledge.");
     if (input.action === "send" && !claim.replayed && before.status !== "idle")
@@ -516,17 +521,27 @@ export async function handleManagedOrganizer(
     request.signal.addEventListener("abort", () => abort.abort(), { once: true });
     let events: Awaited<ReturnType<typeof api.events.stream>>;
     try {
-      events = await api.events.stream(providerId, { signal: abort.signal });
+      events = await retryTransient(
+        () => api.events.stream(providerId, { signal: abort.signal }),
+        undefined,
+        abort.signal,
+      );
       if (input.action === "send" && !claim.replayed)
-        await api.events.create(providerId, {
-          "Idempotency-Key": input.requestId!,
-          events: [
-            {
-              type: "agent.session.input.message",
-              input: [{ role: "user", content: [{ type: "input_text", text: input.message! }] }],
-            },
-          ],
-        });
+        // The idempotency key makes a retried submission land at most once.
+        await retryTransient(
+          () =>
+            api.events.create(providerId, {
+              "Idempotency-Key": input.requestId!,
+              events: [
+                {
+                  type: "agent.session.input.message",
+                  input: [{ role: "user", content: [{ type: "input_text", text: input.message! }] }],
+                },
+              ],
+            }),
+          undefined,
+          abort.signal,
+        );
     } catch (e) {
       clearTimeout(timer);
       abort.abort();
@@ -613,7 +628,7 @@ export async function handleManagedOrganizer(
                 text: event.text,
               });
             else if (event.type === "agent.session.requires_action") {
-              if (!(await tools(await api.retrieve(providerId)))) break;
+              if (!(await tools(await retryTransient(() => api.retrieve(providerId))))) break;
             } else if (
               [
                 "agent.session.turn.completed",
