@@ -53,7 +53,6 @@ export const workspaceViews: [RailView, string, Icon][] = [
   ["ideas", "Ideas", Lightbulb],
   ["goals", "Goals", Target],
   ["people", "People", Users],
-  ["browser", "Live browser", Monitor],
   ["dashboard", "Overview", LayoutDashboard],
   ["activity", "Activity", Activity],
   ["connectors", "Settings", Settings],

@@ -2,7 +2,7 @@
 
 ## Architecture and current scope
 
-The existing TanStack Start/React application, Supabase authentication, organization briefs, vendor directory, event records, Perplexity research and Steel browser are preserved. `/dashboard` is the authenticated workspace; `/demo` contains labeled sample data. The newer GitHub main changes also include an existing Muse/Steel browser agent, encrypted connector credentials, event task plans and chat-to-action routing. These remain available; this rollout does not replace their execution engine. Standard chat threads show one managed organizer. Previous chat/event tools and connections are in Settings; platform threads keep their existing workflow. The workspace fits the viewport; only the conversation and settings content scroll. Explicit browser/connect/control commands in managed chat go through the existing `chat-intents` and `ChatActions` authorization path.
+The TanStack Start/React application, Supabase authentication, organization memory, vendor directory, event records and Perplexity research are preserved. All workspace conversations now use the managed OpenAI organizer, including isolated platform helper threads. Legacy Atlas/Steel/Muse browser controls and chat interception are retired; both browser execution endpoints return HTTP 410. Settings keeps encrypted saved logins and official OAuth connections. Saving credentials does not launch a browser or establish an OpenAI login. The workspace fits the viewport with internal conversation and settings scrolling.
 
 `ManagedOrganizer.tsx` uses authenticated `POST /api/organizer`. The server validates membership and editor role before resolving any provider session. It uses the official OpenAI SDK's `beta.agents.sessions` APIs, subscribes before submitting input, streams selected text/activity events, retrieves saved provider messages after refresh, and submits explicit cancellation events. Provider session IDs cannot be supplied by callers. API credentials never reach the browser or the hosted environment.
 
@@ -10,13 +10,13 @@ The existing TanStack Start/React application, Supabase authentication, organiza
 
 The organizer starts with organization reference data and has two allowlisted function tools: `organization_context` retrieves current saved information; `research_local` invokes the existing authenticated Perplexity research handler and persists sourced vendor candidates, draft proposals and knowledge using the existing transaction. Tool execution rechecks membership. Tool call IDs produce stable research request IDs. The selected public-web agent must be enabled and unpaused.
 
-The customer-facing conversational agent uses `environment.type: "none"` and only those application function tools. It does not need a sandbox to chat or invoke research. Computer-use, sign-in, vault credentials and outbound actions are **not enabled**. Existing Steel public-page browsing remains available separately. No social post, message, booking or payment is executed by this implementation. Sending an answer to the existing approval editor prepares a draft; approval does not secretly dispatch it.
+The customer-facing conversational agent uses `environment.type: "none"` and only those application function tools. It does not need a sandbox to chat or invoke research. Computer-use, sign-in, vault credentials and outbound actions are **not enabled**. Legacy Steel public-page browsing is disabled. OpenAI browser sign-in and human takeover are not yet implemented. No social post, message, booking or payment is executed by this implementation. Sending an answer to the existing approval editor prepares a draft; approval does not secretly dispatch it.
 
 An event can also queue a two-task Perplexity sequence: community research followed by vendor discovery, both tied to its saved geographic area. Each task has a lease, dependency, retry limit and saved agent-memory checkpoint. This sequence advances while the workspace is open; it is not a deployed recurring background worker.
 
 ## Configuration
 
-Apply `202610310005_agent_work_runner.sql` and `202611090001_managed_organizer.sql`.
+Apply `202610310005_agent_work_runner.sql`, `202611090001_managed_organizer.sql` and `202611090002_openai_helper_threads.sql`.
 
 Server secrets:
 

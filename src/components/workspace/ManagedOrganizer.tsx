@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowUp, Square, MoreHorizontal, Copy, FileCheck2 } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
-import type { OrganizerThread } from "@/lib/organizer";
-import { parseChatIntent } from "@/lib/chat-intents";
-import { useChatActions, type ChatActionRecord } from "./ChatActions";
-import { ActionTurn } from "./OrganizerChat";
+import type { ChatThread } from "@/lib/organizer";
 
 type Message = { id: string; role: string; text: string };
 type State = {
@@ -22,31 +19,13 @@ export function ManagedOrganizer({
   onDraft,
   report,
 }: {
-  thread: OrganizerThread;
+  thread: ChatThread;
   initialMessage?: string;
   onDraft?: (text: string) => void;
   /** Civi's roll-up of every helper, shown at the top of the main conversation. */
   report?: ReactNode;
 }) {
   const { db, organizationId, role } = useWorkspace();
-  const actions = useChatActions();
-  const [actionRows, setActionRows] = useState<ChatActionRecord[]>([]);
-  useEffect(() => {
-    let active = true;
-    void db
-      .from("organizer_chat_actions")
-      .select("id,thread_key,message,action,status,reply,resume_goal,created_at")
-      .eq("organization_id", organizationId)
-      .eq("thread_key", thread)
-      .order("created_at", { ascending: false })
-      .limit(20)
-      .then((r) => {
-        if (active && r.data) setActionRows((r.data as ChatActionRecord[]).reverse());
-      });
-    return () => {
-      active = false;
-    };
-  }, [db, organizationId, thread, actions?.version]);
   const [state, setState] = useState<State>({ status: "loading", messages: [] });
   const [message, setMessage] = useState(initialMessage),
     [busy, setBusy] = useState(false);
@@ -100,20 +79,6 @@ export function ManagedOrganizer({
   }, [busy, state.status, refresh]);
   async function run(action: "send" | "resume") {
     if (busy || role === "viewer" || (action === "send" && !message.trim())) return;
-    const intent = action === "send" ? parseChatIntent(message.trim()) : null;
-    if (intent && actions) {
-      setBusy(true);
-      setError("");
-      try {
-        await actions.run(intent, message.trim(), thread);
-        setMessage("");
-      } catch {
-        setError("The workspace action could not complete. Check its saved status.");
-      } finally {
-        if (alive.current) setBusy(false);
-      }
-      return;
-    }
     setBusy(true);
     setError("");
     setParts({});
@@ -282,22 +247,6 @@ export function ManagedOrganizer({
           <div className="cv-thread">
             {state.hasOlderMessages && (
               <p className="text-center text-xs text-muted-foreground">Showing the most recent saved messages.</p>
-            )}
-            {actionRows.length > 0 && (
-              <details className="civi-chat-history">
-                <summary>Workspace activity</summary>
-                {actionRows.map((action) => (
-                  <ActionTurn
-                    key={action.id}
-                    action={action}
-                    busy={busy || Boolean(actions?.busy)}
-                    onContinue={(text) => setMessage(text)}
-                    onRetry={() => {
-                      void actions?.run(action.action, action.message, thread);
-                    }}
-                  />
-                ))}
-              </details>
             )}
             {state.messages.map((m) =>
               m.role === "user" ? (

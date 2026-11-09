@@ -190,8 +190,7 @@ const defaults = {
   newSessionId: () => crypto.randomUUID(),
 };
 export type ConnectorDeps = typeof defaults;
-const browserReady = (env: Record<string, string | undefined>) =>
-  Boolean(env["STEEL_API_KEY"] && env["SUPABASE_SERVICE_ROLE_KEY"] && env["SUPABASE_URL"]);
+const browserReady = (_env: Record<string, string | undefined>) => false;
 
 /** Public capability status: which sign-in paths this deployment has configured. No secrets. */
 export function connectorRuntimeStatus(env: Record<string, string | undefined> = process.env) {
@@ -302,6 +301,8 @@ async function openPage(deps: ConnectorDeps, sessionId: string, url: string) {
 }
 
 async function run(deps: ConnectorDeps, actor: string, input: ConnectorCommand, origin: string) {
+  if (input.command.startsWith("browser_") && input.command !== "browser_cancel")
+    throw new ConnectorError(410, "The legacy browser has been retired. OpenAI account sign-in is not available yet.");
   const definition = getConnector(input.connector)!;
   const org = input.organizationId;
   const id = input.connector;
@@ -310,7 +311,7 @@ async function run(deps: ConnectorDeps, actor: string, input: ConnectorCommand, 
     if (!browserReady(deps.env))
       throw new ConnectorError(
         409,
-        "The agent browser is not configured on this deployment yet (Steel API key).",
+        "OpenAI account sign-in is not available yet.",
       );
   };
 
@@ -523,7 +524,7 @@ async function run(deps: ConnectorDeps, actor: string, input: ConnectorCommand, 
         status: "saved",
         method: "credentials",
         accountLabel: label,
-        detail: `Login saved. Open the live browser once to finish the first ${definition.name} sign-in.`,
+        detail: `Login saved securely. OpenAI account sign-in is not available yet.`,
         event: "credentials_saved",
         message: "Saved an encrypted login",
       });

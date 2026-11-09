@@ -1,10 +1,3 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { agentBrowserStatus, handleAgentBrowser } from "@/lib/browser-agent.server";
-export const Route = createFileRoute("/api/agent/browser")({
-  server: {
-    handlers: {
-      GET: () => agentBrowserStatus(),
-      POST: ({ request }) => handleAgentBrowser(request),
-    },
-  },
-});
+const retired = () => Response.json({ error: "The legacy browser has been retired. Use the OpenAI organizer in chat.", code: "browser_retired" }, { status: 410 });
+export const Route = createFileRoute("/api/agent/browser")({ server: { handlers: { GET: retired, POST: retired } } });

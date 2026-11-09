@@ -60,7 +60,7 @@ export const connectors: ConnectorDefinition[] = [
       "Creates events and invites people",
       "Messages vendors when they have no email or phone",
     ],
-    methods: ["browser", "credentials"],
+    methods: ["credentials"],
     loginUrl: "https://www.facebook.com/login/",
     fields: [
       {
@@ -98,7 +98,7 @@ export const connectors: ConnectorDefinition[] = [
       "Replies to comments and messages",
       "Engages with local accounts and hashtags",
     ],
-    methods: ["browser", "credentials", "oauth"],
+    methods: ["credentials", "oauth"],
     oauth: { provider: "meta_instagram", label: "Continue with Instagram (business)" },
     loginUrl: "https://www.instagram.com/accounts/login/",
     fields: [
@@ -123,7 +123,7 @@ export const connectors: ConnectorDefinition[] = [
       "Replies to questions in your threads",
       "Joins local conversations with useful tips",
     ],
-    methods: ["browser"],
+    methods: [],
     loginUrl: "https://www.threads.com/login",
     commentControls: true,
     risk: automationRisk,
@@ -138,7 +138,7 @@ export const connectors: ConnectorDefinition[] = [
       "Comments on partner and sponsor posts",
       "Reaches out to local organizations",
     ],
-    methods: ["browser", "credentials", "oauth"],
+    methods: ["credentials", "oauth"],
     oauth: { provider: "linkedin", label: "Continue with LinkedIn" },
     loginUrl: "https://www.linkedin.com/login",
     fields: [
@@ -153,7 +153,7 @@ export const connectors: ConnectorDefinition[] = [
     category: "social",
     summary: "Real-time local conversation and announcements.",
     agentWork: ["Posts announcements", "Replies in local conversations", "Follows local voices"],
-    methods: ["browser", "credentials"],
+    methods: ["credentials"],
     loginUrl: "https://x.com/i/flow/login",
     fields: [
       {
@@ -184,7 +184,7 @@ export const connectors: ConnectorDefinition[] = [
       "Shares local events",
       "Finds recommended local vendors",
     ],
-    methods: ["browser", "credentials"],
+    methods: ["credentials"],
     loginUrl: "https://nextdoor.com/login/",
     fields: [
       { key: "identifier", label: "Email or phone number", type: "text", autoComplete: "username" },
@@ -198,7 +198,7 @@ export const connectors: ConnectorDefinition[] = [
     category: "social",
     summary: "City and neighborhood subreddits.",
     agentWork: ["Answers questions in local subreddits", "Shares useful resources"],
-    methods: ["browser", "credentials"],
+    methods: ["credentials"],
     loginUrl: "https://www.reddit.com/login/",
     fields: [
       { key: "identifier", label: "Username or email", type: "text", autoComplete: "username" },
@@ -212,7 +212,7 @@ export const connectors: ConnectorDefinition[] = [
     category: "social",
     summary: "Short video for younger neighbors.",
     agentWork: ["Posts event recaps", "Replies to comments"],
-    methods: ["browser"],
+    methods: [],
     loginUrl: "https://www.tiktok.com/login",
     commentControls: true,
   },
@@ -222,7 +222,7 @@ export const connectors: ConnectorDefinition[] = [
     category: "events",
     summary: "Ticketing, RSVPs and event discovery.",
     agentWork: ["Publishes event listings", "Tracks RSVPs and check-ins", "Emails attendees"],
-    methods: ["oauth", "browser", "credentials"],
+    methods: ["oauth", "credentials"],
     oauth: { provider: "eventbrite", label: "Continue with Eventbrite" },
     loginUrl: "https://www.eventbrite.com/signin/",
     fields: [
@@ -236,7 +236,7 @@ export const connectors: ConnectorDefinition[] = [
     category: "events",
     summary: "Recurring groups and local meetups.",
     agentWork: ["Creates meetup events", "Messages group members", "Tracks RSVPs"],
-    methods: ["browser", "credentials"],
+    methods: ["credentials"],
     loginUrl: "https://www.meetup.com/login/",
     fields: [
       { key: "identifier", label: "Email address", type: "text", autoComplete: "username" },

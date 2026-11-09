@@ -582,7 +582,7 @@ function ConnectorItem({
             />
           ) : (
             <>
-              {resumable && (
+              {false && resumable && (
                 <button
                   type="button"
                   disabled={!admin || Boolean(busy)}
@@ -657,7 +657,7 @@ function ConnectOptions({
   onOAuth: () => void;
   onCredentials: (credentials: { identifier: string; password: string; handle?: string }) => void;
 }) {
-  const [method, setMethod] = useState<ConnectMethod>(definition.methods[0]!);
+  const [method, setMethod] = useState<ConnectMethod>(definition.methods[0] ?? "credentials");
   const disabled = !admin || Boolean(busy);
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
@@ -752,8 +752,7 @@ function CredentialForm({
       <div>
         <p className="!mb-1 text-[14px] font-semibold text-slate-900">Save a login for the agent</p>
         <p className="!mb-0 text-[13px] text-slate-500">
-          The agent signs in to {definition.name} with these details in its own browser. If{" "}
-          {definition.name} asks for a code, you finish that step live.
+          These details are saved securely for {definition.name}. OpenAI account sign-in is not available yet.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

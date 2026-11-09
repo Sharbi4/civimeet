@@ -5,12 +5,13 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { handleStewardResearch } from "../steward-research.server";
 import { organizerInstructions, organizerTools } from "./organizer-personality";
+import { connectors } from "../connectors";
 import { paymentRequestSchema } from "../agent-payments";
 
 const inputSchema = z
   .object({
     organizationId: z.string().uuid(),
-    thread: z.enum(["main", "venue", "outreach", "volunteers"]),
+    thread: z.string().refine((value) => ["main", "venue", "outreach", "volunteers", "discover", ...connectors.map((c) => `platform_${c.id}`)].includes(value), "Unknown organizer conversation"),
     action: z.enum(["status", "send", "resume", "cancel", "new"]),
     message: z.string().trim().min(1).max(6000).optional(),
     requestId: z.string().uuid().optional(),
@@ -390,13 +391,13 @@ export async function handleManagedOrganizer(
         }
         return json({ configuration, status: row ? "interrupted" : "ready", messages: [] });
       }
-      const session = await api.retrieve(row.provider_id);
       if (input.action === "cancel") {
         await api.events.create(row.provider_id, {
           events: [{ type: "agent.session.input.cancel" }],
         });
         return json({ status: "cancellation_requested" });
       }
+      const session = await api.retrieve(row.provider_id);
       if (input.action === "new") {
         if (session.status !== "idle" && session.status !== "failed")
           throw new OrganizerError(409, "Stop the active task before starting a new conversation.");

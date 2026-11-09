@@ -14,7 +14,6 @@ import {
 import { useWorkspace } from "./WorkspaceGate";
 import { ActionTurn, OrganizerChat } from "./OrganizerChat";
 import { OrganizerMode } from "./OrganizerMode";
-import { PlatformBrowser, useInlineBrowser } from "./BrowserDock";
 import { LocalDiscoveryPanel } from "./LocalDiscoveryPanel";
 import { OrganizationBrief } from "./OrganizationBrief";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -24,9 +23,8 @@ import { OrganizationKnowledge } from "@/routes/knowledge";
 import { PlatformAgents } from "@/routes/platform-agents";
 import { LiveConnectors } from "./Connectors";
 import { AgentPanel, type PanelActivity, type PanelMemory } from "./AgentPanel";
-import { ChatBrowser } from "./ChatBrowser";
 import { LivePlansProvider } from "./AgentPlans";
-import { ChatActionsProvider, useChatActions } from "./ChatActions";
+
 import { HelperReport } from "./HelperReport";
 import { PaymentSettings, livePaymentsBackend } from "./PaymentSettings";
 import { parseChatIntent } from "@/lib/chat-intents";
@@ -69,17 +67,6 @@ const settingsTabs: [SettingsTab, string][] = [
   ["helpers", "Helper agents"],
   ["organization", "Organization"],
 ];
-/** Opens Civi's computer whenever a sign-in, take-over or agent run starts from chat. */
-function AutoOpenComputer({ onOpen }: { onOpen: () => void }) {
-  const actions = useChatActions();
-  const active = Boolean(actions?.liveSession || actions?.agentRun);
-  const open = useRef(onOpen);
-  open.current = onOpen;
-  useEffect(() => {
-    if (active) open.current();
-  }, [active]);
-  return null;
-}
 type Task = {
   id: string;
   title: string;
@@ -152,7 +139,7 @@ const blank: WorkspaceData = {
 export function LiveOrganizerWorkspace() {
   const { db, organizationId, role } = useWorkspace();
   // The agent panel beside the chat replaces the floating browser dock here.
-  useInlineBrowser();
+
   const [data, setData] = useState(blank);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -475,16 +462,14 @@ function OrganizerWorkspace({
   ];
   // Meta AI-style split: the conversation stays centered; Civi's computer (the live browser) or the
   // agent panel opens on the right only when there is something to watch or review.
-  const [pane, setPane] = useState<"computer" | "panel" | null>(null);
+  const [pane, setPane] = useState<"panel" | null>(null);
   useEffect(() => {
     const show = (event: Event) =>
-      setPane((event as CustomEvent<{ tab?: string }>).detail?.tab === "browser" ? "computer" : "panel");
-    const browse = () => setPane("computer");
+      setPane((event as CustomEvent<{ tab?: string }>).detail?.tab === "browser" ? null : "panel");
+
     window.addEventListener("civimeet:panel", show);
-    window.addEventListener("civimeet:browse", browse);
     return () => {
       window.removeEventListener("civimeet:panel", show);
-      window.removeEventListener("civimeet:browse", browse);
     };
   }, []);
   const mentions = (text: string) =>
@@ -686,20 +671,7 @@ function OrganizerWorkspace({
       navigate={navigate}
       approvalsKey={data.approvals.map((a) => `${a.id}:${a.status}`).join(",")}
     >
-      <ChatActionsProvider
-        workspace={{
-          db: access.db,
-          organizationId: access.organizationId,
-          role,
-          approvalsPending: pending.length,
-          navigate,
-          openChatThread: (next) => {
-            setThread(next as ChatThread);
-            setChatSeed("");
-            navigate("chat");
-          },
-        }}
-      >
+      <>
         <div className="ow-app cv-app">
           <WorkspaceRail
             view={view}
@@ -744,14 +716,6 @@ function OrganizerWorkspace({
               <div className="ml-auto flex items-center gap-1.5">
                 {view === "chat" && (
                   <>
-                    <button
-                      type="button"
-                      className="cv-chip"
-                      aria-pressed={pane === "computer"}
-                      onClick={() => setPane(pane === "computer" ? null : "computer")}
-                    >
-                      <Monitor size={14} /> Computer
-                    </button>
                     <button
                       type="button"
                       className="cv-chip"
@@ -862,31 +826,7 @@ function OrganizerWorkspace({
                       </Link>
                       {tasks}
                     </section>
-                    <section className="ow-card">
-                      <h2>Browser sessions</h2>
-                      {data.sessions.length ? (
-                        data.sessions.map((s) => (
-                          <button
-                            className="ow-session-link"
-                            key={s.id}
-                            onClick={() => navigate("browser")}
-                          >
-                            <Monitor size={18} />
-                            <span>
-                              <b>{s.task}</b>
-                              <small>
-                                {s.state.replaceAll("_", " ")}
-                              </small>
-                            </span>
-                            <ArrowRight size={16} />
-                          </button>
-                        ))
-                      ) : (
-                        <p>
-                          No browser sessions yet. Open a supported website from Browser Sessions.
-                        </p>
-                      )}
-                    </section>
+
                   </div>
                   <details className="ow-recent">
                     <summary>Recent activity</summary>
@@ -896,7 +836,6 @@ function OrganizerWorkspace({
               )}
               {view === "chat" && (
                 <div className={`cv-split ${pane ? "cv-split-open" : ""}`}>
-                  <AutoOpenComputer onOpen={() => setPane("computer")} />
                   <div className="relative min-w-0">
                     <OrganizerMode
                         key={`${thread}:${chatSeed}`}
@@ -908,38 +847,6 @@ function OrganizerWorkspace({
                         report={helperReport}
                       />
                   </div>
-                  {pane === "computer" && (
-                    <aside className="cv-computer" aria-label="Civi's computer">
-                      <div className="cv-computer-head">
-                        <span className="cv-civi-avatar h-5 w-5" aria-hidden="true">
-                          <img src="/brand/civimeet-mark.svg" alt="" className="h-3 w-3 brightness-0 invert" />
-                        </span>
-                        {isPlatformThread(thread) ? `${platformName ?? "Helper"} helper’s computer` : "Civi’s computer"}
-                        <button
-                          type="button"
-                          className="cv-icon-btn ml-auto"
-                          aria-label="Close computer"
-                          onClick={() => setPane(null)}
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                      <div className="cv-computer-body">
-                        <ChatBrowser
-                          key={`browser:${thread}`}
-                          docked
-                          thread={thread}
-                          connector={
-                            isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
-                          }
-                          admin={admin}
-                          connected={data.connected}
-                          webAgentId={data.webAgentId}
-                          onOpenSettings={() => openSettings("connections")}
-                        />
-                      </div>
-                    </aside>
-                  )}
                   {pane === "panel" && (
                     <div className="cv-computer">
                       <AgentPanel
@@ -974,7 +881,7 @@ function OrganizerWorkspace({
               )}
               {view === "search" && (
                 <SearchView items={searchItems}>
-                  <OrganizerChat thread="discover" onDraft={(c) => edit(undefined, c)} />
+                  <OrganizerMode thread="discover" onDraft={(c) => edit(undefined, c)} />
                   <details className="ow-recent">
                     <summary>Save local partners and prepare a plan</summary>
                     <LocalDiscoveryPanel />
@@ -1031,23 +938,7 @@ function OrganizerWorkspace({
                 <AgentLibrary work={agentWork} onOpen={openArtifact} />
               )}
               {view === "library" && <OrganizationKnowledge />}
-              {view === "browser" &&
-                (data.webAgentId ? (
-                  <>
-                    <h2>Supervised browser</h2>
-                    <p className="ow-subtitle">
-                      Supported public websites only. Account login, manual takeover, and publishing
-                      remain unavailable until verified.
-                    </p>
-                    <PlatformBrowser agentId={data.webAgentId} />
-                  </>
-                ) : (
-                  <Empty
-                    title="Choose your public-web organizer"
-                    text="Enable the public-web agent in Connectors to use supervised browser research."
-                    action={<button onClick={() => navigate("connectors")}>Open connectors</button>}
-                  />
-                ))}
+              {view === "browser" && <p>Browser sessions have been retired. Continue with Civi in chat.</p>}
               {view === "connectors" && (
                 <div className="cv-settings">
                   <header>
@@ -1266,7 +1157,7 @@ function OrganizerWorkspace({
             </Dialog>
           )}
         </div>
-      </ChatActionsProvider>
+      </>
     </LivePlansProvider>
   );
 }
