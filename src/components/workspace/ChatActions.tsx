@@ -40,7 +40,6 @@ type Workspace = {
   db: SupabaseClient | null;
   organizationId: string | null;
   role: string;
-  demo: boolean;
   approvalsPending: number;
   navigate: (view: "connectors" | "approvals") => void;
   openChatThread: (thread: string) => void;
@@ -76,7 +75,6 @@ type ChatActionsValue = {
   sessionExpired: () => Promise<void>;
   busy: string | null;
   version: number;
-  demoActions: ChatActionRecord[];
 };
 const ChatActionsContext = createContext<ChatActionsValue | null>(null);
 export const useChatActions = () => useContext(ChatActionsContext);
@@ -100,12 +98,11 @@ export function ChatActionsProvider({
   children: ReactNode;
   workspace: Workspace;
 }) {
-  const { db, organizationId, role, demo, approvalsPending, navigate, openChatThread } = workspace;
+  const { db, organizationId, role, approvalsPending, navigate, openChatThread } = workspace;
   const plans = usePlans();
   const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
-  const [demoActions, setDemoActions] = useState<ChatActionRecord[]>([]);
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
   const stepping = useRef(false);
 
@@ -116,23 +113,7 @@ export function ChatActionsProvider({
       action: ChatIntent & { source?: "civi" },
       goal = "",
     ) => {
-      if (demo || !db || !organizationId) {
-        const id = crypto.randomUUID();
-        setDemoActions((current) => [
-          ...current,
-          {
-            id,
-            thread_key: thread,
-            message,
-            action,
-            status: "started",
-            reply: "",
-            resume_goal: goal,
-            created_at: new Date().toISOString(),
-          },
-        ]);
-        return id;
-      }
+      if (!db || !organizationId) throw new Error("Sign in to your organization first.");
       const { data, error } = await db.rpc("log_chat_action", {
         workspace: organizationId,
         thread,
@@ -146,20 +127,15 @@ export function ChatActionsProvider({
       setVersion((value) => value + 1);
       return String(data);
     },
-    [db, organizationId, demo],
+    [db, organizationId],
   );
   const settle = useCallback(
     async (id: string | null, status: ChatActionRecord["status"], reply: string) => {
-      if (!id) return;
-      if (demo || !db)
-        setDemoActions((current) =>
-          current.map((item) => (item.id === id ? { ...item, status, reply } : item)),
-        );
-      else
-        await db.rpc("update_chat_action", { target: id, outcome: status, outcome_reply: reply });
+      if (!id || !db) return;
+      await db.rpc("update_chat_action", { target: id, outcome: status, outcome_reply: reply });
       setVersion((value) => value + 1);
     },
-    [db, demo],
+    [db],
   );
   const request = useCallback(
     (body: Parameters<typeof connectorRequest>[2]) => {
@@ -179,12 +155,6 @@ export function ChatActionsProvider({
           `I can't connect ${definition?.name ?? "that platform"} yet. You can see what's available in Connections.`,
         );
       const name = definition.name;
-      if (demo)
-        return settle(
-          actionId,
-          "succeeded",
-          `This is the sample workspace, so no real browser opens here. In your workspace, I'd open ${name} in your secure agent browser for you to sign in.`,
-        );
       if (!isAdmin(role))
         return settle(
           actionId,
@@ -250,7 +220,7 @@ export function ChatActionsProvider({
         );
       }
     },
-    [demo, role, db, organizationId, request, settle],
+    [role, db, organizationId, request, settle],
   );
 
   const agentBrowser = useCallback(
@@ -279,12 +249,6 @@ export function ChatActionsProvider({
   const browse = useCallback(
     async (actionId: string, platform: string, objective: string) => {
       const name = nameOf(platform);
-      if (demo)
-        return settle(
-          actionId,
-          "succeeded",
-          `This is the sample workspace, so no real browser runs here. In your workspace, the ${name} agent would open your account in its secure browser, look around read-only, and tell you what it found.`,
-        );
       if (!isAdmin(role))
         return settle(
           actionId,
@@ -329,7 +293,7 @@ export function ChatActionsProvider({
         );
       }
     },
-    [demo, role, agentBrowser, settle],
+    [role, agentBrowser, settle],
   );
 
   // Advance the run one verified step at a time while it is running.
@@ -472,7 +436,7 @@ export function ChatActionsProvider({
         if (intent.type === "show_agent") {
           const name = nameOf(intent.platform);
           const { data: row } =
-            db && organizationId && !demo
+            db && organizationId
               ? await db
                   .from("organization_connectors")
                   .select("status")
@@ -481,7 +445,7 @@ export function ChatActionsProvider({
                   .maybeSingle()
               : {
                   data: {
-                    status: demo && intent.platform === "facebook" ? "connected" : "not_connected",
+                    status: "not_connected",
                   },
                 };
           if (row?.status !== "connected")
@@ -512,12 +476,6 @@ export function ChatActionsProvider({
           );
         }
         const name = nameOf(intent.platform);
-        if (demo)
-          return await settle(
-            actionId,
-            "succeeded",
-            `In the sample workspace nothing is running, but in yours this ${intent.resume ? "resumes" : "pauses"} the ${name} agent.`,
-          );
         if (!isAdmin(role))
           return await settle(
             actionId,
@@ -565,7 +523,6 @@ export function ChatActionsProvider({
       openChatThread,
       db,
       organizationId,
-      demo,
       plans,
       role,
     ],
@@ -654,7 +611,6 @@ export function ChatActionsProvider({
       sessionExpired,
       busy,
       version,
-      demoActions,
     }),
     [
       run,
@@ -666,7 +622,6 @@ export function ChatActionsProvider({
       sessionExpired,
       busy,
       version,
-      demoActions,
     ],
   );
   return <ChatActionsContext.Provider value={value}>{children}</ChatActionsContext.Provider>;
