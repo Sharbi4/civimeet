@@ -409,8 +409,16 @@ export function OrganizerChat({
                   : undefined),
         }),
       });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? "Research could not finish.");
+      // Proxies can answer with an HTML error page, so never assume a JSON body.
+      const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+      if (!response.ok)
+        throw new Error(
+          typeof body?.error === "string" && body.error
+            ? body.error
+            : response.status >= 500
+              ? "Research couldn't be reached just now. Try again in a moment."
+              : "Research could not finish.",
+        );
       if (!alive.current) return;
       requestKey.current = null;
       await load();

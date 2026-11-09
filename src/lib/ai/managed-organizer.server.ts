@@ -32,6 +32,31 @@ export class OrganizerError extends Error {
     super(message);
   }
 }
+const transientStatuses = new Set([408, 429, 500, 502, 503, 504]);
+/** OpenAI hiccups (busy, overloaded, dropped connection) that are worth one more try. */
+export function isTransientProviderError(e: unknown) {
+  if (e instanceof OpenAI.APIConnectionTimeoutError) return false;
+  if (e instanceof OpenAI.APIConnectionError) return true;
+  return e instanceof OpenAI.APIError && typeof e.status === "number" && transientStatuses.has(e.status);
+}
+/**
+ * Retries a provider call that is safe to repeat (reads, opening the event stream, and
+ * submissions carrying an idempotency key). Never wrap calls that could double-act.
+ */
+export async function retryTransient<T>(
+  call: () => Promise<T>,
+  delays: readonly number[] = [400, 1200],
+  signal?: AbortSignal,
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call();
+    } catch (e) {
+      if (attempt >= delays.length || signal?.aborted || !isTransientProviderError(e)) throw e;
+      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+    }
+  }
+}
 /** The configured organizer model, or the default when the setting isn't a model name. */
 export function organizerModel(env: Record<string, string | undefined> = process.env) {
   const configured = env["OPENAI_ORGANIZER_MODEL"]?.trim() ?? "";
@@ -390,11 +415,14 @@ export async function handleManagedOrganizer(
         }
         return json({ configuration, status: row ? "interrupted" : "ready", messages: [] });
       }
-      const session = await api.retrieve(row.provider_id);
+      const providerId = row.provider_id;
+      const session = await retryTransient(() => api.retrieve(providerId));
       if (input.action === "cancel") {
-        await api.events.create(row.provider_id, {
-          events: [{ type: "agent.session.input.cancel" }],
-        });
+        await retryTransient(() =>
+          api.events.create(providerId, {
+            events: [{ type: "agent.session.input.cancel" }],
+          }),
+        );
         return json({ status: "cancellation_requested" });
       }
       if (input.action === "new") {
@@ -406,7 +434,9 @@ export async function handleManagedOrganizer(
         await deps.archive(row);
         return json({ status: "ready" });
       }
-      const items = await api.items.list(row.provider_id, { order: "desc", limit: 100 });
+      const items = await retryTransient(() =>
+        api.items.list(providerId, { order: "desc", limit: 100 }),
+      );
       const messages = items.data
         .filter((item) => item.type === "message")
         .map((item) => ({
@@ -469,7 +499,7 @@ export async function handleManagedOrganizer(
       }
     }
     const providerId = row.provider_id;
-    const before = await api.retrieve(providerId);
+    const before = await retryTransient(() => api.retrieve(providerId));
     const tokenLimit = z.coerce.number().int().min(1000).max(1000000).parse(process.env["OPENAI_ORGANIZER_SESSION_TOKEN_LIMIT"] || 100000);
     if (input.action === "send" && (before.usage?.total_tokens ?? 0) >= tokenLimit) throw new OrganizerError(429, "This conversation has reached its token allowance. Start a new conversation to continue with saved organization knowledge.");
     if (input.action === "send" && !claim.replayed && before.status !== "idle")
@@ -491,17 +521,27 @@ export async function handleManagedOrganizer(
     request.signal.addEventListener("abort", () => abort.abort(), { once: true });
     let events: Awaited<ReturnType<typeof api.events.stream>>;
     try {
-      events = await api.events.stream(providerId, { signal: abort.signal });
+      events = await retryTransient(
+        () => api.events.stream(providerId, { signal: abort.signal }),
+        undefined,
+        abort.signal,
+      );
       if (input.action === "send" && !claim.replayed)
-        await api.events.create(providerId, {
-          "Idempotency-Key": input.requestId!,
-          events: [
-            {
-              type: "agent.session.input.message",
-              input: [{ role: "user", content: [{ type: "input_text", text: input.message! }] }],
-            },
-          ],
-        });
+        // The idempotency key makes a retried submission land at most once.
+        await retryTransient(
+          () =>
+            api.events.create(providerId, {
+              "Idempotency-Key": input.requestId!,
+              events: [
+                {
+                  type: "agent.session.input.message",
+                  input: [{ role: "user", content: [{ type: "input_text", text: input.message! }] }],
+                },
+              ],
+            }),
+          undefined,
+          abort.signal,
+        );
     } catch (e) {
       clearTimeout(timer);
       abort.abort();
@@ -588,7 +628,7 @@ export async function handleManagedOrganizer(
                 text: event.text,
               });
             else if (event.type === "agent.session.requires_action") {
-              if (!(await tools(await api.retrieve(providerId)))) break;
+              if (!(await tools(await retryTransient(() => api.retrieve(providerId))))) break;
             } else if (
               [
                 "agent.session.turn.completed",
@@ -638,26 +678,37 @@ export async function handleManagedOrganizer(
     if (e instanceof OrganizerError) return json({ error: e.message }, e.status);
     if (e instanceof z.ZodError || e instanceof SyntaxError)
       return json({ error: "Check the message and organization." }, 400);
+    // Never answer 502/504: hosting proxies replace those bodies with their own HTML page,
+    // so the chat would lose the explanation. 503 and 424 pass through intact.
+    if (isTransientProviderError(e))
+      return json(
+        {
+          error: "Civi's AI service is busy right now and couldn't reply. Try again in a moment.",
+          retryable: true,
+          providerStatus: e instanceof OpenAI.APIError ? (e.status ?? null) : null,
+        },
+        503,
+      );
     if (e instanceof OpenAI.APIError) {
       const code = typeof e.code === "string" && /^[a-z0-9_-]{1,80}$/i.test(e.code) ? e.code : null;
       const param =
         typeof e.param === "string" && /^[a-z0-9_.\[\]-]{1,120}$/i.test(e.param) ? e.param : null;
       return json(
         {
-          error: `OpenAI returned HTTP ${e.status ?? 502}${code ? ` (${code})` : ""}${param ? ` for ${param}` : ""}. Check Agents API access, billing and the configured model.`,
+          error: `OpenAI returned HTTP ${e.status ?? "error"}${code ? ` (${code})` : ""}${param ? ` for ${param}` : ""}. Check Agents API access, billing and the configured model.`,
           providerStatus: e.status,
           providerCode: code,
           providerParam: param,
         },
-        502,
+        424,
       );
     }
     return json(
       {
         error:
-          "OpenAI could not start or recover this conversation. Check the server key, model and Agents permissions; refresh before retrying.",
+          "Civi couldn't start or recover this conversation. Refresh saved work, then try again.",
       },
-      502,
+      503,
     );
   }
 }
