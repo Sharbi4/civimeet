@@ -22,13 +22,13 @@ import { Events } from "@/routes/events";
 import { VendorDirectory } from "@/routes/vendors";
 import { OrganizationKnowledge } from "@/routes/knowledge";
 import { PlatformAgents } from "@/routes/platform-agents";
-import { DemoConnectors, LiveConnectors } from "./Connectors";
+import { LiveConnectors } from "./Connectors";
 import { AgentPanel, type PanelActivity, type PanelMemory } from "./AgentPanel";
 import { ChatBrowser } from "./ChatBrowser";
-import { DemoPlansProvider, LivePlansProvider, PlanCard } from "./AgentPlans";
+import { LivePlansProvider } from "./AgentPlans";
 import { ChatActionsProvider, useChatActions } from "./ChatActions";
 import { HelperReport } from "./HelperReport";
-import { PaymentSettings, demoPaymentsBackend, livePaymentsBackend } from "./PaymentSettings";
+import { PaymentSettings, livePaymentsBackend } from "./PaymentSettings";
 import { parseChatIntent } from "@/lib/chat-intents";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -51,8 +51,6 @@ import {
 import { connectors as connectorCatalog } from "@/lib/connectors";
 import {
   chatLabel,
-  demoApprovals,
-  demoReplies,
   isPlatformThread,
   organizerThreads,
   platformThread,
@@ -151,99 +149,6 @@ const blank: WorkspaceData = {
   connectorStatus: [],
   payments: null,
 };
-const demoData: WorkspaceData = {
-  ...blank,
-  name: "Tucson Community Alliance",
-  mission: "Connect Tucson residents to food, housing, health, and library resources.",
-  area: "Tucson, AZ",
-  vendorCount: 18,
-  goal: "Host a Neighborhood Resource Fair next month that connects 200 residents with food, housing and health partners.",
-  connected: ["facebook", "google_calendar"],
-  connectorStatus: [
-    { connector: "facebook", status: "connected", detail: "Shared the pantry schedule in 2 neighborhood groups" },
-    { connector: "eventbrite", status: "connected", detail: "Resource Fair page drafted · 142 RSVPs (sample)" },
-    { connector: "instagram", status: "needs_attention", detail: "Instagram asked for a security check" },
-  ],
-  payments: { committedCents: 2_900, budgetCents: 150_000, waiting: 1 },
-  research: [
-    {
-      id: "r1",
-      input: { question: "Which Tucson food banks run mobile pantries near Reid Park?" },
-      result: {
-        answer:
-          "Community Food Bank of Southern Arizona runs weekly mobile pantries on the south side; two stops are within a mile of Reid Park. Hours and eligibility should be confirmed before promoting.",
-        sources: [{ url: "https://www.communityfoodbank.org/" }],
-      },
-      created_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
-    },
-  ],
-  needs: [
-    {
-      id: "n1",
-      title: "Families asking where to find weekend meals",
-      detail: "Several neighbors in the Midvale Park group asked about Saturday food options.",
-      kind: "question",
-      priority: "high",
-      created_at: new Date(Date.now() - 5 * 3_600_000).toISOString(),
-    },
-    {
-      id: "n2",
-      title: "Seniors want help signing up for utility assistance",
-      detail: "",
-      kind: "resource",
-      priority: "normal",
-      created_at: new Date(Date.now() - 26 * 3_600_000).toISOString(),
-    },
-  ],
-  approvals: demoApprovals,
-  tasks: [
-    {
-      id: "task1",
-      title: "Confirm venue requirements",
-      contribution: "Compare accessible spaces for 200 people near bus lines.",
-      follow_up: "Compare accessible spaces for 200 people.",
-      follow_up_on: "Next week · sample",
-      status: "draft",
-    },
-    {
-      id: "task2",
-      title: "Prepare volunteer briefing",
-      contribution: "A short volunteer guide with roles, shifts and a welcome script.",
-      follow_up: "Define roles and opt-in shifts.",
-      follow_up_on: "Before the fair · sample",
-      status: "draft",
-    },
-  ],
-  events: [
-    {
-      id: "fair",
-      title: "Neighborhood Resource Fair",
-      event_date: "Next month · sample",
-      venue: "Tucson · venue to be confirmed",
-      status: "draft",
-    },
-  ],
-  activity: [
-    { id: "a1", action: "Sample event plan prepared for review", created_at: "Sample timeline" },
-  ],
-  sessions: [
-    {
-      id: "s1",
-      agent_id: "facebook",
-      state: "waiting_for_approval",
-      task: "Prepare Facebook Group announcement",
-      current_origin: "https://www.facebook.com",
-    },
-    {
-      id: "s2",
-      agent_id: "venue",
-      state: "paused",
-      task: "Compare venue requirements",
-      current_origin: "Sample venue page",
-    },
-  ],
-};
-
 export function LiveOrganizerWorkspace() {
   const { db, organizationId, role } = useWorkspace();
   // The agent panel beside the chat replaces the floating browser dock here.
@@ -333,7 +238,7 @@ export function LiveOrganizerWorkspace() {
     const monthPayments = (r[13].data ?? []) as { amount_cents: number; status: string }[];
     if (r.some((x) => x.error)) {
       setError(
-        "Some workspace data could not load. Refresh to try again; sample results are never substituted.",
+        "Some workspace data could not load. Refresh to try again.",
       );
     } else setError("");
     setData({
@@ -368,7 +273,6 @@ export function LiveOrganizerWorkspace() {
   return (
     <OrganizerWorkspace
       data={data}
-      demo={false}
       role={role}
       access={{ db, organizationId }}
       error={error}
@@ -396,66 +300,20 @@ export function LiveOrganizerWorkspace() {
     />
   );
 }
-export function DemoOrganizerWorkspace() {
-  const [data, setData] = useState(demoData);
-  return (
-    <OrganizerWorkspace
-      demo
-      data={data}
-      role="admin"
-      refresh={async () => {}}
-      review={async (item, decision) => {
-        setData((d) => ({
-          ...d,
-          approvals: d.approvals.map((a) =>
-            a.id === item.id
-              ? { ...a, status: decision === "approve" ? "approved" : "rejected" }
-              : a,
-          ),
-          activity: [
-            {
-              id: crypto.randomUUID(),
-              action: `Sample ${item.title}: ${decision}. No external action taken.`,
-              created_at: new Date().toISOString(),
-            },
-            ...d.activity,
-          ],
-        }));
-      }}
-      save={async (draft, item) => {
-        setData((d) => ({
-          ...d,
-          approvals: item
-            ? d.approvals.map((a) =>
-                a.id === item.id
-                  ? { ...a, ...draft, status: "pending", revision: a.revision + 1 }
-                  : a,
-              )
-            : [
-                { ...draft, id: crypto.randomUUID(), revision: 1, status: "pending" },
-                ...d.approvals,
-              ],
-        }));
-      }}
-    />
-  );
-}
 type Draft = Pick<ReviewItem, "title" | "content" | "destination" | "kind">;
 type Props = {
   data: WorkspaceData;
-  demo: boolean;
   role: string;
   error?: string;
   loading?: boolean;
   refresh: () => Promise<void>;
   review: (item: ReviewItem, decision: "approve" | "reject") => Promise<void>;
   save: (draft: Draft, item?: ReviewItem) => Promise<void>;
-  /** Signed-in database access for tools run from chat (absent in the demo). */
-  access?: { db: SupabaseClient; organizationId: string } | undefined;
+  /** Signed-in database access for tools run from chat. */
+  access: { db: SupabaseClient; organizationId: string };
 };
 function OrganizerWorkspace({
   data,
-  demo,
   role,
   error,
   loading,
@@ -491,7 +349,6 @@ function OrganizerWorkspace({
   const [chatSeed, setChatSeed] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [search, setSearch] = useState("");
-  const [sampleNotes, setSampleNotes] = useState<Record<string, string[]>>({});
   const pending = data.approvals.filter((a) => a.status === "pending");
   const admin = role === "admin" || role === "owner";
   const editor = role !== "viewer";
@@ -750,9 +607,7 @@ function OrganizerWorkspace({
                   onClick={() =>
                     void act(
                       () => review(a, "approve"),
-                      demo
-                        ? "Sample approved. Nothing was posted, booked, or paid."
-                        : "Draft approved for the recorded destination. External execution is not enabled; nothing was sent or paid.",
+                      "Draft approved for the recorded destination. Nothing has been sent or paid yet.",
                     )
                   }
                 >
@@ -823,23 +678,19 @@ function OrganizerWorkspace({
     </div>
   );
   const paymentsBackend = useMemo(
-    () =>
-      demo || !access ? demoPaymentsBackend() : livePaymentsBackend(access.db, access.organizationId),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [demo, access?.db, access?.organizationId],
+    () => livePaymentsBackend(access.db, access.organizationId),
+    [access.db, access.organizationId],
   );
-  const PlansProvider = demo ? DemoPlansProvider : LivePlansProvider;
   return (
-    <PlansProvider
+    <LivePlansProvider
       navigate={navigate}
       approvalsKey={data.approvals.map((a) => `${a.id}:${a.status}`).join(",")}
     >
       <ChatActionsProvider
         workspace={{
-          db: access?.db ?? null,
-          organizationId: access?.organizationId ?? null,
+          db: access.db,
+          organizationId: access.organizationId,
           role,
-          demo,
           approvalsPending: pending.length,
           navigate,
           openChatThread: (next) => {
@@ -876,8 +727,8 @@ function OrganizerWorkspace({
               window.dispatchEvent(new CustomEvent("civimeet:new-chat"));
             }}
             footer={{
-              title: demo ? "Sample administrator" : role === "organizer" ? "Editor" : role,
-              detail: demo ? "Demo workspace" : "Organization workspace",
+              title: role === "organizer" ? "Editor" : role,
+              detail: "Organization workspace",
             }}
           />
           <div className="ow-body">
@@ -921,15 +772,6 @@ function OrganizerWorkspace({
                 </button>
               </div>
             </header>
-            {demo && (
-              <div className="ow-demo-banner">
-                <strong>Demo / Sample data</strong>
-                <span>
-                  No live accounts, messages, bookings, or payments. Changes reset on reload.
-                </span>
-                <Link to="/dashboard">Open your workspace →</Link>
-              </div>
-            )}
             {loading && (
               <p role="status" className="ow-notice">
                 Loading your organization…
@@ -951,19 +793,13 @@ function OrganizerWorkspace({
                   <div className="ow-welcome">
                     <div>
                       <span className="ow-supervision-status">
-                        {demo
-                          ? "Sample organizer · waiting for your review"
-                          : `${pending.length} drafts awaiting review`}
+                        {`${pending.length} drafts awaiting review`}
                       </span>
                       <h2>
-                        {demo
-                          ? "Your Resource Fair starts with a good plan."
-                          : "Bring people together. Let AI do the groundwork."}
+                        Bring people together. Let Civi do the groundwork.
                       </h2>
                       <p>
-                        {demo
-                          ? "Neighborhood Resource Fair · Tucson · next month"
-                          : "Your organizer prepares the groundwork. You decide what happens next."}
+                        Your organizer prepares the groundwork. You decide what happens next.
                       </p>
                     </div>
                     <button className="ow-primary" onClick={() => navigate("chat")}>
@@ -981,7 +817,7 @@ function OrganizerWorkspace({
                       {approvalCards(pending.slice(0, 3))}
                     </section>
                     <aside className="ow-card ow-event-focus">
-                      <span>{demo ? "Sample event" : "Event in focus"}</span>
+                      <span>Event in focus</span>
                       <h3>{data.events[0]?.title ?? "Your next community gathering"}</h3>
                       <p>
                         {data.events[0]?.event_date ?? "Start with a goal and a proposed date."}
@@ -990,7 +826,6 @@ function OrganizerWorkspace({
                         {data.events[0]?.venue ??
                           "Your organizer can help compare venues and local partners."}
                       </p>
-                      {demo && <p>142 RSVPs · 87% plan complete · sample figures</p>}
                       <button onClick={() => navigate(data.events.length ? "events" : "chat")}>
                         {data.events.length ? "Open event plan →" : "Plan a gathering →"}
                       </button>
@@ -1003,26 +838,18 @@ function OrganizerWorkspace({
                     </aside>
                   </div>
                   <div className="ow-stats">
-                    {(demo
-                      ? [
-                          ["142", "RSVPs"],
-                          ["18", "Partners"],
-                          ["87%", "Plan complete"],
-                        ]
-                      : [
-                          [String(data.events.length), "Event plans"],
-                          [String(data.vendorCount), "Saved vendors"],
-                          [
-                            String(data.tasks.filter((t) => t.status === "completed").length),
-                            "Completed plans",
-                          ],
-                        ]
-                    ).map(([n, l]) => (
+                    {[
+                      [String(data.events.length), "Event plans"],
+                      [String(data.vendorCount), "Saved vendors"],
+                      [
+                        String(data.tasks.filter((t) => t.status === "completed").length),
+                        "Completed plans",
+                      ],
+                    ].map(([n, l]) => (
                       <div key={l}>
                         <strong>{n}</strong>
                         <span>
                           {l}
-                          {demo ? " · sample" : ""}
                         </span>
                       </div>
                     ))}
@@ -1030,11 +857,9 @@ function OrganizerWorkspace({
                   <div className="ow-two">
                     <section className="ow-card">
                       <h2>Next steps</h2>
-                      {!demo && (
-                        <Link to="/planning" className="ow-link">
-                          Manage community needs and plans →
-                        </Link>
-                      )}
+                      <Link to="/planning" className="ow-link">
+                        Manage community needs and plans →
+                      </Link>
                       {tasks}
                     </section>
                     <section className="ow-card">
@@ -1051,7 +876,6 @@ function OrganizerWorkspace({
                               <b>{s.task}</b>
                               <small>
                                 {s.state.replaceAll("_", " ")}
-                                {demo ? " · sample" : ""}
                               </small>
                             </span>
                             <ArrowRight size={16} />
@@ -1074,24 +898,7 @@ function OrganizerWorkspace({
                 <div className={`cv-split ${pane ? "cv-split-open" : ""}`}>
                   <AutoOpenComputer onOpen={() => setPane("computer")} />
                   <div className="relative min-w-0">
-                    {demo ? (
-                      <DemoChat
-                        key={thread}
-                        thread={thread}
-                        platformName={platformName}
-                        initialMessage={chatSeed}
-                        onDraft={(c) => edit(undefined, c)}
-                        report={thread === "main" ? helperReport : null}
-                        sent={sampleNotes[thread] ?? []}
-                        onSend={(message) =>
-                          setSampleNotes((notes) => ({
-                            ...notes,
-                            [thread]: [...(notes[thread] ?? []), message],
-                          }))
-                        }
-                      />
-                    ) : (
-                      <OrganizerMode
+                    <OrganizerMode
                         key={`${thread}:${chatSeed}`}
                         thread={thread}
                         platformName={platformName}
@@ -1100,7 +907,6 @@ function OrganizerWorkspace({
                         onOpenEvents={() => navigate("events")}
                         report={helperReport}
                       />
-                    )}
                   </div>
                   {pane === "computer" && (
                     <aside className="cv-computer" aria-label="Civi's computer">
@@ -1126,7 +932,6 @@ function OrganizerWorkspace({
                           connector={
                             isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
                           }
-                          demo={demo}
                           admin={admin}
                           connected={data.connected}
                           webAgentId={data.webAgentId}
@@ -1139,7 +944,6 @@ function OrganizerWorkspace({
                     <div className="cv-computer">
                       <AgentPanel
                         key={thread}
-                        demo={demo}
                         label={chatLabel(thread, platformName)}
                         connector={
                           isPlatformThread(thread) ? thread.slice("platform_".length) : undefined
@@ -1170,20 +974,14 @@ function OrganizerWorkspace({
               )}
               {view === "search" && (
                 <SearchView items={searchItems}>
-                  {demo ? (
-                    <SampleDiscover />
-                  ) : (
-                    <>
-                      <OrganizerChat thread="discover" onDraft={(c) => edit(undefined, c)} />
-                      <details className="ow-recent">
-                        <summary>Save local partners and prepare a plan</summary>
-                        <LocalDiscoveryPanel />
-                      </details>
-                    </>
-                  )}
+                  <OrganizerChat thread="discover" onDraft={(c) => edit(undefined, c)} />
+                  <details className="ow-recent">
+                    <summary>Save local partners and prepare a plan</summary>
+                    <LocalDiscoveryPanel />
+                  </details>
                 </SearchView>
               )}
-              {view === "feed" && <FeedView entries={feed} demo={demo} onDiscuss={openChat} />}
+              {view === "feed" && <FeedView entries={feed} onDiscuss={openChat} />}
               {view === "ideas" && (
                 <IdeasView
                   ideas={data.tasks
@@ -1196,7 +994,6 @@ function OrganizerWorkspace({
                       followUpOn: t.follow_up_on,
                       status: t.status,
                     }))}
-                  demo={demo}
                   onDevelop={openChat}
                   onEvent={() => navigate("events")}
                 />
@@ -1207,62 +1004,20 @@ function OrganizerWorkspace({
                   goal={data.goal}
                   area={data.area}
                   stats={
-                    demo
-                      ? [
-                          ["142", "RSVPs"],
-                          ["18", "Partners"],
-                          ["87%", "Plan complete"],
-                          [String(platformChats.length), "Platforms live"],
-                        ]
-                      : [
-                          [String(data.events.length), "Event plans"],
-                          [String(data.vendorCount), "Saved vendors"],
-                          [String(platformChats.length), "Platforms live"],
-                          [String(pending.length), "Awaiting review"],
-                        ]
+                    [
+                      [String(data.events.length), "Event plans"],
+                      [String(data.vendorCount), "Saved vendors"],
+                      [String(platformChats.length), "Platforms live"],
+                      [String(pending.length), "Awaiting review"],
+                    ]
                   }
                   needs={data.needs}
-                  demo={demo}
                   onEdit={() => setPanel("Identity")}
                   onDiscuss={openChat}
                 />
               )}
-              {view === "events" &&
-                (demo ? (
-                  <>
-                    <h2>Neighborhood Resource Fair</h2>
-                    <p>Tucson · next month · sample event</p>
-                    <div className="ow-two">
-                      <div className="ow-card">
-                        <h3>Event plan</h3>
-                        <p>Venue: to be confirmed</p>
-                        <p>142 sample RSVPs · 18 sample partners</p>
-                        <SampleChecklist />
-                      </div>
-                      <div className="ow-card">
-                        <h3>Timeline & volunteers</h3>
-                        <p>
-                          Confirm venue → invite partners → open RSVPs → brief volunteers → follow
-                          up.
-                        </p>
-                        <button
-                          onClick={() => {
-                            setThread("volunteers");
-                            navigate("chat");
-                          }}
-                        >
-                          Plan volunteer roles
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <Events />
-                ))}
-              {view === "people" &&
-                (demo ? (
-                  <SamplePeople />
-                ) : (
+              {view === "events" && <Events />}
+              {view === "people" && (
                   <>
                     <h2>People & local partners</h2>
                     <p className="ow-subtitle">
@@ -1271,36 +1026,13 @@ function OrganizerWorkspace({
                     </p>
                     <VendorDirectory />
                   </>
-                ))}
-              {view === "library" && (
-                <AgentLibrary work={agentWork} demo={demo} onOpen={openArtifact} />
               )}
-              {view === "library" &&
-                (demo ? (
-                  <div className="ow-card">
-                    <h2>Organization library · sample</h2>
-                    {[
-                      "Community mission & voice",
-                      "Resource Fair planning checklist",
-                      "Venue comparison template",
-                    ].map((t) => (
-                      <details key={t}>
-                        <summary>{t}</summary>
-                        <p>
-                          {t === "Community mission & voice"
-                            ? demoData.mission
-                            : "Capture source, date checked, accessibility, contact details, and open questions. These are illustrative notes."}
-                        </p>
-                      </details>
-                    ))}
-                  </div>
-                ) : (
-                  <OrganizationKnowledge />
-                ))}
+              {view === "library" && (
+                <AgentLibrary work={agentWork} onOpen={openArtifact} />
+              )}
+              {view === "library" && <OrganizationKnowledge />}
               {view === "browser" &&
-                (demo ? (
-                  <DemoBrowser onReview={() => navigate("approvals")} />
-                ) : data.webAgentId ? (
+                (data.webAgentId ? (
                   <>
                     <h2>Supervised browser</h2>
                     <p className="ow-subtitle">
@@ -1339,40 +1071,19 @@ function OrganizerWorkspace({
                       </button>
                     ))}
                   </div>
-                  {settingsTab === "connections" && (demo ? <DemoConnectors /> : <LiveConnectors />)}
+                  {settingsTab === "connections" && <LiveConnectors />}
                   {settingsTab === "payments" && (
                     <PaymentSettings
                       backend={paymentsBackend}
                       admin={admin}
                       editor={editor}
-                      demo={demo}
                     />
                   )}
-                  {settingsTab === "helpers" &&
-                    (demo ? (
-                      <div className="cv-card">
-                        <h3 className="!mt-0">Helper playbooks · sample</h3>
-                        <p className="text-muted-foreground">
-                          Each helper follows its own playbook: the Facebook helper supports local
-                          groups, the Eventbrite helper runs event pages, the LinkedIn helper builds
-                          partnerships. Sign in to edit real playbooks and memory.
-                        </p>
-                      </div>
-                    ) : (
-                      <PlatformAgents />
-                    ))}
-                  {settingsTab === "organization" &&
-                    (demo ? (
-                      <div className="cv-card">
-                        <h3 className="!mt-0">{data.name}</h3>
-                        <p>{data.mission}</p>
-                        <p className="text-muted-foreground">{data.area}</p>
-                      </div>
-                    ) : (
-                      <div className="cv-card">
+                  {settingsTab === "helpers" && <PlatformAgents />}
+                  {settingsTab === "organization" && (                      <div className="cv-card">
                         <OrganizationBrief next="research" onNext={() => navigate("chat")} />
                       </div>
-                    ))}
+                  )}
                 </div>
               )}
               {view === "approvals" && (
@@ -1395,7 +1106,7 @@ function OrganizerWorkspace({
                     </p>
                   )}
                   {approvalCards(pending)}
-                  {!demo && (
+                  {(
                     <p className="ow-subtitle">
                       Event budgets and payment proposals retain their separate reviews in{" "}
                       <button className="ow-link" onClick={() => navigate("events")}>
@@ -1465,7 +1176,7 @@ function OrganizerWorkspace({
                     <br />
                     Publish / message / spend: unavailable
                   </p>
-                  {!demo && (
+                  {(
                     <OrganizationBrief
                       next="research"
                       onNext={() => {
@@ -1556,7 +1267,7 @@ function OrganizerWorkspace({
           )}
         </div>
       </ChatActionsProvider>
-    </PlansProvider>
+    </LivePlansProvider>
   );
 }
 function Empty({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
@@ -1567,267 +1278,5 @@ function Empty({ title, text, action }: { title: string; text: string; action?: 
       <p>{text}</p>
       {action}
     </div>
-  );
-}
-function DemoChat({
-  thread,
-  platformName,
-  initialMessage,
-  onDraft,
-  report,
-  sent,
-  onSend,
-}: {
-  thread: ChatThread;
-  platformName?: string | undefined;
-  initialMessage: string;
-  onDraft: (s: string) => void;
-  report?: ReactNode;
-  sent: string[];
-  onSend: (message: string) => void;
-}) {
-  const [message, setMessage] = useState(initialMessage);
-  const actions = useChatActions();
-  const label = chatLabel(thread, platformName);
-  // The sample conversation also opens on its most recent message.
-  const scroller = useRef<HTMLDivElement>(null);
-  const sampleCount = sent.length + (actions?.demoActions.length ?? 0);
-  const sampleLast = actions?.demoActions.at(-1)?.status ?? "";
-  useEffect(() => {
-    const element = scroller.current;
-    if (element) element.scrollTop = element.scrollHeight;
-  }, [thread, sampleCount, sampleLast]);
-  const reply = isPlatformThread(thread)
-    ? `This week on ${platformName ?? "this platform"}, I’d share the mobile pantry schedule in two neighborhood groups, answer the weekend-meals question in Midvale Park with sourced options, and invite partners to the Resource Fair once the venue is confirmed.\n\nFirst draft is ready for your review. Nothing is posted until you approve it.`
-    : demoReplies[thread];
-  return (
-    <div className="ow-chat-thread">
-      <header>
-        <h2>{label}</h2>
-        <p>Sample conversation · no AI or browser calls</p>
-      </header>
-      <div className="ow-messages" ref={scroller}>
-        {report && <div className="mb-7">{report}</div>}
-        <div className="ow-user-message">
-          {thread === "main"
-            ? "Help us organize a neighborhood resource fair in Tucson next month."
-            : isPlatformThread(thread)
-              ? `What should we do on ${platformName ?? "this platform"} this week?`
-              : `Help with ${label.toLowerCase()}.`}
-        </div>
-        <article className="ow-agent-message">
-          <strong>Civi · sample organizer</strong>
-          <p className="whitespace-pre-wrap">{reply}</p>
-          <button className="ow-link" onClick={() => onDraft(reply)}>
-            Prepare a sample draft for review
-          </button>
-        </article>
-        {thread === "main" && (
-          <>
-            <div className="ow-user-message">
-              We also want to start a community for single parents in Tucson with monthly meetups.
-              Start from scratch.
-            </div>
-            <article className="ow-agent-message">
-              <strong>Civi · sample organizer</strong>
-              <p className="whitespace-pre-wrap">
-                Let’s build it. I’m researching the single-parent groups already active in Tucson
-                and drafting a name, description and rules for a new Facebook group. Creating the
-                group and publishing anything will wait for your approval.
-              </p>
-              <PlanCard planId="sample-plan" />
-            </article>
-          </>
-        )}
-        {sent.map((s, i) => (
-          <article key={i}>
-            <div className="ow-user-message">{s}</div>
-            <p className="ow-agent-message">
-              Demo note captured for this conversation. Open your signed-in workspace for live
-              research and saved memory.
-            </p>
-          </article>
-        ))}
-        {actions?.demoActions
-          .filter((item) => item.thread_key === thread)
-          .map((item) => (
-            <ActionTurn
-              key={item.id}
-              action={item}
-              busy={false}
-              onContinue={onSend}
-              onRetry={() => {}}
-            />
-          ))}
-      </div>
-      <form
-        className="ow-composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          // Tool instructions work in the sample too, with simulated outcomes.
-          const intent = parseChatIntent(message);
-          if (intent && actions) void actions.run(intent, message, thread);
-          else onSend(message);
-          setMessage("");
-        }}
-      >
-        <label className="sr-only" htmlFor="sample-message">
-          Message your organizer
-        </label>
-        <textarea
-          id="sample-message"
-          required
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Try a direction in this sample conversation"
-        />
-        <div>
-          <span>Demo only · nothing is sent</span>
-          <button disabled={!message.trim()}>Add sample note</button>
-        </div>
-      </form>
-    </div>
-  );
-}
-function SampleChecklist() {
-  const [checked, setChecked] = useState([true, true, false, false]);
-  return (
-    <div className="ow-checklist">
-      {[
-        "Define community goal",
-        "Prepare partner shortlist",
-        "Confirm venue and budget",
-        "Approve invitations",
-      ].map((s, i) => (
-        <label key={s}>
-          <input
-            type="checkbox"
-            checked={checked[i]}
-            onChange={() => setChecked(checked.map((v, n) => (n === i ? !v : v)))}
-          />
-          {s}
-        </label>
-      ))}
-      <small>Interactive sample checklist. The 87% headline is a fixed prototype figure.</small>
-    </div>
-  );
-}
-function SampleDiscover() {
-  const [query, setQuery] = useState("");
-  return (
-    <>
-      <h2>Discover your community</h2>
-      <p className="ow-subtitle">
-        Sample data · open your workspace for live Perplexity research. No research citations are
-        invented here.
-      </p>
-      <label>
-        Filter sample opportunities
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search resources, venues, or partners"
-        />
-      </label>
-      <div className="ow-three">
-        {[
-          "Community resource partners",
-          "Accessible neighborhood venues",
-          "Local food trucks and caterers",
-        ]
-          .filter((t) => t.toLowerCase().includes(query.toLowerCase()))
-          .map((t) => (
-            <article className="ow-card" key={t}>
-              <Search size={22} />
-              <h3>{t}</h3>
-              <p>
-                Explore fit for the Tucson resource fair. Names, availability, prices, and contacts
-                need live research.
-              </p>
-              <small>Illustrative opportunity · not a verified lead</small>
-            </article>
-          ))}
-      </div>
-    </>
-  );
-}
-function SamplePeople() {
-  return (
-    <>
-      <h2>People & partners</h2>
-      <p className="ow-subtitle">Illustrative roles, not real contacts or outreach.</p>
-      <div className="ow-list">
-        {[
-          "Resource partner · Community services",
-          "Volunteer coordinator · Event team",
-          "Food truck contact · Vendor shortlist",
-        ].map((t) => (
-          <article key={t}>
-            <Users size={20} />
-            <span>
-              <b>{t}</b>
-              <small>Contact details not supplied · no messages sent</small>
-            </span>
-          </article>
-        ))}
-      </div>
-    </>
-  );
-}
-function DemoBrowser({ onReview }: { onReview: () => void }) {
-  const [state, setState] = useState("Awaiting approval");
-  return (
-    <>
-      <h2>Browser Sessions</h2>
-      <p className="ow-subtitle">
-        Demo mode — no live browser connection. The production public-web browser uses Steel.
-      </p>
-      <div className="ow-browser-demo">
-        <div className="ow-card">
-          <h3>Prepare a Facebook Group post</h3>
-          <p>Sample profile: facebook-org</p>
-          <span className="ow-status">{state}</span>
-          <div className="ow-buttons">
-            <button
-              disabled={state === "Stopped"}
-              onClick={() => setState(state === "Paused" ? "Awaiting approval" : "Paused")}
-            >
-              {state === "Paused" ? "Resume sample" : "Pause sample"}
-            </button>
-            <button
-              disabled={state === "Stopped"}
-              onClick={() =>
-                setState(state === "Manual sample" ? "Awaiting approval" : "Manual sample")
-              }
-            >
-              {state === "Manual sample" ? "Hand back to organizer" : "Take over sample"}
-            </button>
-            <button onClick={() => setState("Stopped")}>Stop sample task</button>
-          </div>
-          <details>
-            <summary>Sample steps</summary>
-            <ol>
-              <li>Opened sample group</li>
-              <li>Prepared draft</li>
-              <li>Paused for approval</li>
-            </ol>
-          </details>
-        </div>
-        <div className="ow-fake-browser">
-          <div>facebook.com · illustrative page</div>
-          <h3>Tucson Community Alliance</h3>
-          <p>Group announcement · draft</p>
-          <textarea
-            aria-label="Sample browser draft"
-            defaultValue={demoApprovals[0]!.content}
-            readOnly={state !== "Manual sample"}
-          />
-          <button disabled={state === "Stopped"} onClick={onReview}>
-            Review draft in Approvals
-          </button>
-          <small>Changing this mock page does not change a live website or approval draft.</small>
-        </div>
-      </div>
-    </>
   );
 }
