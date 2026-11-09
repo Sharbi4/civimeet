@@ -596,31 +596,20 @@ function OrganizerWorkspace({
       open: () => navigate("goals"),
     })),
   ];
-  // The agent panel beside the chat is scoped to whichever agent you're talking to.
-  // Side by side on wide screens; a slide-over drawer below 1280px so it never covers the chat.
-  const [wide, setWide] = useState(true);
+  // Meta AI-style split: the conversation stays centered; Civi's computer (the live browser) or the
+  // agent panel opens on the right only when there is something to watch or review.
+  const [pane, setPane] = useState<"computer" | "panel" | null>(null);
   useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia("(min-width: 1280px)");
-    const update = () => setWide(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-  const [sideOpen, setSideOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const panelOpen = wide ? sideOpen : drawerOpen;
-  const setPanelOpen = (open: boolean) => (wide ? setSideOpen(open) : setDrawerOpen(open));
-  useEffect(() => {
-    // Approvals, activity and memory open the panel; the browser itself lives above the chat.
-    const show = (event: Event) => {
-      if ((event as CustomEvent<{ tab?: string }>).detail?.tab === "browser") return;
-      if (wide) setSideOpen(true);
-      else setDrawerOpen(true);
-    };
+    const show = (event: Event) =>
+      setPane((event as CustomEvent<{ tab?: string }>).detail?.tab === "browser" ? "computer" : "panel");
+    const browse = () => setPane("computer");
     window.addEventListener("civimeet:panel", show);
-    return () => window.removeEventListener("civimeet:panel", show);
-  }, [wide]);
+    window.addEventListener("civimeet:browse", browse);
+    return () => {
+      window.removeEventListener("civimeet:panel", show);
+      window.removeEventListener("civimeet:browse", browse);
+    };
+  }, []);
   const mentions = (text: string) =>
     platformName ? text.toLowerCase().includes(platformName.toLowerCase()) : true;
   const panelApprovals = data.approvals.filter(
