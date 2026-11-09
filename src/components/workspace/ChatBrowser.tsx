@@ -195,7 +195,7 @@ export function ChatBrowser({
                 You sign in yourself; Civi never sees your password.
               </p>
               )}
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+              <div className={`grid grid-cols-2 gap-2 ${docked ? "" : "sm:grid-cols-3 lg:grid-cols-5"}`}>
                 {platforms.map((item) => {
                   const signedIn = connected.includes(item.id);
                   return (
