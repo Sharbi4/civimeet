@@ -23,7 +23,6 @@ const frame = "block h-[clamp(300px,52dvh,620px)] w-full bg-slate-100";
 export function ChatBrowser({
   thread,
   connector,
-  demo,
   admin,
   connected,
   webAgentId,
@@ -33,7 +32,6 @@ export function ChatBrowser({
 }: {
   thread: string;
   connector?: string | undefined;
-  demo: boolean;
   admin: boolean;
   connected: string[];
   webAgentId: string | null;
@@ -45,7 +43,7 @@ export function ChatBrowser({
   const actions = useChatActions();
   const session = actions?.liveSession ?? null;
   const run = actions?.agentRun ?? null;
-  const [open, setOpen] = useState(demo || docked);
+  const [open, setOpen] = useState(docked);
   const [web, setWeb] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const stage = useRef<HTMLElement>(null);
@@ -77,7 +75,7 @@ export function ChatBrowser({
   const platforms = (
     connector ? browserPlatforms.filter((item) => item.id === connector) : browserPlatforms
   ).filter((item) => !docked || connected.includes(item.id));
-  const canOpen = demo || admin;
+  const canOpen = admin;
   async function openPlatform(id: string, name: string) {
     if (!actions) return;
     setOpening(id);
@@ -101,7 +99,7 @@ export function ChatBrowser({
   const dot = session || running ? "bg-emerald-500" : "bg-slate-300";
 
   // The workspace starts as a conversation. Reveal the browser only for a task or explicit request.
-  if (!demo && !session && !run && !web && !open) return null;
+  if (!session && !run && !web && !open) return null;
 
   return (
     <section
@@ -175,7 +173,7 @@ export function ChatBrowser({
                 onControl={(command) => void actions.controlRun(command)}
               />
             </div>
-          ) : web && webAgentId && !demo ? (
+          ) : web && webAgentId ? (
             <div className="max-h-[clamp(320px,56dvh,660px)] overflow-y-auto rounded-2xl border border-[#e4e9ec] bg-white">
               <PlatformBrowser agentId={webAgentId} />
             </div>
@@ -222,7 +220,7 @@ export function ChatBrowser({
                     </button>
                   );
                 })}
-                {!connector && webAgentId && !demo && (
+                {!connector && webAgentId && (
                   <button
                     type="button"
                     onClick={() => setWeb(true)}
