@@ -58,6 +58,77 @@ export type Database = {
           },
         ]
       }
+      agent_payments: {
+        Row: {
+          agent: string
+          amount_cents: number
+          approval: string
+          budget_month: string
+          category: string
+          created_at: string
+          currency: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          organization_id: string
+          over_budget: boolean
+          paid_at: string | null
+          payee: string
+          provider_reference: string | null
+          purpose: string
+          requested_by: string | null
+          status: string
+        }
+        Insert: {
+          agent?: string
+          amount_cents: number
+          approval?: string
+          budget_month: string
+          category: string
+          created_at?: string
+          currency?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          organization_id: string
+          over_budget?: boolean
+          paid_at?: string | null
+          payee: string
+          provider_reference?: string | null
+          purpose: string
+          requested_by?: string | null
+          status?: string
+        }
+        Update: {
+          agent?: string
+          amount_cents?: number
+          approval?: string
+          budget_month?: string
+          category?: string
+          created_at?: string
+          currency?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          organization_id?: string
+          over_budget?: boolean
+          paid_at?: string | null
+          payee?: string
+          provider_reference?: string | null
+          purpose?: string
+          requested_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_plans: {
         Row: {
           created_at: string
@@ -926,6 +997,41 @@ export type Database = {
           },
         ]
       }
+      organization_payment_settings: {
+        Row: {
+          auto_approve_limit_cents: number
+          monthly_budget_cents: number
+          organization_id: string
+          provider: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          auto_approve_limit_cents?: number
+          monthly_budget_cents?: number
+          organization_id: string
+          provider?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          auto_approve_limit_cents?: number
+          monthly_budget_cents?: number
+          organization_id?: string
+          provider?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_payment_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -1754,6 +1860,42 @@ export type Database = {
         }
         Returns: string
       }
+      request_agent_payment: {
+        Args: {
+          cents: number
+          helper: string
+          payee_name: string
+          payment_category: string
+          payment_purpose: string
+          workspace: string
+        }
+        Returns: {
+          agent: string
+          amount_cents: number
+          approval: string
+          budget_month: string
+          category: string
+          created_at: string
+          currency: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          organization_id: string
+          over_budget: boolean
+          paid_at: string | null
+          payee: string
+          provider_reference: string | null
+          purpose: string
+          requested_by: string | null
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "agent_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reserve_organizer_turn: {
         Args: {
           actor: string
@@ -1784,6 +1926,10 @@ export type Database = {
         Returns: undefined
       }
       retry_agent_task: { Args: { target_task: string }; Returns: undefined }
+      review_agent_payment: {
+        Args: { decision: string; target: string }
+        Returns: undefined
+      }
       review_community_event: {
         Args: {
           decision: string
@@ -1852,6 +1998,14 @@ export type Database = {
           workspace: string
         }
         Returns: string
+      }
+      save_payment_settings: {
+        Args: {
+          auto_limit_cents: number
+          budget_cents: number
+          workspace: string
+        }
+        Returns: undefined
       }
       save_steward_plan: {
         Args: {
