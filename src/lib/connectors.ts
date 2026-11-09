@@ -114,6 +114,21 @@ export const connectors: ConnectorDefinition[] = [
     risk: automationRisk,
   },
   {
+    id: "threads",
+    name: "Threads",
+    category: "social",
+    summary: "Short public conversations with neighbors and local organizations.",
+    agentWork: [
+      "Shares timely community updates",
+      "Replies to questions in your threads",
+      "Joins local conversations with useful tips",
+    ],
+    methods: ["browser"],
+    loginUrl: "https://www.threads.com/login",
+    commentControls: true,
+    risk: automationRisk,
+  },
+  {
     id: "linkedin",
     name: "LinkedIn",
     category: "social",
