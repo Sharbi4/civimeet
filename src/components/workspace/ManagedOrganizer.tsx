@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, Square, Sparkles, MoreHorizontal } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowUp, Square, MoreHorizontal, Copy, FileCheck2 } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
 import type { OrganizerThread } from "@/lib/organizer";
 import { parseChatIntent } from "@/lib/chat-intents";
@@ -20,10 +20,13 @@ export function ManagedOrganizer({
   thread,
   initialMessage = "",
   onDraft,
+  report,
 }: {
   thread: OrganizerThread;
   initialMessage?: string;
   onDraft?: (text: string) => void;
+  /** Civi's roll-up of every helper, shown at the top of the main conversation. */
+  report?: ReactNode;
 }) {
   const { db, organizationId, role } = useWorkspace();
   const actions = useChatActions();
@@ -202,19 +205,32 @@ export function ManagedOrganizer({
   const ready = state.configuration?.ready,
     active =
       busy || ["in_progress", "requires_action", "cancellation_requested"].includes(state.status);
+  useEffect(() => {
+    const reset = () => {
+      if (!active) void newConversation();
+    };
+    window.addEventListener("civimeet:new-chat", reset);
+    return () => window.removeEventListener("civimeet:new-chat", reset);
+  });
+  const empty = !state.messages.length && !busy;
+  const suggestions: [string, string, string][] = [
+    ["How are my helpers doing?", "A check-in on every connected account", "Give me today's report on all my helpers: what each one did, what needs me, and our spending."],
+    ["Plan a gathering", "Format, place, date and budget", "Help us plan our next community event."],
+    ["Find local partners", "Vendors, venues and nonprofits nearby", "Find local partners who fit our mission."],
+    ["Pay a vendor", "Within this month's budget", "Request a $250 deposit for the Reid Park pavilion."],
+  ];
   return (
-    <section className="civi-chat" aria-label="AI community organizer">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
-        <div>
-          <strong className="flex items-center gap-2">
-            <Sparkles size={18} /> Civi
-          </strong>
-          <p className="mt-1 text-sm text-slate-500">Your AI community organizer</p>
-        </div>
-        <div className="flex gap-2">
+    <section className="civi-chat cv-chat" aria-label="AI community organizer">
+      {(active || state.messages.length > 0) && (
+        <div className="absolute right-4 top-2 z-10 flex gap-2">
+          {active && (
+            <button type="button" className="cv-chip" onClick={() => void stop()}>
+              <Square size={13} /> Stop
+            </button>
+          )}
           <details className="civi-chat-menu">
-            <summary aria-label="Conversation options">
-              <MoreHorizontal size={20} />
+            <summary aria-label="Conversation options" className="cv-icon-btn">
+              <MoreHorizontal size={18} />
             </summary>
             <div>
               <button onClick={() => void refresh()} disabled={busy}>
@@ -228,124 +244,138 @@ export function ManagedOrganizer({
               )}
             </div>
           </details>
-          {active && (
-            <button type="button" className="ow-button" onClick={() => void stop()}>
-              <Square size={14} /> Stop task
-            </button>
-          )}
-        </div>
-      </header>
-      {!ready && state.status !== "loading" && (
-        <div className="m-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <strong>OpenAI organizer setup is pending</strong>
-          <p className="mt-1 text-sm">
-            Your organization information and existing research tools are available. The
-            conversational organizer needs its OpenAI server credentials before it can respond.
-          </p>
         </div>
       )}
       <div className="civi-chat-scroll" aria-live="polite">
-        {ready && !state.messages.length && !busy && (
-          <div className="civi-chat-welcome">
-            <span>
-              <Sparkles size={26} />
-            </span>
-            <h2>What shall we bring to life?</h2>
-            <p>
-              Tell me what you have in mind. We’ll work from your community’s mission and take it
-              from there.
-            </p>
-            <div>
-              <button onClick={() => setMessage("Help us plan our next community event.")}>
-                Plan a gathering
-              </button>
-              <button onClick={() => setMessage("Find local partners who fit our mission.")}>
-                Find local partners
-              </button>
+        {!ready && state.status !== "loading" && (
+          <div className="cv-thread">
+            <div className="cv-card">
+              <strong>Civi is almost ready</strong>
+              <p className="!mb-0 mt-1 text-sm text-muted-foreground">
+                The conversational organizer needs its ChatGPT server key before it can reply. Your
+                organization information and research tools are still available.
+              </p>
             </div>
           </div>
         )}
-        {state.hasOlderMessages && (
-          <p className="text-xs text-slate-500">Showing the most recent saved messages.</p>
+        {ready && empty && (
+          <div className="cv-greeting">
+            <span className="cv-civi-avatar h-11 w-11" aria-hidden="true">
+              <img src="/brand/civimeet-mark.svg" alt="" className="h-6 w-6 brightness-0 invert" />
+            </span>
+            <h2>
+              Hi, I’m <span>Civi</span>.
+            </h2>
+            <p>What are we bringing your community together for today?</p>
+            {report}
+            <div className="cv-suggestions">
+              {suggestions.map(([title, hint, prompt]) => (
+                <button key={title} type="button" className="cv-suggestion" onClick={() => setMessage(prompt)}>
+                  <b>{title}</b>
+                  <small>{hint}</small>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
-        {actionRows.length > 0 && (
-          <details className="civi-chat-history">
-            <summary>Workspace activity</summary>
-            {actionRows.map((action) => (
-              <ActionTurn
-                key={action.id}
-                action={action}
-                busy={busy || Boolean(actions?.busy)}
-                onContinue={(text) => setMessage(text)}
-                onRetry={() => {
-                  void actions?.run(action.action, action.message, thread);
-                }}
-              />
-            ))}
-          </details>
-        )}
-        {state.messages.map((m) => (
-          <article
-            key={m.id}
-            className={`civi-message ${m.role === "user" ? "civi-message-user" : "civi-message-agent"}`}
-          >
-            <small className="font-semibold text-blue-700">
-              {m.role === "user" ? "Your team" : "Civi · AI organizer"}
-            </small>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{m.text}</p>
-            {m.role === "assistant" && onDraft && (
-              <button className="ow-button mt-3" onClick={() => onDraft(m.text)}>
-                Prepare for review
-              </button>
+        {!empty && (
+          <div className="cv-thread">
+            {state.hasOlderMessages && (
+              <p className="text-center text-xs text-muted-foreground">Showing the most recent saved messages.</p>
             )}
-          </article>
-        ))}
-        {busy && Object.values(parts).length > 0 && (
-          <article className="rounded-xl border p-4">
-            <small>Civi · AI organizer</small>
-            <p className="whitespace-pre-wrap text-sm leading-6">
-              {Object.values(parts).join("\n\n")}
-            </p>
-          </article>
-        )}
-        {activity && (
-          <p className="text-sm text-blue-700" role="status">
-            {activity}
-          </p>
+            {actionRows.length > 0 && (
+              <details className="civi-chat-history">
+                <summary>Workspace activity</summary>
+                {actionRows.map((action) => (
+                  <ActionTurn
+                    key={action.id}
+                    action={action}
+                    busy={busy || Boolean(actions?.busy)}
+                    onContinue={(text) => setMessage(text)}
+                    onRetry={() => {
+                      void actions?.run(action.action, action.message, thread);
+                    }}
+                  />
+                ))}
+              </details>
+            )}
+            {state.messages.map((m) =>
+              m.role === "user" ? (
+                <article key={m.id} className="cv-msg-user" aria-label="Your team">
+                  {m.text}
+                </article>
+              ) : (
+                <article key={m.id} className="cv-msg-agent" aria-label="Civi">
+                  <span className="cv-civi-avatar mt-0.5 h-7 w-7" aria-hidden="true">
+                    <img src="/brand/civimeet-mark.svg" alt="" className="h-4 w-4 brightness-0 invert" />
+                  </span>
+                  <div>
+                    {m.text}
+                    <div className="cv-msg-actions">
+                      <button type="button" onClick={() => void navigator.clipboard?.writeText(m.text)}>
+                        <Copy size={13} className="mr-1 inline" /> Copy
+                      </button>
+                      {onDraft && (
+                        <button type="button" onClick={() => onDraft(m.text)}>
+                          <FileCheck2 size={13} className="mr-1 inline" /> Prepare for review
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ),
+            )}
+            {busy && Object.values(parts).length > 0 && (
+              <article className="cv-msg-agent" aria-label="Civi">
+                <span className="cv-civi-avatar mt-0.5 h-7 w-7 animate-pulse" aria-hidden="true" />
+                <div>{Object.values(parts).join("\n\n")}</div>
+              </article>
+            )}
+            {activity && (
+              <p className="text-sm text-muted-foreground" role="status">
+                {activity}
+              </p>
+            )}
+          </div>
         )}
         {error && (
-          <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800" role="alert">
-            {error}
-          </p>
+          <div className="cv-thread">
+            <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          </div>
         )}
       </div>
       {ready && (
-        <div className="civi-composer">
-          {state.needsResume && !busy && (
-            <button className="ow-button mb-3" onClick={() => void run("resume")}>
-              Continue saved task
-            </button>
-          )}
-          {state.status === "in_progress" && !busy && (
-            <button className="ow-button mb-3" onClick={() => void run("resume")}>
-              Reconnect to live task
-            </button>
+        <div className="cv-composer-wrap">
+          {(state.needsResume || state.status === "in_progress") && !busy && (
+            <div className="mx-auto mb-2 flex max-w-[760px] gap-2">
+              {state.needsResume && (
+                <button className="cv-chip" onClick={() => void run("resume")}>
+                  Continue saved task
+                </button>
+              )}
+              {state.status === "in_progress" && (
+                <button className="cv-chip" onClick={() => void run("resume")}>
+                  Reconnect to live task
+                </button>
+              )}
+            </div>
           )}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               void run("send");
             }}
-            className="flex gap-2"
+            className="cv-composer"
           >
             <textarea
               aria-label="Message your community organizer"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               maxLength={6000}
-              rows={2}
-              className="min-w-0 flex-1 rounded-xl border p-3"
-              placeholder="Message Civi…"
+              rows={1}
+              placeholder="Message Civi"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
@@ -354,17 +384,20 @@ export function ManagedOrganizer({
               }}
               disabled={role === "viewer"}
             />
-            <button
-              aria-label="Send to organizer"
-              className="ow-button ow-button-primary self-end"
-              disabled={active || !message.trim() || role === "viewer"}
-            >
-              <ArrowUp size={18} />
-            </button>
+            <div className="cv-composer-row">
+              <small className="text-[12px] text-muted-foreground">
+                Civi asks before anything is posted, sent or paid above your limit.
+              </small>
+              <button
+                aria-label="Send to organizer"
+                className="cv-send"
+                disabled={active || !message.trim() || role === "viewer"}
+              >
+                <ArrowUp size={18} />
+              </button>
+            </div>
           </form>
-          <p className="mt-2 text-center text-[11px] text-slate-400">
-            Your community. Your voice. Your final say.
-          </p>
+          <p className="cv-fineprint">Your community. Your voice. Your final say.</p>
         </div>
       )}
     </section>
