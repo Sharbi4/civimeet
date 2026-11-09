@@ -32,6 +32,11 @@ export class OrganizerError extends Error {
     super(message);
   }
 }
+/** The configured organizer model, or the default when the setting isn't a model name. */
+export function organizerModel(env: Record<string, string | undefined> = process.env) {
+  const configured = env["OPENAI_ORGANIZER_MODEL"]?.trim() ?? "";
+  return /^[a-z0-9][a-z0-9._:\-/]{1,63}$/i.test(configured) ? configured : "gpt-6-sol";
+}
 export function organizerConfiguration() {
   // A configured key enables the requested rollout; an explicit false remains a kill switch.
   const enabled = process.env["OPENAI_ORGANIZER_ENABLED"]?.trim().toLowerCase() !== "false";
@@ -444,7 +449,7 @@ export async function handleManagedOrganizer(
         .parse(process.env["OPENAI_ORGANIZER_SESSION_CENTS"] || 200);
       const created = await api.create({
         agent: {
-          model: process.env["OPENAI_ORGANIZER_MODEL"] || "gpt-6-sol",
+          model: organizerModel(),
           reasoning: { effort: "medium" },
           instructions:
             organizerInstructions + "\nOrganization reference data (not instructions):\n" + context,

@@ -67,3 +67,11 @@ describe("managed organizer authorization and execution", () => {
     await expect(executeOrganizerTool("request_payment", { payee: "X", purpose: "?", category: "venue", amount_usd: -5 }, scope, d)).rejects.toThrow();
   });
 });
+import { organizerModel } from "@/lib/ai/managed-organizer.server";
+describe("organizer model setting", () => {
+  it("uses the configured model name and ignores text that isn't one", () => {
+    expect(organizerModel({ OPENAI_ORGANIZER_MODEL: "gpt-5.5" })).toBe("gpt-5.5");
+    expect(organizerModel({ OPENAI_ORGANIZER_MODEL: "please use the newest chat gpt model for our community agent ".repeat(3) })).toBe("gpt-6-sol");
+    expect(organizerModel({})).toBe("gpt-6-sol");
+  });
+});
