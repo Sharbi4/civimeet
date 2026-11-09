@@ -475,18 +475,42 @@ function OrganizerWorkspace({
   const pending = data.approvals.filter((a) => a.status === "pending");
   const admin = role === "admin" || role === "owner";
   const editor = role !== "viewer";
-  // Every connected community or events platform gets its own agent conversation.
-  const platformChats: RailChat[] = connectorCatalog
-    .filter(
-      (item) =>
-        (item.category === "social" || item.category === "events") &&
-        data.connected.includes(item.id),
-    )
-    .map((item) => ({
-      id: platformThread(item.id),
-      label: `${item.name} Agent`,
-      connector: item.id,
-    }));
+  // Connecting a community or events platform starts its own helper agent and conversation.
+  const helperStatus = (id: string) =>
+    data.connectorStatus.find((row) => row.connector === id)?.status ??
+    (data.connected.includes(id) ? "connected" : "");
+  const helperDefinitions = connectorCatalog.filter(
+    (item) =>
+      (item.category === "social" || item.category === "events") &&
+      ["connected", "needs_attention", "needs_verification"].includes(helperStatus(item.id)),
+  );
+  const platformChats: RailChat[] = helperDefinitions.map((item) => ({
+    id: platformThread(item.id),
+    label: `${item.name} Agent`,
+    connector: item.id,
+    status: helperStatus(item.id) === "connected" ? "connected" : "needs_attention",
+  }));
+  const helperReport = (
+    <HelperReport
+      organization={data.name}
+      helpers={helperDefinitions.map((item) => ({
+        connector: item.id,
+        name: item.name,
+        status: helperStatus(item.id),
+        detail: data.connectorStatus.find((row) => row.connector === item.id)?.detail,
+      }))}
+      pendingApprovals={pending.length}
+      spend={data.payments}
+      onOpenHelper={(id) => {
+        setThread(platformThread(id) as ChatThread);
+        setChatSeed("");
+        navigate("chat");
+      }}
+      onOpenSettings={() => openSettings("connections")}
+      onOpenApprovals={() => navigate("approvals")}
+      onOpenPayments={() => openSettings("payments")}
+    />
+  );
   const chats: RailChat[] = [{ id: "main", label: threadLabels.main }, ...platformChats];
   const topics: RailChat[] = organizerThreads
     .filter((item) => item !== "main")
@@ -654,6 +678,11 @@ function OrganizerWorkspace({
     setView(next);
     setNotice("");
   };
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("connections");
+  function openSettings(tab: SettingsTab) {
+    setSettingsTab(tab);
+    navigate("connectors");
+  }
   function openChat(text: string) {
     setChatSeed(text);
     setThread("main");
