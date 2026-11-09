@@ -19,7 +19,7 @@ export function ManagedOrganizer({
   onDraft,
   report,
 }: {
-  thread: ChatThread;
+  thread: ChatThread | "discover";
   initialMessage?: string;
   onDraft?: (text: string) => void;
   /** Civi's roll-up of every helper, shown at the top of the main conversation. */
