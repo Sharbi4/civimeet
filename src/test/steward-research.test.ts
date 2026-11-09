@@ -44,16 +44,14 @@ describe("Authenticated steward research", () => {
   it("uses the saved event area instead of caller geography before reserving and researching", async () => {
     const deps = {
       ...dependencies(),
-      event: vi
-        .fn()
-        .mockResolvedValue({
-          id: "event",
-          title: "Local fair",
-          purpose: "Meet neighbors",
-          geographic_area: "Orlando, Florida",
-          revision: 2,
-          status: "draft",
-        }),
+      event: vi.fn().mockResolvedValue({
+        id: "event",
+        title: "Local fair",
+        purpose: "Meet neighbors",
+        geographic_area: "Orlando, Florida",
+        revision: 2,
+        status: "draft",
+      }),
     };
     const eventId = "8e0cf07d-a77a-4833-81b3-9b87f9edcf5c";
     const response = await handleStewardResearch(
@@ -257,4 +255,39 @@ it("accepts the research query/type contract through the same authenticated rese
     expect.objectContaining({ question: input.question, purpose: "venues" }),
     expect.any(String),
   );
+});
+
+describe("Platform agent memory", () => {
+  it("accepts per-platform threads and saves what the agent learned after the answer is stored", async () => {
+    const deps = { ...dependencies(), remember: vi.fn().mockResolvedValue(undefined) };
+    const response = await handleStewardResearch(
+      request({ ...input, threadKey: "platform_facebook" }),
+      deps,
+    );
+    expect(response.status).toBe(200);
+    expect(deps.finish).toHaveBeenCalledWith("run", result, null);
+    expect(deps.remember).toHaveBeenCalledWith(
+      expect.objectContaining({ threadKey: "platform_facebook" }),
+      "run",
+      result,
+    );
+    expect(deps.finish.mock.invocationCallOrder[0]).toBeLessThan(
+      deps.remember.mock.invocationCallOrder[0]!,
+    );
+  });
+  it("keeps the saved answer when a memory note fails", async () => {
+    const deps = { ...dependencies(), remember: vi.fn().mockRejectedValue(new Error("down")) };
+    const response = await handleStewardResearch(
+      request({ ...input, threadKey: "platform_nextdoor" }),
+      deps,
+    );
+    expect(response.status).toBe(200);
+  });
+  it("rejects thread keys outside the known shapes", async () => {
+    const response = await handleStewardResearch(
+      request({ ...input, threadKey: "platform_../../x" }),
+      dependencies(),
+    );
+    expect(response.status).toBe(400);
+  });
 });

@@ -2,7 +2,7 @@ import type { ResearchResult } from "./research";
 export const organizerThreads = ["main", "venue", "outreach", "volunteers"] as const;
 export type OrganizerThread = (typeof organizerThreads)[number];
 export const threadLabels: Record<OrganizerThread, string> = {
-  main: "Main Organizer Chat",
+  main: "Main Agent",
   venue: "Venue Research",
   outreach: "Outreach",
   volunteers: "Volunteers",
@@ -15,9 +15,25 @@ export const threadPrompts: Record<OrganizerThread, string> = {
   volunteers:
     "Prepare volunteer roles, an opt-in sign-up plan, and a briefing checklist for our event.",
 };
+/** Each connected platform gets its own agent conversation, keyed by connector id. */
+export type PlatformThread = `platform_${string}`;
+export type ChatThread = OrganizerThread | PlatformThread;
+export const platformThread = (connector: string): PlatformThread => `platform_${connector}`;
+export const isPlatformThread = (thread: string): thread is PlatformThread =>
+  thread.startsWith("platform_");
+export function chatLabel(thread: ChatThread | "discover", platformName?: string) {
+  if (thread === "discover") return "Research your community";
+  if (isPlatformThread(thread)) return `${platformName ?? "Platform"} Agent`;
+  return threadLabels[thread];
+}
+export function chatPrompt(thread: ChatThread, platformName?: string) {
+  if (isPlatformThread(thread))
+    return `What should our ${platformName ?? "platform"} agent contribute this week? Suggest helpful posts, comments and groups to join, and draft the first one for review.`;
+  return threadPrompts[thread];
+}
 export type OrganizerTurn = {
   id: string;
-  input: { question: string; threadKey?: OrganizerThread; location?: string; eventId?: string };
+  input: { question: string; threadKey?: string; location?: string; eventId?: string };
   status: string;
   result: ResearchResult | null;
   error: string | null;
@@ -67,7 +83,7 @@ export const demoApprovals: ReviewItem[] = [
   },
 ];
 export const demoReplies: Record<OrganizerThread, string> = {
-  main: "Here’s the working plan for the Neighborhood Resource Fair in Tucson next month.\n\n1. Confirm which resources residents need.\n2. Research local partners and compare accessible venues.\n3. Shortlist food trucks and confirm quotes.\n4. Build the timeline, volunteer roles, and RSVP plan.\n5. Prepare invitations for review.\n\nThe sample Facebook draft, venue hold, and $250 deposit are waiting in Approvals. Nothing has been posted, booked, or paid. These are illustrative examples, not completed research.",
+  main: "Love it. A resource fair in Tucson next month is a great way to meet neighbors.\n\nAre you picturing it in person, and roughly how many people? And do you already have a spot in mind, or should I start looking at venues near you?\n\n(Sample conversation. The draft post, venue hold and $250 deposit in Approvals are illustrative; nothing has been posted, booked or paid.)",
   venue:
     "Compare Reid Park Community Center and other accessible community spaces. Confirm capacity for 200, availability, permits, accessibility, and full cost directly. The prototype has no verified venue quotes or citations; run live Discover research in your organization for evidence.",
   outreach:

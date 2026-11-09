@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, RotateCcw, Square, Sparkles } from "lucide-react";
 import { useWorkspace } from "./WorkspaceGate";
 import type { OrganizerThread } from "@/lib/organizer";
+import { parseChatIntent } from "@/lib/chat-intents";
+import { useChatActions, type ChatActionRecord } from "./ChatActions";
+import { ActionTurn } from "./OrganizerChat";
 
 type Message = { id: string; role: string; text: string };
 type State = {
@@ -23,6 +26,13 @@ export function ManagedOrganizer({
   onDraft?: (text: string) => void;
 }) {
   const { db, organizationId, role } = useWorkspace();
+  const actions = useChatActions();
+  const [actionRows, setActionRows] = useState<ChatActionRecord[]>([]);
+  useEffect(() => {
+    let active = true;
+    void db.from("organizer_chat_actions").select("id,thread_key,message,action,status,reply,resume_goal,created_at").eq("organization_id", organizationId).eq("thread_key", thread).order("created_at", { ascending: false }).limit(20).then(r => { if (active && r.data) setActionRows((r.data as ChatActionRecord[]).reverse()); });
+    return () => { active = false; };
+  }, [db, organizationId, thread, actions?.version]);
   const [state, setState] = useState<State>({ status: "loading", messages: [] });
   const [message, setMessage] = useState(initialMessage),
     [busy, setBusy] = useState(false);
@@ -76,6 +86,14 @@ export function ManagedOrganizer({
   }, [busy, state.status, refresh]);
   async function run(action: "send" | "resume") {
     if (busy || role === "viewer" || (action === "send" && !message.trim())) return;
+    const intent = action === "send" ? parseChatIntent(message.trim()) : null;
+    if (intent && actions) {
+      setBusy(true); setError("");
+      try { await actions.run(intent, message.trim(), thread); setMessage(""); }
+      catch { setError("The workspace action could not complete. Check its saved status."); }
+      finally { if (alive.current) setBusy(false); }
+      return;
+    }
     setBusy(true);
     setError("");
     setParts({});
@@ -211,6 +229,7 @@ export function ManagedOrganizer({
         {state.hasOlderMessages && (
           <p className="text-xs text-slate-500">Showing the most recent saved messages.</p>
         )}
+        {actionRows.map(action => <ActionTurn key={action.id} action={action} busy={busy || Boolean(actions?.busy)} onContinue={text => setMessage(text)} onRetry={() => { void actions?.run(action.action, action.message, thread); }} />)}
         {state.messages.map((m) => (
           <article
             key={m.id}

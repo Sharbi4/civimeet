@@ -28,16 +28,20 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProductRouteImport } from './routes/product'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VendorsRouteImport } from './routes/vendors'
+import { Route as ApiConnectorsRouteImport } from './routes/api.connectors'
 import { Route as ApiOrganizerRouteImport } from './routes/api.organizer'
 import { Route as ApiResearchRouteImport } from './routes/api.research'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
+import { Route as ApiAgentBrowserRouteImport } from './routes/api.agent.browser'
 import { Route as ApiAgentResearchRouteImport } from './routes/api.agent.research'
+import { Route as ApiAgentRunRouteImport } from './routes/api.agent.run'
 import { Route as ApiAgentWorkRouteImport } from './routes/api.agent.work'
 import { Route as ApiAnalyticsAnalyzeRouteImport } from './routes/api.analytics.analyze'
 import { Route as ApiBrowserCommandRouteImport } from './routes/api.browser.command'
 import { Route as ApiOrganizerVoiceRouteImport } from './routes/api.organizer.voice'
 import { Route as ApiStewardResearchRouteImport } from './routes/api.steward.research'
+import { Route as ApiConnectorsOauthCallbackRouteImport } from './routes/api.connectors.oauth.callback'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
@@ -135,6 +139,11 @@ const VendorsRoute = VendorsRouteImport.update({
   path: '/vendors',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiConnectorsRoute = ApiConnectorsRouteImport.update({
+  id: '/api/connectors',
+  path: '/api/connectors',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOrganizerRoute = ApiOrganizerRouteImport.update({
   id: '/api/organizer',
   path: '/api/organizer',
@@ -155,9 +164,19 @@ const SolutionsSlugRoute = SolutionsSlugRouteImport.update({
   path: '/solutions/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentBrowserRoute = ApiAgentBrowserRouteImport.update({
+  id: '/api/agent/browser',
+  path: '/api/agent/browser',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentResearchRoute = ApiAgentResearchRouteImport.update({
   id: '/api/agent/research',
   path: '/api/agent/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentRunRoute = ApiAgentRunRouteImport.update({
+  id: '/api/agent/run',
+  path: '/api/agent/run',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAgentWorkRoute = ApiAgentWorkRouteImport.update({
@@ -185,6 +204,12 @@ const ApiStewardResearchRoute = ApiStewardResearchRouteImport.update({
   path: '/api/steward/research',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiConnectorsOauthCallbackRoute =
+  ApiConnectorsOauthCallbackRouteImport.update({
+    id: '/oauth/callback',
+    path: '/oauth/callback',
+    getParentRoute: () => ApiConnectorsRoute,
+  } as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
@@ -212,16 +237,20 @@ export interface FileRoutesByFullPath {
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/connectors': typeof ApiConnectorsRouteWithChildren
   '/api/organizer': typeof ApiOrganizerRouteWithChildren
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
+  '/api/agent/browser': typeof ApiAgentBrowserRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/agent/run': typeof ApiAgentRunRoute
   '/api/agent/work': typeof ApiAgentWorkRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
+  '/api/connectors/oauth/callback': typeof ApiConnectorsOauthCallbackRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
@@ -244,16 +273,20 @@ export interface FileRoutesByTo {
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/connectors': typeof ApiConnectorsRouteWithChildren
   '/api/organizer': typeof ApiOrganizerRouteWithChildren
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
+  '/api/agent/browser': typeof ApiAgentBrowserRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/agent/run': typeof ApiAgentRunRoute
   '/api/agent/work': typeof ApiAgentWorkRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
+  '/api/connectors/oauth/callback': typeof ApiConnectorsOauthCallbackRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
@@ -277,16 +310,20 @@ export interface FileRoutesById {
   '/product': typeof ProductRoute
   '/terms': typeof TermsRoute
   '/vendors': typeof VendorsRoute
+  '/api/connectors': typeof ApiConnectorsRouteWithChildren
   '/api/organizer': typeof ApiOrganizerRouteWithChildren
   '/api/research': typeof ApiResearchRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
+  '/api/agent/browser': typeof ApiAgentBrowserRoute
   '/api/agent/research': typeof ApiAgentResearchRoute
+  '/api/agent/run': typeof ApiAgentRunRoute
   '/api/agent/work': typeof ApiAgentWorkRoute
   '/api/analytics/analyze': typeof ApiAnalyticsAnalyzeRoute
   '/api/browser/command': typeof ApiBrowserCommandRoute
   '/api/organizer/voice': typeof ApiOrganizerVoiceRoute
   '/api/steward/research': typeof ApiStewardResearchRoute
+  '/api/connectors/oauth/callback': typeof ApiConnectorsOauthCallbackRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
@@ -311,16 +348,20 @@ export interface FileRouteTypes {
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/connectors'
     | '/api/organizer'
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
+    | '/api/agent/browser'
     | '/api/agent/research'
+    | '/api/agent/run'
     | '/api/agent/work'
     | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/organizer/voice'
     | '/api/steward/research'
+    | '/api/connectors/oauth/callback'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -343,16 +384,20 @@ export interface FileRouteTypes {
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/connectors'
     | '/api/organizer'
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions'
+    | '/api/agent/browser'
     | '/api/agent/research'
+    | '/api/agent/run'
     | '/api/agent/work'
     | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/organizer/voice'
     | '/api/steward/research'
+    | '/api/connectors/oauth/callback'
     | '/lovable/email/transactional/preview'
   id:
     | '__root__'
@@ -375,16 +420,20 @@ export interface FileRouteTypes {
     | '/product'
     | '/terms'
     | '/vendors'
+    | '/api/connectors'
     | '/api/organizer'
     | '/api/research'
     | '/solutions/$slug'
     | '/solutions/'
+    | '/api/agent/browser'
     | '/api/agent/research'
+    | '/api/agent/run'
     | '/api/agent/work'
     | '/api/analytics/analyze'
     | '/api/browser/command'
     | '/api/organizer/voice'
     | '/api/steward/research'
+    | '/api/connectors/oauth/callback'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
@@ -408,11 +457,14 @@ export interface RootRouteChildren {
   ProductRoute: typeof ProductRoute
   TermsRoute: typeof TermsRoute
   VendorsRoute: typeof VendorsRoute
+  ApiConnectorsRoute: typeof ApiConnectorsRouteWithChildren
   ApiOrganizerRoute: typeof ApiOrganizerRouteWithChildren
   ApiResearchRoute: typeof ApiResearchRoute
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
+  ApiAgentBrowserRoute: typeof ApiAgentBrowserRoute
   ApiAgentResearchRoute: typeof ApiAgentResearchRoute
+  ApiAgentRunRoute: typeof ApiAgentRunRoute
   ApiAgentWorkRoute: typeof ApiAgentWorkRoute
   ApiAnalyticsAnalyzeRoute: typeof ApiAnalyticsAnalyzeRoute
   ApiBrowserCommandRoute: typeof ApiBrowserCommandRoute
@@ -555,6 +607,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VendorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/connectors': {
+      id: '/api/connectors'
+      path: '/api/connectors'
+      fullPath: '/api/connectors'
+      preLoaderRoute: typeof ApiConnectorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/organizer': {
       id: '/api/organizer'
       path: '/api/organizer'
@@ -583,11 +642,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SolutionsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/browser': {
+      id: '/api/agent/browser'
+      path: '/api/agent/browser'
+      fullPath: '/api/agent/browser'
+      preLoaderRoute: typeof ApiAgentBrowserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent/research': {
       id: '/api/agent/research'
       path: '/api/agent/research'
       fullPath: '/api/agent/research'
       preLoaderRoute: typeof ApiAgentResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent/run': {
+      id: '/api/agent/run'
+      path: '/api/agent/run'
+      fullPath: '/api/agent/run'
+      preLoaderRoute: typeof ApiAgentRunRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/agent/work': {
@@ -625,6 +698,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStewardResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/connectors/oauth/callback': {
+      id: '/api/connectors/oauth/callback'
+      path: '/oauth/callback'
+      fullPath: '/api/connectors/oauth/callback'
+      preLoaderRoute: typeof ApiConnectorsOauthCallbackRouteImport
+      parentRoute: typeof ApiConnectorsRoute
+    }
     '/lovable/email/transactional/preview': {
       id: '/lovable/email/transactional/preview'
       path: '/lovable/email/transactional/preview'
@@ -634,6 +714,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface ApiConnectorsRouteChildren {
+  ApiConnectorsOauthCallbackRoute: typeof ApiConnectorsOauthCallbackRoute
+}
+
+const ApiConnectorsRouteChildren: ApiConnectorsRouteChildren = {
+  ApiConnectorsOauthCallbackRoute: ApiConnectorsOauthCallbackRoute,
+}
+
+const ApiConnectorsRouteWithChildren = ApiConnectorsRoute._addFileChildren(
+  ApiConnectorsRouteChildren,
+)
 
 interface ApiOrganizerRouteChildren {
   ApiOrganizerVoiceRoute: typeof ApiOrganizerVoiceRoute
@@ -667,11 +759,14 @@ const rootRouteChildren: RootRouteChildren = {
   ProductRoute: ProductRoute,
   TermsRoute: TermsRoute,
   VendorsRoute: VendorsRoute,
+  ApiConnectorsRoute: ApiConnectorsRouteWithChildren,
   ApiOrganizerRoute: ApiOrganizerRouteWithChildren,
   ApiResearchRoute: ApiResearchRoute,
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
+  ApiAgentBrowserRoute: ApiAgentBrowserRoute,
   ApiAgentResearchRoute: ApiAgentResearchRoute,
+  ApiAgentRunRoute: ApiAgentRunRoute,
   ApiAgentWorkRoute: ApiAgentWorkRoute,
   ApiAnalyticsAnalyzeRoute: ApiAnalyticsAnalyzeRoute,
   ApiBrowserCommandRoute: ApiBrowserCommandRoute,

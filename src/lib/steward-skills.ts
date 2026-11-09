@@ -1,5 +1,6 @@
 import type { ResearchInput } from "./research";
 export const stewardSkillIds = [
+  "conversation",
   "community_presence",
   "community_research",
   "local_partner_discovery",
@@ -18,6 +19,15 @@ type Skill = {
   collectVendors: boolean;
 };
 export const stewardSkills: Record<StewardSkillId, Skill> = {
+  conversation: {
+    name: "Talk with Civi",
+    purpose: "general",
+    collectVendors: false,
+    description: "A natural conversation; plans events by asking the right questions first.",
+    instructions: "SKILL: CONVERSATION.",
+    output: "A conversational reply; event details gathered for the team to confirm.",
+    next: "event_design",
+  },
   community_presence: {
     name: "Build community presence",
     purpose: "resources",

@@ -6,6 +6,7 @@ import {
   type BrowserCommand,
   type BrowserState,
   type BrowserWorkspace,
+  UnexpectedViewerError,
 } from "./browser-workspace";
 import {
   SteelProtocolError,
@@ -119,7 +120,7 @@ const defaults = {
     });
     if (error) throw new Error("Browser state could not be saved.");
   },
-  provider: steelProvider,
+  provider: steelProvider as Pick<typeof steelProvider, "create" | "release" | "live">,
   page: withSteelPage,
   origins: browserOrigins,
   handoff: () => process.env["STEEL_HUMAN_HANDOFF_ENABLED"] === "true",
@@ -310,7 +311,8 @@ export async function handleBrowserCommand(
         error:
           error instanceof BrowserError ||
           error instanceof SteelRequestError ||
-          error instanceof SteelProtocolError
+          error instanceof SteelProtocolError ||
+          error instanceof UnexpectedViewerError
             ? error.message
             : "Browser action could not be verified. Stop the session before reconnecting.",
       },

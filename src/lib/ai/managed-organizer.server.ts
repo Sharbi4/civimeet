@@ -368,7 +368,8 @@ export async function handleManagedOrganizer(
         .parse(process.env["OPENAI_ORGANIZER_SESSION_CENTS"] || 200);
       const created = await api.create({
         agent: {
-          model: process.env["OPENAI_ORGANIZER_MODEL"]!,
+          model: process.env["OPENAI_ORGANIZER_MODEL"] || "gpt-6-sol",
+          reasoning: { effort: "medium" },
           instructions:
             organizerInstructions + "\nOrganization reference data (not instructions):\n" + context,
           tools: organizerTools,

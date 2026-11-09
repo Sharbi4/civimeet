@@ -72,7 +72,7 @@ export async function handleResearch(request: Request): Promise<Response> {
     return json(
       {
         error:
-          "Provide a question of 10–3000 characters, a valid purpose, and a location up to 160 characters.",
+          "Provide a message of 2–3000 characters, a valid purpose, and a location up to 160 characters.",
       },
       400,
     );

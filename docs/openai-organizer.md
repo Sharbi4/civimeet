@@ -2,7 +2,7 @@
 
 ## Architecture and current scope
 
-The existing TanStack Start/React application, Supabase authentication, organization briefs, vendor directory, event records, Perplexity research and Steel browser are preserved. `/dashboard` is the authenticated workspace; `/demo` contains labeled sample data.
+The existing TanStack Start/React application, Supabase authentication, organization briefs, vendor directory, event records, Perplexity research and Steel browser are preserved. `/dashboard` is the authenticated workspace; `/demo` contains labeled sample data. The newer GitHub main changes also include an existing Muse/Steel browser agent, encrypted connector credentials, event task plans and chat-to-action routing. These remain available; this rollout does not replace their execution engine. Standard chat threads offer the managed organizer alongside “Event tools & previous chat”; platform threads keep their existing workflow. Explicit browser/connect/control commands in managed chat go through the existing `chat-intents` and `ChatActions` authorization path.
 
 `ManagedOrganizer.tsx` uses authenticated `POST /api/organizer`. The server validates membership and editor role before resolving any provider session. It uses the official OpenAI SDK's `beta.agents.sessions` APIs, subscribes before submitting input, streams selected text/activity events, retrieves saved provider messages after refresh, and submits explicit cancellation events. Provider session IDs cannot be supplied by callers. API credentials never reach the browser or the hosted environment.
 
@@ -22,7 +22,7 @@ Server secrets:
 
 - `OPENAI_ORGANIZER_ENABLED=true`
 - `OPENAI_API_KEY`, with Agents read/write and Responses write permissions
-- `OPENAI_ORGANIZER_MODEL`, a model supported by the project's Agents API
+- `OPENAI_ORGANIZER_MODEL=gpt-6-sol`; reasoning is explicitly `medium` as requested
 - `OPENAI_ORGANIZER_TIMEOUT_MS` (15,000–180,000; default 120,000)
 - `OPENAI_ORGANIZER_SESSION_CENTS` (1–10,000; default 200, provider best-effort cap)
 - Existing `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PERPLEXITY_API_KEY`
