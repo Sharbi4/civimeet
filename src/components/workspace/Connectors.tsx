@@ -301,8 +301,7 @@ export function ConnectorList({
             Connections
           </h2>
           <p className="!mb-0 max-w-xl text-[14px] text-slate-500">
-            Sign your agent in where your community lives. It works from these accounts to post,
-            comment, message vendors and run events.
+            Manage official account connections and encrypted saved logins. OpenAI browser sign-in and takeover are not available yet.
           </p>
         </div>
         <div className="flex items-center gap-2 text-[13px]">
@@ -517,7 +516,7 @@ function ConnectorItem({
         <div id={panelId} className="space-y-5 px-5 pb-6 sm:pl-[78px]">
           <WorkChips items={definition.agentWork} />
           {notice && <NoticeLine notice={notice} />}
-          {row?.detail && !notice && status !== "connected" && (
+          {row?.detail && !notice && status !== "connected" && row.method === "oauth" && (
             <NoticeLine
               notice={{ tone: status === "awaiting_sign_in" ? "info" : "warn", text: row.detail }}
             />
@@ -1131,7 +1130,7 @@ function WorkChips({ items }: { items: string[] }) {
   return (
     <div>
       <p className="!mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-        What your agent does here
+        Planned uses for this connection
       </p>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
