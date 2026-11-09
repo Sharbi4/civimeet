@@ -1600,3 +1600,22 @@ body:has(.organizer-frame) { overflow:hidden; }
   .cv-split-open { grid-template-columns: minmax(0, 1fr); }
   .cv-computer { position: fixed; inset: 0 0 0 auto; z-index: 50; width: min(560px, 100vw); height: 100dvh; box-shadow: -20px 0 50px -24px oklch(0.2 0.02 260 / 0.4); }
 }
+
+/* Helper and sample conversations share the same quiet chat look. */
+.cv-app .ow-chat-thread { max-width: none; height: calc(100dvh - 56px); min-height: 0; background: transparent; }
+.cv-app .ow-chat-thread > header { border: 0; padding: 6px 20px 0; margin: 0 auto; width: 100%; max-width: 800px; }
+.cv-app .ow-chat-thread > header h2 { font-size: 22px; letter-spacing: -.025em; }
+.cv-app .ow-chat-thread > header p { font-size: 13px; color: var(--muted-foreground); }
+.cv-app .ow-messages { padding: 18px max(20px, calc((100% - 760px) / 2)) 24px; }
+.cv-app .ow-user-message { margin: 0 0 24px auto; border-radius: 22px; background: var(--muted); padding: 10px 16px; font-size: 15px; line-height: 1.6; max-width: 78%; }
+.cv-app .ow-agent-message { font-size: 15px; line-height: 1.7; margin-bottom: 30px; }
+.cv-app .ow-agent-message > strong { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-foreground); font-weight: 600; }
+.cv-app .ow-agent-message > strong::before { content: ""; display: inline-block; height: 22px; width: 22px; border-radius: 999px; background: var(--gradient-civi); }
+.cv-app .ow-composer { border: 0; padding: 4px max(20px, calc((100% - 760px) / 2)) 18px; }
+.cv-app .ow-composer textarea { min-height: 56px; border-radius: 22px; border: 1px solid var(--border); background: var(--surface-raised); box-shadow: var(--shadow-composer); padding: 14px 18px; font-size: 15px; resize: none; }
+.cv-app .ow-composer > div { padding: 0 6px; }
+.cv-app .ow-composer span { font-size: 11.5px; color: var(--muted-foreground); }
+.cv-app .ow-composer button { border-radius: 999px; background: var(--foreground); color: var(--background); padding: 7px 14px; font-size: 12.5px; font-weight: 600; border: 0; }
+.cv-app .ow-main { max-width: none; padding: 8px 28px 48px; }
+.cv-app .ow-main.ow-main-chat { padding: 0; }
+.cv-app .ow-demo-banner { margin: 0 16px 6px; border-radius: 12px; }
