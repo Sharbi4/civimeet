@@ -93,84 +93,14 @@ export function livePaymentsBackend(db: SupabaseClient, organizationId: string):
   };
 }
 
-/** Sample payments for the demo workspace: everything stays in memory. */
-export function demoPaymentsBackend(): Backend {
-  let settings: Settings | null = { monthlyBudgetCents: 150_000, autoApproveLimitCents: 10_000 };
-  let payments: PaymentRow[] = [
-    {
-      id: "p1",
-      agent: "eventbrite",
-      payee: "Eventbrite",
-      purpose: "Ticketing fee for the Resource Fair page",
-      category: "platform_fee",
-      amount_cents: 2_900,
-      status: "approved",
-      approval: "auto",
-      over_budget: false,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "p2",
-      agent: "main",
-      payee: "Reid Park Community Center",
-      purpose: "Pavilion deposit for Saturday, 10am–2pm",
-      category: "venue",
-      amount_cents: 25_000,
-      status: "needs_approval",
-      approval: "pending",
-      over_budget: false,
-      created_at: new Date().toISOString(),
-    },
-  ];
-  const committed = () =>
-    payments
-      .filter((p) => p.status === "approved" || p.status === "paid")
-      .reduce((sum, p) => sum + p.amount_cents, 0);
-  return {
-    async load() {
-      return { settings, payments: [...payments] };
-    },
-    async save(next) {
-      settings = next;
-    },
-    async request(input) {
-      const decision = decidePayment(input.cents, settings, committed());
-      payments = [
-        {
-          id: crypto.randomUUID(),
-          agent: "main",
-          payee: input.payee,
-          purpose: input.purpose,
-          category: input.category,
-          amount_cents: input.cents,
-          status: decision.status,
-          approval: decision.approval,
-          over_budget: decision.overBudget,
-          created_at: new Date().toISOString(),
-        },
-        ...payments,
-      ];
-    },
-    async review(id, decision) {
-      payments = payments.map((p) =>
-        p.id === id
-          ? { ...p, status: decision === "approve" ? "approved" : "rejected", approval: "person" }
-          : p,
-      );
-    },
-  };
-}
-
 export function PaymentSettings({
   backend,
   admin,
   editor,
-  demo,
 }: {
   backend: Backend;
   admin: boolean;
   editor: boolean;
-  demo: boolean;
 }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
@@ -326,7 +256,7 @@ export function PaymentSettings({
           <h3 className="!m-0 text-[15px]">
             Payments {waiting.length > 0 && <span className="cv-pill cv-pill-warn ml-2">{waiting.length} waiting</span>}
           </h3>
-          <small className="text-muted-foreground">{demo ? "Sample payments" : "This month"}</small>
+          <small className="text-muted-foreground">This month</small>
         </div>
         <div className="mt-3">
           {payments.length === 0 && (
