@@ -7,14 +7,16 @@ export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
       { title: "Pricing — CiviMeet" },
-      { name: "description", content: "Proposed CiviMeet plans: Community, Civic, and Enterprise." },
+      { name: "description", content: "CiviMeet plans for community organizations, civic teams, and larger institutions: Community, Civic, and Enterprise." },
       { property: "og:title", content: "CiviMeet Pricing" },
       { property: "og:description", content: "Community from $250/month, Civic from $1,000/month, Enterprise custom." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: () => (
     <SiteLayout>
-      <PageHeader eyebrow="Pricing" title="Proposed plans" intro="These are preliminary plans. Billing is not active yet, and no payment is collected." />
+      <PageHeader eyebrow="Pricing" title="Plans for every community" intro="Every plan includes Civi, a helper for each account you connect, and approval controls so nothing goes out without your say." />
       <div className="mx-auto grid max-w-6xl gap-4 px-4 py-14 md:grid-cols-3">
         {plans.map((p) => (
           <div key={p.name} className="flex flex-col rounded-lg border p-6">
