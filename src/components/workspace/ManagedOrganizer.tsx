@@ -39,6 +39,10 @@ export function ManagedOrganizer({
   // Automatic reconnects in a row, so a task that keeps dropping doesn't loop forever.
   const reconnects = useRef(0);
   const resumedOnOpen = useRef(false);
+  // What the current request is doing, and a message waiting to take over from a reconnect.
+  const mode = useRef<"send" | "resume" | null>(null);
+  const queuedSend = useRef(false);
+  const [sending, setSending] = useState(false);
   const submission = useRef<{ text: string; id: string } | null>(null);
   const call = useCallback(
     async (action: string, extra: Record<string, unknown> = {}, signal?: AbortSignal) => {
@@ -55,12 +59,18 @@ export function ManagedOrganizer({
       });
       if (!response.ok) {
         // Proxies can answer with an HTML error page, so never assume a JSON body.
-        const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+        const body = (await response.json().catch(() => null)) as {
+          error?: unknown;
+          restart?: unknown;
+        } | null;
         const fallback =
           response.status >= 500
             ? "Civi couldn't be reached just now. Try again in a moment."
             : "The organizer could not complete that request.";
-        throw new Error(typeof body?.error === "string" && body.error ? body.error : fallback);
+        throw Object.assign(
+          new Error(typeof body?.error === "string" && body.error ? body.error : fallback),
+          { restart: body?.restart === true, status: response.status },
+        );
       }
       return response;
     },
@@ -87,8 +97,18 @@ export function ManagedOrganizer({
     const timer = setInterval(() => void refresh(), 4000);
     return () => clearInterval(timer);
   }, [busy, state.status, refresh]);
-  async function run(action: "send" | "resume") {
-    if (busy || role === "viewer" || (action === "send" && !message.trim())) return;
+  async function run(action: "send" | "resume", attempt = 0) {
+    if (role === "viewer" || (action === "send" && !message.trim())) return;
+    if (mode.current) {
+      // A new message always gets through: stop listening to the old task, then send.
+      if (action === "send" && mode.current === "resume") {
+        queuedSend.current = true;
+        connection.current?.abort();
+      }
+      return;
+    }
+    mode.current = action;
+    setSending(action === "send");
     setBusy(true);
     setError("");
     setParts({});
@@ -96,8 +116,10 @@ export function ManagedOrganizer({
       reconnects.current = 0;
       setBrowser(null);
     }
-    setActivity(action === "resume" ? "Reconnecting to Civi…" : "Connecting to your organizer…");
+    setActivity(action === "resume" ? "Reconnecting to Civi…" : "Sending to Civi…");
     let reconnect = false;
+    let restart = false;
+    let retrySend = false;
     const text = message.trim();
     if (action === "send" && submission.current?.text !== text)
       submission.current = { text, id: crypto.randomUUID() };
@@ -164,13 +186,38 @@ export function ManagedOrganizer({
       }
       await refresh();
     } catch (e) {
-      const text = e instanceof Error ? e.message : "Connection interrupted. Refresh saved work.";
-      // Civi may still be finishing on the server: wait a moment and pick it back up.
-      if (/still finishing|already responding/i.test(text)) reconnect = true;
-      else if (alive.current) setError(text);
+      const failure = e as Error & { restart?: boolean };
+      const text = failure instanceof Error ? failure.message : "Connection interrupted.";
+      if (queuedSend.current) {
+        // We stopped this reconnect ourselves so a new message can go through.
+      } else if (action === "send" && failure.restart && attempt < 1) {
+        // The old task was stuck and has been set aside: send into a fresh conversation.
+        restart = true;
+        setActivity("Starting a fresh conversation…");
+      } else if (/still finishing|already responding/i.test(text)) {
+        // Civi may still be finishing the last reply: wait a moment and try again.
+        if (action === "send" && attempt < 3) retrySend = true;
+        else reconnect = true;
+      } else if (alive.current) {
+        setActivity("");
+        setError(text);
+      }
     } finally {
       if (alive.current) setBusy(false);
       connection.current = null;
+      mode.current = null;
+      setSending(false);
+    }
+    if (queuedSend.current) {
+      queuedSend.current = false;
+      reconnects.current = 0;
+      setTimeout(() => void runRef.current("send"), 0);
+      return;
+    }
+    if (restart || retrySend) {
+      if (restart) submission.current = null;
+      setTimeout(() => void runRef.current("send", attempt + 1), restart ? 0 : 1500);
+      return;
     }
     if (reconnect && alive.current && reconnects.current < 4) {
       reconnects.current += 1;
@@ -214,9 +261,8 @@ export function ManagedOrganizer({
       setError(e instanceof Error ? e.message : "Could not start a conversation.");
     }
   }
-  const ready = state.configuration?.ready,
-    active =
-      busy || ["in_progress", "requires_action", "cancellation_requested"].includes(state.status);
+  const active =
+    busy || ["in_progress", "requires_action", "cancellation_requested"].includes(state.status);
   useEffect(() => {
     const reset = () => {
       if (!active) void newConversation();
@@ -275,7 +321,7 @@ export function ManagedOrganizer({
         </div>
       )}
       <div className="civi-chat-scroll" aria-live="polite">
-        {!ready && state.status !== "loading" && (
+        {state.status === "configuration_required" && (
           <div className="cv-thread">
             <div className="cv-card">
               <strong>Civi is almost ready</strong>
@@ -286,7 +332,7 @@ export function ManagedOrganizer({
             </div>
           </div>
         )}
-        {ready && empty && (
+        {state.status !== "configuration_required" && empty && (
           <div className="cv-greeting">
             <span className="cv-civi-avatar h-11 w-11" aria-hidden="true">
               <img src="/brand/civimeet-mark.svg" alt="" className="h-6 w-6 brightness-0 invert" />
@@ -388,7 +434,7 @@ export function ManagedOrganizer({
           </div>
         )}
       </div>
-      {ready && (
+      {state.status !== "configuration_required" && (
         <div className="cv-composer-wrap">
           {(state.needsResume || state.status === "in_progress") && !busy && (
             <div className="mx-auto mb-2 flex max-w-[760px] gap-2">
@@ -421,7 +467,7 @@ export function ManagedOrganizer({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
-                  if (!active) void run("send");
+                  void run("send");
                 }
               }}
               disabled={role === "viewer"}
@@ -433,7 +479,7 @@ export function ManagedOrganizer({
               <button
                 aria-label="Send to organizer"
                 className="cv-send"
-                disabled={active || !message.trim() || role === "viewer"}
+                disabled={sending || !message.trim() || role === "viewer"}
               >
                 <ArrowUp size={18} />
               </button>

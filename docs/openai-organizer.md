@@ -21,6 +21,8 @@ An event can also queue a two-task Perplexity sequence: community research follo
 - Screenshots stream to the person's chat and are never stored.
 - The live connection sends a keep-alive every 10 seconds while tools run. At the stream time limit (default 150 s) the connection ends cleanly and the chat reconnects; the task keeps running at OpenAI instead of being cancelled. The token allowance still bounds a conversation.
 - Opening a conversation that is still running, or waiting on Civi's tools, resumes it automatically (up to four automatic reconnects in a row).
+- Conversations start from the saved OpenAI agent `agent_6af2277a03308191aefbc871a7cb5318` (its model and multi-agent settings) with Civi's personality, function tools, web search and browser applied on top; set `OPENAI_ORGANIZER_AGENT_ID` to use another agent or `none` to skip it. If OpenAI rejects the saved agent, the same setup runs without it. That agent's own instructions are a build brief, so Civi's personality always overrides them.
+- A new message always goes through: the message box shows even when saved work can't load, and Enter is never blocked by an old task. Sending while a task runs stops it (waiting up to 6 s for OpenAI to confirm); if it stays stuck, the conversation is set aside and the message is resent into a fresh one. `reset` does the same on request.
 - Not live-verified yet: whether this OpenAI project accepts the hosted browser and web search. If it doesn't, the chat says so and continues with what it has.
 
 ## Configuration

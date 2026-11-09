@@ -26,7 +26,7 @@ const inputSchema = z
           ].includes(value),
         "Unknown organizer conversation",
       ),
-    action: z.enum(["status", "send", "resume", "cancel", "new"]),
+    action: z.enum(["status", "send", "resume", "cancel", "new", "reset"]),
     message: z.string().trim().min(1).max(6000).optional(),
     requestId: z.string().uuid().optional(),
   })
@@ -186,11 +186,24 @@ export function browserApproval(request: {
     return { type: "browser_origin_access", decision: "deny" };
   }
 }
+/**
+ * The saved OpenAI agent conversations start from (its model and multi-agent settings), with
+ * Civi's personality and tools applied on top. OPENAI_ORGANIZER_AGENT_ID overrides it;
+ * "none" turns it off.
+ */
+export function organizerAgentId(env: Record<string, string | undefined> = process.env) {
+  const configured = env["OPENAI_ORGANIZER_AGENT_ID"]?.trim();
+  if (configured && /^(none|false|off)$/i.test(configured)) return null;
+  const id = configured || "agent_6af2277a03308191aefbc871a7cb5318";
+  return /^agent_[a-z0-9]{8,64}$/i.test(id) ? id : null;
+}
+let savedAgentAccepted: boolean | null = null;
 // Remembers (per server instance) the best capability OpenAI accepted, so later conversations
 // don't retry setups this project doesn't support.
 let acceptedCapability: OrganizerCapability | null = null;
 export function resetOrganizerCapability() {
   acceptedCapability = null;
+  savedAgentAccepted = null;
 }
 function database() {
   const key = process.env["SUPABASE_SERVICE_ROLE_KEY"],
@@ -282,6 +295,16 @@ const defaults = {
       .select("id");
     if (r.error || !r.data?.length)
       throw new OrganizerError(409, "Conversation checkpoint changed. Refresh saved work.");
+  },
+  /** Set a stuck conversation aside so the next message starts fresh (history stays at OpenAI). */
+  async forceArchive(row: SessionRow) {
+    const r = await database()
+      .from("organizer_sessions")
+      .update({ archived: true, lease_id: null, lease_until: null })
+      .eq("id", row.id)
+      .eq("organization_id", row.organization_id)
+      .select("id");
+    if (r.error) throw new OrganizerError(503, "Civi couldn't start a fresh conversation.");
   },
   async archive(row: SessionRow) {
     const r = await database()
@@ -541,6 +564,18 @@ export async function handleManagedOrganizer(
             503,
           );
     const api = deps.provider();
+    if (input.action === "reset") {
+      // Stop whatever the current conversation is doing and set it aside.
+      const row = await deps.current(input);
+      if (row?.provider_id) {
+        const providerId = row.provider_id;
+        await api.events
+          .create(providerId, { events: [{ type: "agent.session.input.cancel" }] })
+          .catch(() => {});
+      }
+      if (row) await deps.forceArchive(row);
+      return json({ status: "ready", configuration, messages: [] });
+    }
     if (input.action === "status" || input.action === "cancel" || input.action === "new") {
       const row = await deps.current(input);
       if (!row?.provider_id) {
@@ -619,12 +654,24 @@ export async function handleManagedOrganizer(
       const start = acceptedCapability ? Math.max(0, levels.indexOf(acceptedCapability)) : 0;
       let created: { id: string } | null = null;
       let lastError: unknown = null;
-      for (const level of levels.slice(start)) {
+      const savedAgent = savedAgentAccepted === false ? null : organizerAgentId();
+      const explicitModel = Boolean(process.env["OPENAI_ORGANIZER_MODEL"]?.trim());
+      const attempts = levels.slice(start).flatMap((level) =>
+        savedAgent
+          ? [
+              { level, agentId: savedAgent },
+              { level, agentId: null },
+            ]
+          : [{ level, agentId: null }],
+      );
+      for (const { level, agentId } of attempts) {
         const setup = organizerSetup(level);
         try {
           created = await api.create({
+            ...(agentId ? { agent_id: agentId } : {}),
             agent: {
-              model: organizerModel(),
+              // The saved agent brings its own model unless the server names one.
+              ...(agentId && !explicitModel ? {} : { model: organizerModel() }),
               reasoning: { effort: "medium" },
               instructions:
                 organizerInstructions +
@@ -646,6 +693,7 @@ export async function handleManagedOrganizer(
             metadata: { civimeet_session: row.id },
           } as SessionCreateParamsNonStreaming);
           acceptedCapability = level;
+          if (savedAgent) savedAgentAccepted = Boolean(agentId);
           if (level !== levels[0])
             notices.push(
               level === "search"
@@ -671,7 +719,35 @@ export async function handleManagedOrganizer(
       }
     }
     const providerId = row.provider_id;
-    const before = await retryTransient(() => api.retrieve(providerId));
+    let before = await retryTransient(() => api.retrieve(providerId));
+    if (
+      input.action === "send" &&
+      !claim.replayed &&
+      !initialInputSubmitted &&
+      before.status !== "idle"
+    ) {
+      // A new message takes over: stop the old task and wait briefly for OpenAI to confirm.
+      if (before.status !== "failed")
+        await api.events
+          .create(providerId, { events: [{ type: "agent.session.input.cancel" }] })
+          .catch(() => {});
+      for (let i = 0; i < 6 && before.status !== "idle" && before.status !== "failed"; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        before = await retryTransient(() => api.retrieve(providerId));
+      }
+      if (before.status !== "idle") {
+        // Still stuck: set this conversation aside; the chat resends into a fresh one.
+        await deps.forceArchive(row);
+        reserved = null;
+        return json(
+          {
+            error: "Civi's last task was stuck, so Civi is starting a fresh conversation.",
+            restart: true,
+          },
+          409,
+        );
+      }
+    }
     const tokenLimit = z.coerce
       .number()
       .int()
@@ -682,16 +758,6 @@ export async function handleManagedOrganizer(
       throw new OrganizerError(
         429,
         "This conversation has reached its token allowance. Start a new conversation to continue with saved organization knowledge.",
-      );
-    if (
-      input.action === "send" &&
-      !claim.replayed &&
-      !initialInputSubmitted &&
-      before.status !== "idle"
-    )
-      throw new OrganizerError(
-        409,
-        "A task is still active. Resume or stop it before sending another message.",
       );
     const abort = new AbortController();
     const duration = z.coerce

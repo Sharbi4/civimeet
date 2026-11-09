@@ -90,6 +90,7 @@ function dependencies() {
     reserve: vi.fn().mockResolvedValue({ session: { ...row }, replayed: false }),
     update: vi.fn().mockResolvedValue(undefined),
     archive: vi.fn().mockResolvedValue(undefined),
+    forceArchive: vi.fn().mockResolvedValue(undefined),
     context: vi.fn().mockResolvedValue('{"mission":"Community service"}'),
     researchAgent: vi.fn().mockResolvedValue("web-agent"),
     research: vi.fn().mockResolvedValue(Response.json({ run: { status: "completed" } })),
@@ -189,6 +190,7 @@ describe("managed organizer authorization and execution", () => {
     expect(api.events.create).not.toHaveBeenCalled();
   });
   it("keeps the conversation working when OpenAI rejects the browser, then web search", async () => {
+    process.env["OPENAI_ORGANIZER_AGENT_ID"] = "none";
     resetOrganizerCapability();
     const { d, api } = dependencies();
     d.reserve.mockImplementation(async () => ({
@@ -218,7 +220,65 @@ describe("managed organizer authorization and execution", () => {
     await (await handleManagedOrganizer(req(), d)).text();
     expect(api.create).toHaveBeenCalledTimes(1);
     expect(api.create.mock.calls[0]![0].environment.type).toBe("none");
+    delete process.env["OPENAI_ORGANIZER_AGENT_ID"];
     resetOrganizerCapability();
+  });
+  it("starts from the saved OpenAI agent, keeping Civi's personality and tools", async () => {
+    resetOrganizerCapability();
+    const { d, api } = dependencies();
+    d.reserve.mockImplementation(async () => ({
+      session: { ...row, provider_id: null } as unknown as typeof row,
+      replayed: false,
+    }));
+    await (await handleManagedOrganizer(req(), d)).text();
+    const config = api.create.mock.calls[0]![0];
+    expect(config.agent_id).toBe("agent_6af2277a03308191aefbc871a7cb5318");
+    expect(config.agent.model).toBeUndefined();
+    expect(config.agent.instructions).toContain("You are Civi");
+    expect(config.agent.tools.map((t: { name?: string }) => t.name)).toContain(
+      "organization_context",
+    );
+    // If OpenAI doesn't know that agent here, the same setup runs without it.
+    resetOrganizerCapability();
+    api.create.mockReset();
+    api.create.mockRejectedValueOnce(providerError(404)).mockResolvedValue({ id: "new-provider" });
+    await (await handleManagedOrganizer(req(), d)).text();
+    expect(api.create.mock.calls[1]![0].agent_id).toBeUndefined();
+    expect(api.create.mock.calls[1]![0].agent.model).toBe("gpt-6-sol");
+    expect(api.create.mock.calls[1]![0].environment.type).toBe("openai_hosted");
+    resetOrganizerCapability();
+  });
+  it("lets a new message take over a stuck task, or start fresh", async () => {
+    const { d, api } = dependencies();
+    api.retrieve
+      .mockResolvedValueOnce({
+        status: "requires_action",
+        required_actions: [],
+        usage: { total_tokens: 10 },
+      })
+      .mockResolvedValue({ status: "idle", required_actions: [], usage: { total_tokens: 10 } });
+    const ok = await handleManagedOrganizer(req(), d);
+    expect(ok.status).toBe(200);
+    expect(api.events.create).toHaveBeenCalledWith("provider-owned", {
+      events: [{ type: "agent.session.input.cancel" }],
+    });
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const stuck = dependencies();
+      stuck.api.retrieve.mockResolvedValue({
+        status: "in_progress",
+        required_actions: [],
+        usage: { total_tokens: 10 },
+      });
+      const pending = handleManagedOrganizer(req(), stuck.d);
+      await vi.advanceTimersByTimeAsync(7000);
+      const r = await pending;
+      expect(r.status).toBe(409);
+      expect(await r.json()).toMatchObject({ restart: true });
+      expect(stuck.d.forceArchive).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it("does not hide a bad API key behind a simpler setup", async () => {
     resetOrganizerCapability();
@@ -330,6 +390,7 @@ describe("managed organizer authorization and execution", () => {
       api.events.stream.mockImplementation(
         async (_id: string, { signal }: { signal: AbortSignal }) =>
           Object.assign(
+            // eslint-disable-next-line require-yield -- waits until the stream is aborted
             (async function* () {
               await new Promise((_, reject) =>
                 signal.addEventListener("abort", () => reject(new Error("aborted"))),
