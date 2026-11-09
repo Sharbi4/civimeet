@@ -32,6 +32,31 @@ export class OrganizerError extends Error {
     super(message);
   }
 }
+const transientStatuses = new Set([408, 409, 429, 500, 502, 503, 504]);
+/** OpenAI hiccups (busy, overloaded, dropped connection) that are worth one more try. */
+export function isTransientProviderError(e: unknown) {
+  if (e instanceof OpenAI.APIConnectionTimeoutError) return false;
+  if (e instanceof OpenAI.APIConnectionError) return true;
+  return e instanceof OpenAI.APIError && typeof e.status === "number" && transientStatuses.has(e.status);
+}
+/**
+ * Retries a provider call that is safe to repeat (reads, opening the event stream, and
+ * submissions carrying an idempotency key). Never wrap calls that could double-act.
+ */
+export async function retryTransient<T>(
+  call: () => Promise<T>,
+  delays: readonly number[] = [400, 1200],
+  signal?: AbortSignal,
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call();
+    } catch (e) {
+      if (attempt >= delays.length || signal?.aborted || !isTransientProviderError(e)) throw e;
+      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+    }
+  }
+}
 /** The configured organizer model, or the default when the setting isn't a model name. */
 export function organizerModel(env: Record<string, string | undefined> = process.env) {
   const configured = env["OPENAI_ORGANIZER_MODEL"]?.trim() ?? "";
