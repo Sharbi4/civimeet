@@ -58,7 +58,6 @@ function Dashboard() {
         db,
         organizationId: "org-fixture",
         role,
-        demo: false,
         approvalsPending: 2,
         navigate: vi.fn(),
         openChatThread: vi.fn(),
@@ -66,7 +65,6 @@ function Dashboard() {
     >
       <OrganizerChat thread="main" onDraft={vi.fn()} />
       <AgentPanel
-        demo={false}
         label="Main Agent"
         approvals={[]}
         activity={[]}

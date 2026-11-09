@@ -12,7 +12,6 @@ const actions = {
   sessionExpired: vi.fn(async () => {}),
   busy: null as string | null,
   version: 0,
-  demoActions: [],
 };
 vi.mock("@/components/workspace/ChatActions", () => ({ useChatActions: () => actions }));
 const { ChatBrowser } = await import("@/components/workspace/ChatBrowser");
@@ -28,7 +27,7 @@ afterEach(cleanup);
 
 it("keeps idle chat simple and reveals accounts only when the browser is requested", async () => {
   render(
-    <ChatBrowser thread="main" demo={false} admin connected={["facebook"]} webAgentId={null} />,
+    <ChatBrowser thread="main" admin connected={["facebook"]} webAgentId={null} />,
   );
   expect(screen.queryByRole("region", { name: "Agent browser" })).not.toBeInTheDocument();
   fireEvent(window, new CustomEvent("civimeet:panel", { detail: { tab: "browser" } }));
@@ -53,7 +52,7 @@ it("shows the live sign-in browser itself, with the person's controls", () => {
     actionId: "a1",
     goal: "",
   };
-  render(<ChatBrowser thread="main" demo={false} admin connected={[]} webAgentId={null} />);
+  render(<ChatBrowser thread="main" admin connected={[]} webAgentId={null} />);
   const frame = screen.getByTitle("Facebook sign-in in the agent browser");
   expect(frame).toHaveAttribute("src", viewer);
   fireEvent.click(screen.getByRole("button", { name: "I’m signed in" }));
@@ -69,7 +68,6 @@ it("keeps account buttons off for people who can't connect accounts", () => {
     <ChatBrowser
       thread="platform_facebook"
       connector="facebook"
-      demo={false}
       admin={false}
       connected={[]}
       webAgentId={null}

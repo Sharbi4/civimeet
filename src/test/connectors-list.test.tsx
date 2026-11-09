@@ -33,7 +33,6 @@ describe("Connections list", () => {
         events={[]}
         capabilities={{ browser: true, oauth: { meta_instagram: false } }}
         admin
-        demo={false}
         live
         loadError=""
         actions={actions()}
@@ -59,7 +58,6 @@ describe("Connections list", () => {
         events={[]}
         capabilities={{ browser: true, oauth: {} }}
         admin
-        demo={false}
         live
         loadError=""
         actions={handlers}
@@ -102,7 +100,6 @@ describe("Connections list", () => {
         events={[]}
         capabilities={{ browser: true, oauth: {} }}
         admin
-        demo={false}
         live
         loadError=""
         actions={actions()}
@@ -125,7 +122,6 @@ describe("Connections list", () => {
         events={[]}
         capabilities={{ browser: true, oauth: {} }}
         admin={false}
-        demo={false}
         live
         loadError=""
         actions={actions()}
