@@ -1632,3 +1632,10 @@ body:has(.organizer-frame) { overflow:hidden; }
 .cv-app .ow-chat-thread > header { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; padding: 0; }
 .cv-app .ow-chat-thread .ow-composer textarea { min-height: 54px; height: 54px; }
 .cv-app .ow-chat-thread .ow-composer > div { margin-top: 6px; }
+/* Signed-in shell: the organization switcher bar, then the workspace filling the rest of the screen. */
+.organizer-gate:has(.cv-app) { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+.organizer-gate:has(.cv-app) > div { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+.organizer-gate:has(.cv-app) .og-switch { flex-shrink: 0; padding-left: 16px !important; }
+.organizer-gate:has(.cv-app) .organizer-frame { min-height: 0; flex: 1; }
+.organizer-gate:has(.cv-app) .ow-app.cv-app { height: 100%; min-height: 0; }
+.organizer-gate:has(.cv-app) .cv-rail, .organizer-gate:has(.cv-app) .ow-body { height: 100%; }
