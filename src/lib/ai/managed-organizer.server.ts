@@ -49,8 +49,13 @@ export class OrganizerError extends Error {
 }
 const transientStatuses = new Set([408, 429, 500, 502, 503, 504]);
 /** OpenAI hiccups (busy, overloaded, dropped connection) that are worth one more try. */
+/** OpenAI's "out of credits" answer (HTTP 429 with code insufficient_quota): retrying can't help. */
+export function isOutOfCredits(e: unknown) {
+  return e instanceof OpenAI.APIError && e.code === "insufficient_quota";
+}
 export function isTransientProviderError(e: unknown) {
   if (e instanceof OpenAI.APIConnectionTimeoutError) return false;
+  if (isOutOfCredits(e)) return false;
   if (e instanceof OpenAI.APIConnectionError) return true;
   return (
     e instanceof OpenAI.APIError && typeof e.status === "number" && transientStatuses.has(e.status)
@@ -618,8 +623,17 @@ export async function handleManagedOrganizer(
             .join("\n"),
         }))
         .reverse();
+      // Newest first: the last page Civi's browser showed (fetched from OpenAI, never stored).
+      const lastBrowse = items.data.find((item) => item.type === "computer_use_call") as
+        { title?: string | null; output?: { image_url?: string } | null } | undefined;
+      const screenshot = lastBrowse?.output?.image_url;
       return json({
         configuration,
+        browser: {
+          available: session.environment?.type === "openai_hosted",
+          title: lastBrowse?.title ?? null,
+          screenshot: screenshot?.startsWith("data:image/") ? screenshot : null,
+        },
         status: session.status,
         usage: session.usage,
         spend: session.spend_control,
@@ -752,13 +766,26 @@ export async function handleManagedOrganizer(
       .number()
       .int()
       .min(1000)
-      .max(1000000)
-      .parse(process.env["OPENAI_ORGANIZER_SESSION_TOKEN_LIMIT"] || 100000);
-    if (input.action === "send" && (before.usage?.total_tokens ?? 0) >= tokenLimit)
-      throw new OrganizerError(
-        429,
-        "This conversation has reached its token allowance. Start a new conversation to continue with saved organization knowledge.",
+      .max(5000000)
+      .parse(process.env["OPENAI_ORGANIZER_SESSION_TOKEN_LIMIT"] || 1000000);
+    if (
+      input.action === "send" &&
+      !claim.replayed &&
+      !initialInputSubmitted &&
+      (before.usage?.total_tokens ?? 0) >= tokenLimit
+    ) {
+      // A full conversation never stops the team: set it aside and continue in a fresh one.
+      // Civi reloads the organization's saved context there.
+      await deps.forceArchive(row);
+      reserved = null;
+      return json(
+        {
+          error: "This conversation is full, so Civi is continuing in a fresh one.",
+          restart: true,
+        },
+        409,
       );
+    }
     const abort = new AbortController();
     const duration = z.coerce
       .number()
@@ -1009,6 +1036,15 @@ export async function handleManagedOrganizer(
       return json({ error: "Check the message and organization." }, 400);
     // Never answer 502/504: hosting proxies replace those bodies with their own HTML page,
     // so the chat would lose the explanation. 503 and 424 pass through intact.
+    if (isOutOfCredits(e))
+      return json(
+        {
+          error:
+            "Your OpenAI account is out of credits, so Civi can't reply. Add credits in OpenAI's billing settings (platform.openai.com → Settings → Billing), then try again.",
+          providerCode: "insufficient_quota",
+        },
+        424,
+      );
     if (isTransientProviderError(e))
       return json(
         {

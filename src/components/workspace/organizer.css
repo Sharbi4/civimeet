@@ -1639,3 +1639,16 @@ body:has(.organizer-frame) { overflow:hidden; }
 .organizer-gate:has(.cv-app) .organizer-frame { min-height: 0; flex: 1; }
 .organizer-gate:has(.cv-app) .ow-app.cv-app { height: 100%; min-height: 0; }
 .organizer-gate:has(.cv-app) .cv-rail, .organizer-gate:has(.cv-app) .ow-body { height: 100%; }
+
+/* Civi's browser: pinned above the conversation, showing what the agent sees. */
+.cv-browser { flex-shrink:0; margin:8px clamp(16px,4vw,48px) 0; border:1px solid #e4eaf2; border-radius:14px; overflow:hidden; background:#f8fafb; }
+.cv-browser > header { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:12px; color:#475569; border-bottom:1px solid #eef2f5; min-width:0; }
+.cv-browser > header strong { color:#142d40; font-weight:600; white-space:nowrap; }
+.cv-browser > header button { margin-left:auto; font-size:12px; color:#475569; padding:2px 8px; border-radius:8px; }
+.cv-browser > header button:hover { background:#eef2f5; }
+.cv-browser-chip { border-radius:999px; padding:1px 8px; background:#eef2f5; color:#475569; font-size:11px; white-space:nowrap; }
+.cv-browser-chip.is-live { background:#dcfce7; color:#166534; }
+.cv-browser-title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#64717a; }
+.cv-browser > img { display:block; width:100%; max-height:38vh; object-fit:contain; object-position:top; background:#fff; }
+.cv-browser-empty { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:14px 14px; font-size:13px; color:#64717a; }
+.cv-browser-empty button { border:1px solid #d7e0e5; border-radius:10px; padding:6px 10px; font-size:12px; color:#142d40; background:#fff; }

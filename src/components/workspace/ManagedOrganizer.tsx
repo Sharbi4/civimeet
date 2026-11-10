@@ -12,6 +12,7 @@ type State = {
   hasOlderMessages?: boolean;
   usage?: { total_tokens: number };
   spend?: { consumed: number; limit: number };
+  browser?: { available: boolean; title: string | null; screenshot: string | null };
 };
 export function ManagedOrganizer({
   thread,
@@ -34,6 +35,7 @@ export function ManagedOrganizer({
   const [parts, setParts] = useState<Record<string, string>>({});
   // What Civi's browser is showing right now (screenshots stream in; nothing is stored).
   const [browser, setBrowser] = useState<{ title: string; screenshot?: string } | null>(null);
+  const [browserOpen, setBrowserOpen] = useState(true);
   const alive = useRef(true),
     connection = useRef<AbortController | null>(null);
   // Automatic reconnects in a row, so a task that keeps dropping doesn't loop forever.
@@ -320,6 +322,52 @@ export function ManagedOrganizer({
           </details>
         </div>
       )}
+      {state.status !== "configuration_required" && (
+        <section className="cv-browser" aria-label="Civi's browser">
+          <header>
+            <Globe size={14} aria-hidden="true" />
+            <strong>Civi’s browser</strong>
+            <span className={`cv-browser-chip${busy && browser ? " is-live" : ""}`}>
+              {busy && browser
+                ? "Live"
+                : /Starting Civi/.test(activity)
+                  ? "Starting…"
+                  : state.browser?.available === false && state.messages.length > 0
+                    ? "Web search only"
+                    : "Ready"}
+            </span>
+            <span className="cv-browser-title">{browser?.title ?? state.browser?.title ?? ""}</span>
+            <button type="button" onClick={() => setBrowserOpen((open) => !open)}>
+              {browserOpen ? "Hide" : "Show"}
+            </button>
+          </header>
+          {browserOpen &&
+            (browser?.screenshot || state.browser?.screenshot ? (
+              <img
+                src={browser?.screenshot ?? state.browser?.screenshot ?? ""}
+                alt={`What Civi's browser shows: ${browser?.title ?? state.browser?.title ?? "the last page it opened"}`}
+              />
+            ) : (
+              <div className="cv-browser-empty">
+                <span>
+                  {state.browser?.available === false && state.messages.length > 0
+                    ? "This conversation uses web search: OpenAI hasn't enabled the hosted browser for this project. A new conversation tries the browser again."
+                    : "When Civi opens a website, you'll watch it here, live."}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMessage(
+                      "Open reidparkzoo.org in your browser and tell me what events they have this month.",
+                    )
+                  }
+                >
+                  Try it: open a website
+                </button>
+              </div>
+            ))}
+        </section>
+      )}
       <div className="civi-chat-scroll" aria-live="polite">
         {state.status === "configuration_required" && (
           <div className="cv-thread">
@@ -402,22 +450,6 @@ export function ManagedOrganizer({
                 <span className="cv-civi-avatar mt-0.5 h-7 w-7 animate-pulse" aria-hidden="true" />
                 <div>{Object.values(parts).join("\n\n")}</div>
               </article>
-            )}
-            {browser && (
-              <figure className="cv-card !m-0 overflow-hidden" aria-label="Civi's browser">
-                <figcaption className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Globe size={13} aria-hidden="true" /> Civi’s browser · {browser.title}
-                </figcaption>
-                {browser.screenshot ? (
-                  <img
-                    src={browser.screenshot}
-                    alt={`What Civi's browser shows: ${browser.title}`}
-                    className="mt-2 w-full rounded-lg border"
-                  />
-                ) : (
-                  <p className="!mb-0 mt-2 text-sm text-muted-foreground">Opening the page…</p>
-                )}
-              </figure>
             )}
             {activity && (
               <p className="text-sm text-muted-foreground" role="status">

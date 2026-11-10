@@ -116,3 +116,24 @@ it("resends into a fresh conversation when the old one was stuck", async () => {
   expect(second!.requestId).not.toBe(first!.requestId);
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
+
+it("keeps Civi's browser on screen above the chat, with the last page it opened", async () => {
+  serve(() =>
+    Response.json({
+      ...ready,
+      status: "idle",
+      messages: [{ id: "m", role: "assistant", text: "Found 3 events" }],
+      browser: {
+        available: true,
+        title: "Reid Park Zoo events",
+        screenshot: "data:image/jpeg;base64,BBBB",
+      },
+    }),
+  );
+  render(<ManagedOrganizer thread="main" />);
+  const panel = await screen.findByRole("region", { name: "Civi's browser" });
+  expect(panel).toHaveTextContent("Ready");
+  expect(
+    await screen.findByAltText(/What Civi's browser shows: Reid Park Zoo events/),
+  ).toHaveAttribute("src", "data:image/jpeg;base64,BBBB");
+});

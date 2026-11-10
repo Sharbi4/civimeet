@@ -575,3 +575,65 @@ describe("Civi's browser site policy", () => {
     });
   });
 });
+describe("demo-day resilience", () => {
+  it("continues in a fresh conversation when the current one is full", async () => {
+    const { d, api } = dependencies();
+    api.retrieve.mockResolvedValue({
+      status: "idle",
+      required_actions: [],
+      usage: { total_tokens: 2_000_000 },
+    });
+    const r = await handleManagedOrganizer(req(), d);
+    expect(r.status).toBe(409);
+    expect(await r.json()).toMatchObject({ restart: true });
+    expect(d.forceArchive).toHaveBeenCalled();
+    expect(api.events.create).not.toHaveBeenCalled();
+  });
+  it("says plainly when the OpenAI account is out of credits, without retrying", async () => {
+    const { d, api } = dependencies();
+    api.retrieve.mockRejectedValue(
+      OpenAI.APIError.generate(
+        429,
+        { error: { message: "quota", type: "insufficient_quota", code: "insufficient_quota" } },
+        "quota",
+        new Headers(),
+      ),
+    );
+    const r = await handleManagedOrganizer(req(), d);
+    expect(r.status).toBe(424);
+    expect((await r.json()).error).toMatch(/out of credits/);
+    expect(api.retrieve).toHaveBeenCalledTimes(1);
+  });
+  it("reports the browser and the last page it showed with saved work", async () => {
+    const { d, api } = dependencies();
+    api.retrieve.mockResolvedValue({
+      status: "idle",
+      required_actions: [],
+      usage: { total_tokens: 10 },
+      environment: { type: "openai_hosted" },
+    });
+    api.items.list.mockResolvedValue({
+      data: [
+        {
+          id: "c1",
+          type: "computer_use_call",
+          title: "Reid Park Zoo events",
+          output: { type: "computer_screenshot", image_url: "data:image/jpeg;base64,BBBB" },
+        },
+        {
+          id: "m",
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: "Found 3 events" }],
+        },
+      ],
+      has_more: false,
+    });
+    const body = await (await handleManagedOrganizer(req({ action: "status" }), d)).json();
+    expect(body.browser).toEqual({
+      available: true,
+      title: "Reid Park Zoo events",
+      screenshot: "data:image/jpeg;base64,BBBB",
+    });
+  });
+});
