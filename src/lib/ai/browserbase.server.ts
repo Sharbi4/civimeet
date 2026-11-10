@@ -81,38 +81,44 @@ export async function openBrowser(
   metadata: Record<string, string>,
   profile?: string | null,
 ): Promise<BrowserSession> {
-  const body = (keepAlive: boolean, withProfile: boolean) => ({
-    ...(process.env["BROWSERBASE_PROJECT_ID"]?.trim()
-      ? { projectId: process.env["BROWSERBASE_PROJECT_ID"]!.trim() }
-      : {}),
-    timeout: TIMEOUT_SECONDS,
-    ...(keepAlive ? { keepAlive: true } : {}),
-    userMetadata: metadata,
-    browserSettings: {
-      ...(withProfile && profile ? { context: { id: profile, persist: true } } : {}),
-      viewport: { width: 1280, height: 800 },
-      blockAds: true,
-      solveCaptchas: false,
-      recordSession: false,
-      logSession: false,
-    },
-  });
+  const project = process.env["BROWSERBASE_PROJECT_ID"]?.trim();
+  type Shape = "full" | "lean" | "minimal";
+  const body = (shape: Shape, keepAlive: boolean, withProfile: boolean) =>
+    shape === "minimal"
+      ? // The bare request every plan accepts.
+        { ...(project ? { projectId: project } : {}) }
+      : {
+          ...(project ? { projectId: project } : {}),
+          timeout: TIMEOUT_SECONDS,
+          ...(keepAlive ? { keepAlive: true } : {}),
+          ...(shape === "full" ? { userMetadata: metadata } : {}),
+          browserSettings: {
+            ...(withProfile && profile ? { context: { id: profile, persist: true } } : {}),
+            viewport: { width: 1280, height: 800 },
+            ...(shape === "full"
+              ? { blockAds: true, solveCaptchas: false, recordSession: false, logSession: false }
+              : {}),
+          },
+        };
   type Created = { id: string; connectUrl: string; expiresAt?: string };
-  // Best setup first; keepAlive and saved profiles depend on the Browserbase plan.
-  const attempts: [boolean, boolean][] = [
-    [true, true],
-    [false, true],
-    [true, false],
-    [false, false],
+  // Best setup first; keepAlive, saved profiles and some settings depend on the Browserbase plan.
+  const attempts: [Shape, boolean, boolean][] = [
+    ["full", true, true],
+    ["full", false, true],
+    ["full", true, false],
+    ["full", false, false],
+    ["lean", false, true],
+    ["lean", false, false],
+    ["minimal", false, false],
   ];
   let created: Created | null = null;
   let lastError: unknown = null;
-  for (const [keepAlive, withProfile] of attempts) {
+  for (const [shape, keepAlive, withProfile] of attempts) {
     if (withProfile && !profile) continue;
     try {
       created = await request<Created>("/sessions", {
         method: "POST",
-        body: body(keepAlive, withProfile),
+        body: body(shape, keepAlive, withProfile),
       });
       break;
     } catch (error) {
@@ -122,22 +128,32 @@ export async function openBrowser(
     }
   }
   if (!created) throw lastError;
-  if (!created.id || !created.connectUrl?.startsWith("wss://"))
-    throw new BrowserbaseError(502, "Browserbase didn't return a usable browser.");
-  const live = await request<{ debuggerFullscreenUrl: string }>(
-    `/sessions/${encodeURIComponent(created.id)}/debug`,
-  );
+  if (!created.id || !/^wss?:\/\//.test(created.connectUrl ?? ""))
+    throw new BrowserbaseError(
+      502,
+      `Browserbase created a browser but didn't return its connection address (got: ${Object.keys(created).join(", ").slice(0, 120)}).`,
+    );
+  // The live view is a nice-to-have: if it can't be fetched, Civi still browses.
+  let liveUrl = "";
+  try {
+    const live = await request<{ debuggerFullscreenUrl?: string; debuggerUrl?: string }>(
+      `/sessions/${encodeURIComponent(created.id)}/debug`,
+    );
+    liveUrl = safeLiveUrl(live.debuggerFullscreenUrl ?? live.debuggerUrl ?? "");
+  } catch {
+    liveUrl = "";
+  }
   return {
     id: created.id,
     connectUrl: created.connectUrl,
-    liveUrl: safeLiveUrl(live.debuggerFullscreenUrl),
+    liveUrl: liveUrl || "about:blank",
     expiresAt: created.expiresAt ?? new Date(Date.now() + TIMEOUT_SECONDS * 1000).toISOString(),
   };
 }
 /** Only Browserbase's own https live-view pages are ever framed in the dashboard. */
 export function safeLiveUrl(raw: string) {
   const url = new URL(raw);
-  if (url.protocol !== "https:" || !/(^|\.)browserbase\.com$/i.test(url.hostname))
+  if (url.protocol !== "https:" || !/(^|\.)browserbase\.(com|io)$/i.test(url.hostname))
     throw new BrowserbaseError(502, "Browserbase returned an unexpected live-view address.");
   url.searchParams.set("navbar", "false");
   return url.href;

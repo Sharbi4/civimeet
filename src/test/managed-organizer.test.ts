@@ -5,11 +5,14 @@ import {
   browserApproval,
   resetOrganizerCapability,
   handleManagedOrganizer,
+  organizerVersion,
   executeOrganizerTool,
   toolRequestId,
   OrganizerError,
   type OrganizerDependencies,
 } from "@/lib/ai/managed-organizer.server";
+/** Conversations started on the current version of Civi's instructions. */
+const current = { civimeet_version: organizerVersion() };
 const org = "11111111-1111-4111-8111-111111111111",
   requestId = "22222222-2222-4222-8222-222222222222";
 const row = {
@@ -54,7 +57,12 @@ function dependencies() {
   const api = {
     retrieve: vi
       .fn()
-      .mockResolvedValue({ status: "idle", required_actions: [], usage: { total_tokens: 10 } }),
+      .mockResolvedValue({
+        status: "idle",
+        required_actions: [],
+        usage: { total_tokens: 10 },
+        metadata: current,
+      }),
     create: vi.fn().mockResolvedValue({ id: "new-provider" }),
     delete: vi.fn().mockResolvedValue({}),
     events: {
@@ -296,8 +304,14 @@ describe("managed organizer authorization and execution", () => {
         status: "requires_action",
         required_actions: [],
         usage: { total_tokens: 10 },
+        metadata: current,
       })
-      .mockResolvedValue({ status: "idle", required_actions: [], usage: { total_tokens: 10 } });
+      .mockResolvedValue({
+        status: "idle",
+        required_actions: [],
+        usage: { total_tokens: 10 },
+        metadata: current,
+      });
     const ok = await handleManagedOrganizer(req(), d);
     expect(ok.status).toBe(200);
     expect(api.events.create).toHaveBeenCalledWith("provider-owned", {
@@ -310,6 +324,7 @@ describe("managed organizer authorization and execution", () => {
         status: "in_progress",
         required_actions: [],
         usage: { total_tokens: 10 },
+        metadata: current,
       });
       const pending = handleManagedOrganizer(req(), stuck.d);
       await vi.advanceTimersByTimeAsync(7000);
@@ -338,6 +353,7 @@ describe("managed organizer authorization and execution", () => {
     api.retrieve.mockResolvedValue({
       status: "requires_action",
       usage: { total_tokens: 10 },
+      metadata: current,
       required_actions: [
         {
           type: "computer_use_approval_request",
@@ -651,6 +667,7 @@ describe("demo-day resilience", () => {
       status: "idle",
       required_actions: [],
       usage: { total_tokens: 10 },
+      metadata: current,
       environment: { type: "openai_hosted" },
     });
     api.items.list.mockResolvedValue({
@@ -737,5 +754,36 @@ describe("environment template", () => {
         "environment_template_id"
       ],
     ).toBeUndefined();
+  });
+});
+
+describe("updated instructions", () => {
+  it("continues an outdated conversation in a fresh one", async () => {
+    const { d, api } = dependencies();
+    api.retrieve.mockResolvedValue({
+      status: "idle",
+      required_actions: [],
+      usage: { total_tokens: 10 },
+      metadata: { civimeet_version: "older" },
+    });
+    const r = await handleManagedOrganizer(req(), d);
+    expect(r.status).toBe(409);
+    expect(await r.json()).toMatchObject({
+      restart: true,
+      error: expect.stringContaining("updated"),
+    });
+    expect(d.forceArchive).toHaveBeenCalled();
+    expect(api.events.create).not.toHaveBeenCalled();
+  });
+  it("stamps new conversations with the current version", async () => {
+    const { d, api } = dependencies();
+    d.reserve.mockResolvedValue({
+      session: { ...row, provider_id: null } as unknown as typeof row,
+      replayed: false,
+    });
+    await (await handleManagedOrganizer(req(), d)).text();
+    expect(api.create.mock.calls[0]![0].metadata).toMatchObject({
+      civimeet_version: organizerVersion(),
+    });
   });
 });

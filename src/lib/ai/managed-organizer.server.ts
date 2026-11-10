@@ -657,6 +657,22 @@ async function closeConversationBrowser(deps: OrganizerDependencies, row: Sessio
   const provider = await deps.browserStore.forget(row.id, row.organization_id).catch(() => null);
   if (provider) await deps.browserProvider.close(provider).catch(() => {});
 }
+/**
+ * A short fingerprint of Civi's instructions and tools. OpenAI keeps a conversation's original
+ * instructions for its whole life, so a conversation started before an update is continued in a
+ * fresh one instead of running on outdated rules.
+ */
+export function organizerVersion(env: Record<string, string | undefined> = process.env) {
+  const tools = organizerSetup("search", env).tools.map((tool) =>
+    "name" in tool ? tool.name : tool.type,
+  );
+  return createHash("sha256")
+    .update(organizerInstructions)
+    .update(JSON.stringify(tools))
+    .update(browserbaseConfigured(env) ? "browserbase" : "")
+    .digest("hex")
+    .slice(0, 16);
+}
 /** OpenAI's customer-safe error text, trimmed and stripped of anything key-like. */
 function providerText(text: string) {
   return text
@@ -902,7 +918,10 @@ export async function handleManagedOrganizer(
         configuration,
         browser: {
           available: browserbaseConfigured() || session.environment?.type === "openai_hosted",
-          live: live ? { url: live.live_url, humanControl: live.human_control } : null,
+          live:
+            live && live.live_url.startsWith("https://")
+              ? { url: live.live_url, humanControl: live.human_control }
+              : null,
           approvals: browserbaseConfigured()
             ? await deps.browserActions.pending(row.id).catch(() => [])
             : [],
@@ -995,7 +1014,7 @@ export async function handleManagedOrganizer(
             ...(process.env["OPENAI_ORGANIZER_PROVIDER_SPEND_CAP"] === "true"
               ? { spend_control: { limit: cents } }
               : {}),
-            metadata: { civimeet_session: row.id },
+            metadata: { civimeet_session: row.id, civimeet_version: organizerVersion() },
           } as SessionCreateParamsNonStreaming);
           acceptedCapability = level;
           acceptedAt = Date.now();
@@ -1060,6 +1079,25 @@ export async function handleManagedOrganizer(
           409,
         );
       }
+    }
+    if (
+      input.action === "send" &&
+      !claim.replayed &&
+      !initialInputSubmitted &&
+      (before.metadata as Record<string, string> | null | undefined)?.["civimeet_version"] !==
+        organizerVersion()
+    ) {
+      // Civi was updated since this conversation began: continue in a fresh one.
+      await closeConversationBrowser(deps, row);
+      await deps.forceArchive(row);
+      reserved = null;
+      return json(
+        {
+          error: "Civi was updated, so it's continuing in a fresh conversation.",
+          restart: true,
+        },
+        409,
+      );
     }
     const tokenLimit = z.coerce
       .number()
@@ -1222,16 +1260,24 @@ export async function handleManagedOrganizer(
                   deps,
                 ),
               };
-            } catch {
+            } catch (failure) {
+              const reason =
+                isBrowserTool(action.name) && failure instanceof Error
+                  ? providerText(failure.message)
+                  : "";
+              if (reason)
+                send({ type: "activity", message: `Civi's browser couldn't do that: ${reason}` });
               result = {
                 success: false,
-                error: "The organization tool could not complete. Do not claim it succeeded.",
+                error: reason
+                  ? `The browser step failed: ${reason}. Do not claim it succeeded; tell the team this exact reason.`
+                  : "The organization tool could not complete. Do not claim it succeeded.",
               };
             }
             if (isBrowserTool(action.name)) {
               // Show (or keep showing) the live browser above the chat.
               const live = await deps.browserStore.get(row.id).catch(() => null);
-              if (live)
+              if (live?.live_url.startsWith("https://"))
                 send({
                   type: "browser_live",
                   url: live.live_url,
