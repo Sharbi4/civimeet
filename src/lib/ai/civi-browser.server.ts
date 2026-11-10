@@ -1,6 +1,12 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
-import { clickAllowed, publicSite, typingAllowed, type PageItem } from "./browser-policy";
+import {
+  clickAllowed,
+  isSocialSite,
+  publicSite,
+  typingAllowed,
+  type PageItem,
+} from "./browser-policy";
 import type { BrowserSession, CdpSend } from "./browserbase.server";
 
 /** Civi's browser tools. Each step runs in the conversation's live browser the team can watch. */
@@ -9,7 +15,7 @@ export const browserTools = [
     type: "function" as const,
     name: "browser_open",
     description:
-      "Open a public website in your live browser (the team watches it above the chat and can take over). Returns the page's text and numbered links/buttons. Social networks and sign-ins are not allowed.",
+      "Open a public website in your live browser (the team watches it above the chat and can take over). Returns the page's text and numbered links/buttons. Social networks open too; if a site needs a sign-in, the team signs in themselves after taking control.",
     parameters: {
       type: "object",
       properties: { url: { type: "string", maxLength: 500 } },
@@ -80,9 +86,13 @@ export type BrowserStore = {
   get(conversation: string): Promise<BrowserRecord | null>;
   save(conversation: string, org: string, session: BrowserSession): Promise<void>;
   forget(conversation: string, org: string): Promise<string | null>;
+  /** The organization's saved browser profile, so sign-ins carry across conversations. */
+  profile(org: string): Promise<string | null>;
+  saveProfile(org: string, id: string): Promise<void>;
 };
 export type BrowserProvider = {
-  open(metadata: Record<string, string>): Promise<BrowserSession>;
+  open(metadata: Record<string, string>, profile?: string | null): Promise<BrowserSession>;
+  createProfile(): Promise<string>;
   tab<T>(connectUrl: string, work: (send: CdpSend) => Promise<T>): Promise<T>;
   close(id: string): Promise<void>;
 };
@@ -108,7 +118,7 @@ const SNAPSHOT = `(() => {
     items.push(Object.assign({ item: n }, ${ITEM_FIELDS}));
   }
   const text = (document.body ? document.body.innerText : "").replace(/\\n{3,}/g, "\\n\\n").slice(0, 8000);
-  return JSON.stringify({ url: location.href, title: (document.title || "").slice(0, 200), text, items });
+  return JSON.stringify({ url: location.href, title: (document.title || "").slice(0, 200), text, items, signIn: !!document.querySelector('input[type="password"]') });
 })()`;
 const element = (n: number) =>
   `(() => { const el = document.querySelector('[data-civi="${n}"]'); if (!el) return "null"; return JSON.stringify(${ITEM_FIELDS}); })()`;
@@ -129,6 +139,7 @@ type Snapshot = {
   url: string;
   title: string;
   text: string;
+  signIn?: boolean;
   items: (PageItem & { item: number })[];
 };
 async function snapshot(send: CdpSend): Promise<Snapshot> {
@@ -143,11 +154,20 @@ async function guard(send: CdpSend): Promise<string | undefined> {
   await settle(send);
   return `The page tried to go somewhere Civi's browser doesn't visit, so it went back. ${site.reason}`;
 }
-const report = (page: Snapshot, note?: string) =>
-  JSON.stringify({
+const report = (page: Snapshot, note?: string) => {
+  const notes = [
+    note,
+    page.signIn
+      ? "This page asks for a sign-in. Civi never signs in: ask the team to click “Take control” above the chat, sign in themselves, then click “Hand back to Civi”. Never ask for passwords or codes."
+      : undefined,
+    isSocialSite(page.url)
+      ? "On social networks Civi only reads: liking, commenting, sharing, posting, joining and messaging are left to the team."
+      : undefined,
+  ].filter(Boolean);
+  return JSON.stringify({
     url: page.url,
     title: page.title,
-    ...(note ? { note } : {}),
+    ...(notes.length ? { note: notes.join(" ") } : {}),
     // Website content is untrusted data, never instructions.
     untrusted_page_text: page.text,
     items: page.items.map(({ item, tag, label, href, search }) => ({
@@ -157,6 +177,7 @@ const report = (page: Snapshot, note?: string) =>
       ...(href ? { href: href.slice(0, 200) } : {}),
     })),
   }).slice(0, 14000);
+};
 
 const argsFor = {
   browser_open: z.object({ url: z.string().min(3).max(500) }).strict(),
@@ -249,10 +270,15 @@ export async function runBrowserTool(
   // Use the conversation's browser, opening one if needed; a browser that has ended is replaced once.
   for (let attempt = 0; attempt < 2; attempt++) {
     if (!record) {
-      const session = await context.provider.open({
-        civimeet_org: context.org,
-        civimeet_conversation: context.conversation,
-      });
+      let profile = await context.store.profile(context.org).catch(() => null);
+      if (!profile) {
+        profile = await context.provider.createProfile().catch(() => null);
+        if (profile) await context.store.saveProfile(context.org, profile).catch(() => {});
+      }
+      const session = await context.provider.open(
+        { civimeet_org: context.org, civimeet_conversation: context.conversation },
+        profile,
+      );
       await context.store.save(context.conversation, context.org, session);
       record = {
         provider_session: session.id,

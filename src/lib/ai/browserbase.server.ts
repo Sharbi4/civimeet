@@ -58,9 +58,30 @@ async function request<T>(path: string, init: { method?: string; body?: unknown 
 export type BrowserSession = { id: string; connectUrl: string; liveUrl: string; expiresAt: string };
 const TIMEOUT_SECONDS = 1800;
 
+/** The Browserbase project to use: BROWSERBASE_PROJECT_ID, or the key's first project. */
+async function projectId() {
+  const configured = process.env["BROWSERBASE_PROJECT_ID"]?.trim();
+  if (configured) return configured;
+  const projects = await request<{ id: string }[]>("/projects");
+  const id = Array.isArray(projects) ? projects[0]?.id : undefined;
+  if (!id) throw new BrowserbaseError(503, "Browserbase has no project for this API key.");
+  return id;
+}
+/** A saved browser profile (cookies), so people sign in to a site once per organization. */
+export async function createBrowserProfile(): Promise<string> {
+  const created = await request<{ id: string }>("/contexts", {
+    method: "POST",
+    body: { projectId: await projectId() },
+  });
+  if (!created.id) throw new BrowserbaseError(502, "Browserbase didn't create a profile.");
+  return created.id;
+}
 /** Open a new browser: 30 minutes, kept alive between Civi's steps, nothing recorded. */
-export async function openBrowser(metadata: Record<string, string>): Promise<BrowserSession> {
-  const body = (keepAlive: boolean) => ({
+export async function openBrowser(
+  metadata: Record<string, string>,
+  profile?: string | null,
+): Promise<BrowserSession> {
+  const body = (keepAlive: boolean, withProfile: boolean) => ({
     ...(process.env["BROWSERBASE_PROJECT_ID"]?.trim()
       ? { projectId: process.env["BROWSERBASE_PROJECT_ID"]!.trim() }
       : {}),
@@ -68,6 +89,7 @@ export async function openBrowser(metadata: Record<string, string>): Promise<Bro
     ...(keepAlive ? { keepAlive: true } : {}),
     userMetadata: metadata,
     browserSettings: {
+      ...(withProfile && profile ? { context: { id: profile, persist: true } } : {}),
       viewport: { width: 1280, height: 800 },
       blockAds: true,
       solveCaptchas: false,
@@ -76,15 +98,30 @@ export async function openBrowser(metadata: Record<string, string>): Promise<Bro
     },
   });
   type Created = { id: string; connectUrl: string; expiresAt?: string };
-  let created: Created;
-  try {
-    created = await request<Created>("/sessions", { method: "POST", body: body(true) });
-  } catch (error) {
-    // keepAlive needs a paid Browserbase plan; without it the browser still works per step.
-    if (!(error instanceof BrowserbaseError) || ![400, 402, 403, 422].includes(error.status))
-      throw error;
-    created = await request<Created>("/sessions", { method: "POST", body: body(false) });
+  // Best setup first; keepAlive and saved profiles depend on the Browserbase plan.
+  const attempts: [boolean, boolean][] = [
+    [true, true],
+    [false, true],
+    [true, false],
+    [false, false],
+  ];
+  let created: Created | null = null;
+  let lastError: unknown = null;
+  for (const [keepAlive, withProfile] of attempts) {
+    if (withProfile && !profile) continue;
+    try {
+      created = await request<Created>("/sessions", {
+        method: "POST",
+        body: body(keepAlive, withProfile),
+      });
+      break;
+    } catch (error) {
+      if (!(error instanceof BrowserbaseError) || ![400, 402, 403, 422].includes(error.status))
+        throw error;
+      lastError = error;
+    }
   }
+  if (!created) throw lastError;
   if (!created.id || !created.connectUrl?.startsWith("wss://"))
     throw new BrowserbaseError(502, "Browserbase didn't return a usable browser.");
   const live = await request<{ debuggerFullscreenUrl: string }>(

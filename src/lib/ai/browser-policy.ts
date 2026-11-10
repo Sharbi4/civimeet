@@ -1,7 +1,7 @@
 // Civi's browser rules, shared by every browser Civi uses. Web pages and the model's intent are
 // untrusted: these checks decide what actually happens.
 
-/** Social networks stay off-limits: their terms forbid automated use, and they block cloud browsers. */
+/** Social networks: open in Civi's browser (the person signs in), but Civi only reads there. */
 export const socialDomains = [
   "facebook.com",
   "fb.com",
@@ -14,10 +14,16 @@ export const socialDomains = [
   "nextdoor.com",
   "reddit.com",
 ];
-const blocked = (host: string) =>
-  socialDomains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+export const isSocialSite = (raw: string) => {
+  try {
+    const host = new URL(raw).hostname.toLowerCase();
+    return socialDomains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+  } catch {
+    return false;
+  }
+};
 
-/** Public http(s) websites only: no social networks, private addresses or other schemes. */
+/** Public http(s) websites, social networks included: no private addresses or other schemes. */
 export function publicSite(raw: string): { ok: true; url: string } | { ok: false; reason: string } {
   let url: URL;
   try {
@@ -37,12 +43,6 @@ export function publicSite(raw: string): { ok: true; url: string } | { ok: false
     !host.includes(".")
   )
     return { ok: false, reason: "Civi's browser only opens public websites." };
-  if (blocked(host))
-    return {
-      ok: false,
-      reason:
-        "Civi's browser doesn't visit social networks. Their rules forbid automated use; connect them in Settings → Connections instead.",
-    };
   if (url.username || url.password)
     return { ok: false, reason: "Addresses with sign-in details aren't allowed." };
   return { ok: true, url: url.href };
@@ -50,7 +50,7 @@ export function publicSite(raw: string): { ok: true; url: string } | { ok: false
 
 /** Labels of buttons and links that would act for the organization instead of just looking. */
 const consequential =
-  /\b(post|publish|send|submit|buy|purchase|pay|checkout|check out|donate|order|place order|add to (cart|bag)|sign ?up|register|rsvp|subscribe|join|apply|book|reserve|confirm|delete|remove|log ?in|sign ?in|log ?out|sign ?out|create account|accept|agree|follow|like|share|comment|reply|upload)\b/i;
+  /\b(post|publish|send|submit|buy|purchase|pay|checkout|check out|donate|order|place order|add to (cart|bag)|sign ?up|register|rsvp|subscribe|join|apply|book|reserve|confirm|delete|remove|log ?in|sign ?in|log ?out|sign ?out|create account|accept|agree|follow|like|share|comment|reply|upload|message|invite|react|poke|tag|mention|add friend|friend request|connect|vote|upvote|downvote|retweet|repost|pin|save post|going|interested)\b/i;
 
 export type PageItem = {
   tag: string;
