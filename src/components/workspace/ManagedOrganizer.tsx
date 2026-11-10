@@ -40,6 +40,7 @@ export function ManagedOrganizer({
     connection = useRef<AbortController | null>(null);
   // Automatic reconnects in a row, so a task that keeps dropping doesn't loop forever.
   const reconnects = useRef(0);
+  const lastReason = useRef("");
   const resumedOnOpen = useRef(false);
   // What the current request is doing, and a message waiting to take over from a reconnect.
   const mode = useRef<"send" | "resume" | null>(null);
@@ -120,6 +121,10 @@ export function ManagedOrganizer({
     }
     setActivity(action === "resume" ? "Reconnecting to Civi…" : "Sending to Civi…");
     let reconnect = false;
+    let planned = false;
+    // Whether the server said how this connection ended; a silent end means it was cut.
+    let ended = false;
+    let failedMessage = "";
     let restart = false;
     let retrySend = false;
     const text = message.trim();
@@ -155,6 +160,12 @@ export function ManagedOrganizer({
             buffer = buffer.slice(newline + 1);
             if (!alive.current) continue;
             if (event.type === "ping") continue;
+            if (
+              ["outcome", "saved", "continue", "interrupted", "failed", "blocked"].includes(
+                event.type,
+              )
+            )
+              ended = true;
             if (event.type === "delta" || event.type === "text")
               setParts((p) => ({
                 ...p,
@@ -169,10 +180,23 @@ export function ManagedOrganizer({
                     ? { screenshot: current.screenshot }
                     : {}),
               }));
-            if (event.type === "continue" || event.type === "interrupted") reconnect = true;
+            if (event.type === "continue") {
+              // A planned hand-off between connections: reconnect right away, not a failure.
+              reconnect = true;
+              planned = true;
+            }
+            if (event.type === "interrupted") reconnect = true;
+            if (event.type === "interrupted" && typeof event.reason === "string")
+              lastReason.current = event.reason;
+            if (event.type === "failed") {
+              // A real failure: say why and stop; the next message starts fresh.
+              reconnect = false;
+              failedMessage = typeof event.message === "string" ? event.message : "";
+            }
             if (event.message) setActivity(event.message);
             if (event.type === "outcome" || event.type === "saved") {
               submission.current = null;
+              reconnects.current = 0;
               setActivity(
                 event.status === "completed"
                   ? "Saved to this conversation."
@@ -186,6 +210,11 @@ export function ManagedOrganizer({
       } finally {
         reader.releaseLock();
       }
+      if (!ended && !queuedSend.current) {
+        // The connection was cut without a word: pick the task back up.
+        reconnect = true;
+        lastReason.current = "the connection was cut";
+      }
       await refresh();
     } catch (e) {
       const failure = e as Error & { restart?: boolean };
@@ -198,7 +227,7 @@ export function ManagedOrganizer({
         setActivity("Starting a fresh conversation…");
       } else if (/still finishing|already responding/i.test(text)) {
         // Civi may still be finishing the last reply: wait a moment and try again.
-        if (action === "send" && attempt < 3) retrySend = true;
+        if (action === "send" && attempt < 6) retrySend = true;
         else reconnect = true;
       } else if (alive.current) {
         setActivity("");
@@ -209,6 +238,10 @@ export function ManagedOrganizer({
       connection.current = null;
       mode.current = null;
       setSending(false);
+    }
+    if (failedMessage && alive.current) {
+      setActivity("");
+      setError(failedMessage);
     }
     if (queuedSend.current) {
       queuedSend.current = false;
@@ -221,14 +254,24 @@ export function ManagedOrganizer({
       setTimeout(() => void runRef.current("send", attempt + 1), restart ? 0 : 1500);
       return;
     }
-    if (reconnect && alive.current && reconnects.current < 4) {
-      reconnects.current += 1;
+    if (reconnect && alive.current && planned) {
       setTimeout(() => {
         if (alive.current) void runRef.current("resume");
-      }, 1500 * reconnects.current);
+      }, 300);
+    } else if (reconnect && alive.current && reconnects.current < 8) {
+      // Civi may still be holding the last connection for a few seconds: back off and retry.
+      reconnects.current += 1;
+      setTimeout(
+        () => {
+          if (alive.current) void runRef.current("resume");
+        },
+        Math.min(8000, 1500 * reconnects.current),
+      );
     } else if (reconnect && alive.current) {
       setActivity("");
-      setError("Civi lost the connection a few times. Use “Reconnect to live task” to try again.");
+      setError(
+        `Civi couldn't stay connected to that task${lastReason.current ? ` (${lastReason.current})` : ""}. Just send your message again: Civi will pick up or start fresh.`,
+      );
     }
   }
   const runRef = useRef(run);

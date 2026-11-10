@@ -301,6 +301,16 @@ const defaults = {
     if (r.error || !r.data?.length)
       throw new OrganizerError(409, "Conversation checkpoint changed. Refresh saved work.");
   },
+  /** Drop a hold left by a connection that died before it could release it. */
+  async clearLease(input: Input) {
+    const r = await database()
+      .from("organizer_sessions")
+      .update({ lease_id: null, lease_until: null })
+      .eq("organization_id", input.organizationId)
+      .eq("thread", input.thread)
+      .eq("archived", false);
+    if (r.error) throw new OrganizerError(503, "Civi couldn't take over the conversation.");
+  },
   /** Set a stuck conversation aside so the next message starts fresh (history stays at OpenAI). */
   async forceArchive(row: SessionRow) {
     const r = await database()
@@ -462,6 +472,22 @@ const defaults = {
   },
 };
 export type OrganizerDependencies = typeof defaults;
+/** OpenAI's customer-safe error text, trimmed and stripped of anything key-like. */
+function providerText(text: string) {
+  return text
+    .replace(/(sk|key|tok)[-_A-Za-z0-9]{16,}/g, "[hidden]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300);
+}
+/** A short, safe description of why a live connection broke, for the person to report. */
+function connectionReason(failure: unknown) {
+  if (failure instanceof OpenAI.APIError)
+    return `OpenAI ${failure.status ?? "error"}${typeof failure.code === "string" ? ` (${failure.code})` : ""}`;
+  if (failure instanceof Error)
+    return providerText(`${failure.name}: ${failure.message}`).slice(0, 160);
+  return "unknown";
+}
 const json = (value: unknown, status = 200) =>
   Response.json(value, { status, headers: { "Cache-Control": "no-store" } });
 export function toolRequestId(callId: string) {
@@ -644,7 +670,20 @@ export async function handleManagedOrganizer(
     }
     if (input.action === "send" && (!input.message || !input.requestId))
       throw new OrganizerError(400, "A message and request ID are required.");
-    const claim = await deps.reserve(actor, input);
+    let claim: Awaited<ReturnType<typeof deps.reserve>>;
+    try {
+      claim = await deps.reserve(actor, input);
+    } catch (e) {
+      // A new message takes over: a hold left by a dropped connection must not block the team.
+      if (
+        input.action !== "send" ||
+        !(e instanceof OrganizerError) ||
+        !/still finishing/i.test(e.message)
+      )
+        throw e;
+      await deps.clearLease(input);
+      claim = await deps.reserve(actor, input);
+    }
     reserved = claim.session;
     const row = reserved;
     let initialInputSubmitted = false;
@@ -792,7 +831,7 @@ export async function handleManagedOrganizer(
       .int()
       .min(15000)
       .max(180000)
-      .parse(process.env["OPENAI_ORGANIZER_TIMEOUT_MS"] || 150000);
+      .parse(process.env["OPENAI_ORGANIZER_TIMEOUT_MS"] || 85000);
     // Long tasks keep running at OpenAI: this connection ends cleanly (releasing its lease) and
     // the chat reconnects, instead of cancelling the work. The token allowance bounds cost.
     let timedOut = false;
@@ -831,6 +870,10 @@ export async function handleManagedOrganizer(
       abort.abort();
       throw e;
     }
+    // The database grants a 4-minute hold; keep it short and renew it from the live stream.
+    await deps
+      .update(row, { lease_until: new Date(Date.now() + 45_000).toISOString() })
+      .catch(() => {});
     const scope = { org: input.organizationId, actor, token, url: request.url };
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
@@ -839,8 +882,17 @@ export async function handleManagedOrganizer(
         const send = (data: unknown) => {
           if (!closed) controller.enqueue(encoder.encode(JSON.stringify(data) + "\n"));
         };
-        // Keep the connection alive while tools run, so proxies don't drop a quiet stream.
-        const heartbeat = setInterval(() => send({ type: "ping" }), 10_000);
+        // Keep the connection alive while tools run, so proxies don't drop a quiet stream, and
+        // keep this connection's short hold on the conversation fresh only while it is alive:
+        // if the platform drops the request, the hold expires within a minute.
+        let beats = 0;
+        const heartbeat = setInterval(() => {
+          send({ type: "ping" });
+          if (++beats % 2 === 0)
+            void deps
+              .update(row, { lease_until: new Date(Date.now() + 45_000).toISOString() })
+              .catch(() => {});
+        }, 10_000);
         const handled = new Set<string>();
         let toolCount = 0;
         const tools = async (session: Awaited<ReturnType<typeof api.retrieve>>) => {
@@ -880,7 +932,7 @@ export async function handleManagedOrganizer(
               return false;
             }
             if (handled.has(action.call_id)) continue;
-            if (++toolCount > 4)
+            if (++toolCount > 12)
               throw new OrganizerError(429, "Tool limit reached. Resume saved work to continue.");
             handled.add(action.call_id);
             send({
@@ -994,17 +1046,42 @@ export async function handleManagedOrganizer(
               "turn" in event &&
               event.turn.subagent_id === null
             ) {
-              send({ type: "outcome", status: event.type.split(".").pop() });
+              const status = event.type.split(".").pop();
+              const turnError = (event.turn as { error?: { message?: string } | null }).error;
+              send({
+                type: "outcome",
+                status,
+                ...(status === "failed"
+                  ? {
+                      message: `Civi's task didn't finish${turnError?.message ? `: ${providerText(turnError.message)}` : "."} Your next message continues from here.`,
+                    }
+                  : {}),
+              });
               break;
-            } else if (event.type === "error" || event.type === "agent.session.failed")
-              throw new Error("Provider task failed");
+            } else if (event.type === "error") {
+              // OpenAI's errors are customer-safe and often not fatal: show them, keep listening.
+              send({
+                type: "provider_error",
+                message: `OpenAI: ${providerText(event.error?.message ?? "an error occurred")}`,
+              });
+            } else if (event.type === "agent.session.failed") {
+              const reason = (event.session as { error?: string | null }).error;
+              send({
+                type: "failed",
+                message: `Civi's conversation failed at OpenAI${reason ? `: ${providerText(reason)}` : "."} Your next message starts a fresh conversation.`,
+              });
+              break;
+            }
           }
-        } catch {
+        } catch (failure) {
           if (timedOut) send({ type: "continue", message: "Civi is still working. Reconnecting…" });
+          else if (failure instanceof OrganizerError)
+            send({ type: "failed", message: failure.message });
           else
             send({
               type: "interrupted",
               message: "The live connection ended. Reconnecting to Civi…",
+              reason: connectionReason(failure),
             });
         } finally {
           clearInterval(heartbeat);

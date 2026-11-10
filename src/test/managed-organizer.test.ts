@@ -91,6 +91,7 @@ function dependencies() {
     update: vi.fn().mockResolvedValue(undefined),
     archive: vi.fn().mockResolvedValue(undefined),
     forceArchive: vi.fn().mockResolvedValue(undefined),
+    clearLease: vi.fn().mockResolvedValue(undefined),
     context: vi.fn().mockResolvedValue('{"mission":"Community service"}'),
     researchAgent: vi.fn().mockResolvedValue("web-agent"),
     research: vi.fn().mockResolvedValue(Response.json({ run: { status: "completed" } })),
@@ -635,5 +636,26 @@ describe("demo-day resilience", () => {
       title: "Reid Park Zoo events",
       screenshot: "data:image/jpeg;base64,BBBB",
     });
+  });
+});
+
+describe("held conversations", () => {
+  it("lets a new message take over a conversation held by a dropped connection", async () => {
+    const { d } = dependencies();
+    d.reserve
+      .mockRejectedValueOnce(
+        new OrganizerError(409, "Civi is still finishing the last reply. Give it a moment."),
+      )
+      .mockResolvedValue({ session: { ...row }, replayed: false });
+    const r = await handleManagedOrganizer(req(), d);
+    expect(r.status).toBe(200);
+    expect(d.clearLease).toHaveBeenCalledTimes(1);
+    expect(d.reserve).toHaveBeenCalledTimes(2);
+  });
+  it("keeps the short hold fresh only while the connection is alive", async () => {
+    const { d } = dependencies();
+    await (await handleManagedOrganizer(req(), d)).text();
+    expect(d.update).toHaveBeenCalledWith(row, { lease_until: expect.any(String) });
+    expect(d.update).toHaveBeenLastCalledWith(row, { lease_id: null, lease_until: null });
   });
 });
