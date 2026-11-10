@@ -105,8 +105,9 @@ export function ManagedOrganizer({
     const timer = setInterval(() => void refresh(), 4000);
     return () => clearInterval(timer);
   }, [busy, state.status, refresh]);
-  async function run(action: "send" | "resume", attempt = 0) {
-    if (role === "viewer" || (action === "send" && !message.trim())) return;
+  async function run(action: "send" | "resume", attempt = 0, carried?: string) {
+    const text = (carried ?? message).trim();
+    if (role === "viewer" || (action === "send" && !text)) return;
     if (mode.current) {
       // A new message always gets through: stop listening to the old task, then send.
       if (action === "send" && mode.current === "resume") {
@@ -132,7 +133,17 @@ export function ManagedOrganizer({
     let failedMessage = "";
     let restart = false;
     let retrySend = false;
-    const text = message.trim();
+    if (action === "send" && attempt === 0) {
+      // Show the message in the thread the moment it's sent, like any chat.
+      setMessage("");
+      setState((s) => ({
+        ...s,
+        messages: [
+          ...s.messages.filter((m) => m.id !== "pending"),
+          { id: "pending", role: "user", text },
+        ],
+      }));
+    }
     if (action === "send" && submission.current?.text !== text)
       submission.current = { text, id: crypto.randomUUID() };
     const abort = new AbortController();
@@ -145,13 +156,6 @@ export function ManagedOrganizer({
       );
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No live response. Refresh saved work.");
-      if (action === "send") {
-        setMessage("");
-        setState((s) => ({
-          ...s,
-          messages: [...s.messages, { id: "pending", role: "user", text }],
-        }));
-      }
       const decoder = new TextDecoder();
       let buffer = "";
       try {
@@ -223,20 +227,24 @@ export function ManagedOrganizer({
       await refresh();
     } catch (e) {
       const failure = e as Error & { restart?: boolean };
-      const text = failure instanceof Error ? failure.message : "Connection interrupted.";
+      const failureText = failure instanceof Error ? failure.message : "Connection interrupted.";
       if (queuedSend.current) {
         // We stopped this reconnect ourselves so a new message can go through.
       } else if (action === "send" && failure.restart && attempt < 1) {
         // The old task was stuck and has been set aside: send into a fresh conversation.
         restart = true;
         setActivity("Starting a fresh conversation…");
-      } else if (/still finishing|already responding/i.test(text)) {
+      } else if (/still finishing|already responding/i.test(failureText)) {
         // Civi may still be finishing the last reply: wait a moment and try again.
         if (action === "send" && attempt < 6) retrySend = true;
         else reconnect = true;
       } else if (alive.current) {
         setActivity("");
-        setError(text);
+        setError(failureText);
+        if (action === "send") {
+          setState((s) => ({ ...s, messages: s.messages.filter((m) => m.id !== "pending") }));
+          setMessage((current) => current || text);
+        }
       }
     } finally {
       if (alive.current) setBusy(false);
@@ -256,7 +264,7 @@ export function ManagedOrganizer({
     }
     if (restart || retrySend) {
       if (restart) submission.current = null;
-      setTimeout(() => void runRef.current("send", attempt + 1), restart ? 0 : 1500);
+      setTimeout(() => void runRef.current("send", attempt + 1, text), restart ? 0 : 1500);
       return;
     }
     if (reconnect && alive.current && planned) {
