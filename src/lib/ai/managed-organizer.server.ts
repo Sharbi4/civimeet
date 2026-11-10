@@ -136,7 +136,18 @@ export function organizerCapabilities(
   ];
 }
 /** The tools and environment for a capability level. */
-export function organizerSetup(level: OrganizerCapability) {
+/** An OpenAI environment template made in the dashboard, if the server names one. */
+export function organizerEnvironmentTemplate(
+  env: Record<string, string | undefined> = process.env,
+) {
+  const id = env["OPENAI_ORGANIZER_ENVIRONMENT_TEMPLATE_ID"]?.trim() ?? "";
+  return /^[A-Za-z0-9_-]{4,120}$/.test(id) ? id : null;
+}
+export function organizerSetup(
+  level: OrganizerCapability,
+  env: Record<string, string | undefined> = process.env,
+) {
+  const template = organizerEnvironmentTemplate(env);
   return {
     tools: [
       ...organizerTools,
@@ -153,13 +164,20 @@ export function organizerSetup(level: OrganizerCapability) {
       level === "browser"
         ? {
             type: "openai_hosted" as const,
-            container_size: "small" as const,
+            // A dashboard template, when named, supplies the base; these settings only narrow it.
+            ...(template
+              ? { environment_template_id: template }
+              : { container_size: "small" as const }),
             desktop: { enabled: true },
             network: { access: "restricted" as const, blocked_domains: browserBlockedDomains },
           }
         : level === "browser_basic"
           ? // The simplest hosted browser; social networks are still refused by browserApproval.
-            { type: "openai_hosted" as const, desktop: { enabled: true } }
+            {
+              type: "openai_hosted" as const,
+              ...(template ? { environment_template_id: template } : {}),
+              desktop: { enabled: true },
+            }
           : { type: "none" as const },
   };
 }

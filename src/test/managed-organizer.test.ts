@@ -679,3 +679,30 @@ describe("held conversations", () => {
     expect(d.update).toHaveBeenLastCalledWith(row, { lease_id: null, lease_until: null });
   });
 });
+
+import { organizerSetup } from "@/lib/ai/managed-organizer.server";
+describe("environment template", () => {
+  it("uses a dashboard environment template when the server names one", () => {
+    const withTemplate = organizerSetup("browser", {
+      OPENAI_ORGANIZER_ENVIRONMENT_TEMPLATE_ID: "envtpl_civimeet123",
+    }).environment as Record<string, unknown>;
+    expect(withTemplate).toMatchObject({
+      type: "openai_hosted",
+      environment_template_id: "envtpl_civimeet123",
+      desktop: { enabled: true },
+    });
+    expect(withTemplate["container_size"]).toBeUndefined();
+    expect(
+      (
+        organizerSetup("browser_basic", {
+          OPENAI_ORGANIZER_ENVIRONMENT_TEMPLATE_ID: "envtpl_civimeet123",
+        }).environment as Record<string, unknown>
+      )["environment_template_id"],
+    ).toBe("envtpl_civimeet123");
+    expect(
+      (organizerSetup("browser", {}).environment as Record<string, unknown>)[
+        "environment_template_id"
+      ],
+    ).toBeUndefined();
+  });
+});
