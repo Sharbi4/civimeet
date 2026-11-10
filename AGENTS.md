@@ -32,9 +32,11 @@
 
 - All workspace conversations use ManagedOrganizer and the authenticated OpenAI organizer API. Do not intercept chat messages with the retired ChatActions browser router.
 
-- The legacy browser UI and Steel execution routes are retired. Do not restore Atlas, Steel, Meta Muse fallback, browser docks or takeover controls.
+- The legacy browser UI and Steel execution routes are retired. Do not restore Atlas, Steel, Meta Muse fallback or browser docks.
 
 - OpenAI is the only organizer runtime. Browser sign-in and takeover remain unavailable until implemented and verified against the OpenAI agent API; stored credentials must never be sent in prompts or treated as proof of a connected account.
+
+- Civi's live browser is Browserbase when `BROWSERBASE_API_KEY` is set (`src/lib/ai/browserbase.server.ts`, `civi-browser.server.ts`, `browser-policy.ts`): CiviMeet creates one browser per conversation (kept alive, nothing recorded), stores its CDP connect URL only in `private.organizer_browsers` via service-role RPCs, and gives the team Browserbase's live view above the chat, watch-only until someone takes control. Civi drives it only through its own function tools, each checked before it runs (public sites only, no social networks, no sign-ins, no clicks that post/send/buy/sign up, typing only into search boxes), and every tool pauses while a person has control. Browsers close with their conversation. Why: the team must see and be able to take over whatever the agent does, and only the harness decides what happens in a browser.
 
 - Civi's browser is OpenAI's hosted `computer_use` browser with live `web_search`, created with automatic fallback (browser → search → none) so conversations never break on an unsupported setup. Social networks are blocked in the environment and denied by `browserApproval`; sign-in requests are always declined; screenshots stream to the chat and are never stored. Opening a running conversation resumes it, and long tasks reconnect instead of being cancelled. Why: the agent must browse visibly and safely, and a dropped connection must never leave the chat stuck.
 

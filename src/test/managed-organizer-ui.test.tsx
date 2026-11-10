@@ -1,13 +1,15 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-vi.mock("@/components/workspace/WorkspaceGate", () => ({
-  useWorkspace: () => ({
+vi.mock("@/components/workspace/WorkspaceGate", () => {
+  // One stable workspace, like the real app's context.
+  const workspace = {
     db: { auth: { getSession: async () => ({ data: { session: { access_token: "token" } } }) } },
     organizationId: "11111111-1111-4111-8111-111111111111",
     role: "owner",
-  }),
-}));
+  };
+  return { useWorkspace: () => workspace };
+});
 const { ManagedOrganizer } = await import("@/components/workspace/ManagedOrganizer");
 
 type Call = { action: string; message?: string; requestId?: string };
@@ -136,4 +138,48 @@ it("keeps Civi's browser on screen above the chat, with the last page it opened"
   expect(
     await screen.findByAltText(/What Civi's browser shows: Reid Park Zoo events/),
   ).toHaveAttribute("src", "data:image/jpeg;base64,BBBB");
+});
+
+it("shows Civi's live browser, watch-only until you take control", async () => {
+  let human = false;
+  serve((call) => {
+    if (call.action === "browser_takeover") {
+      human = true;
+      return Response.json({ status: "human" });
+    }
+    if (call.action === "browser_handback") {
+      human = false;
+      return Response.json({ status: "civi" });
+    }
+    return Response.json({
+      ...ready,
+      status: "idle",
+      messages: [{ id: "m", role: "assistant", text: "I opened the zoo's calendar." }],
+      browser: {
+        available: true,
+        title: null,
+        screenshot: null,
+        live: {
+          url: "https://www.browserbase.com/devtools-fullscreen/x?navbar=false",
+          humanControl: human,
+        },
+      },
+    });
+  });
+  render(<ManagedOrganizer thread="main" />);
+  const frame = await screen.findByTitle("Civi's live browser");
+  expect(frame).toHaveAttribute(
+    "src",
+    "https://www.browserbase.com/devtools-fullscreen/x?navbar=false",
+  );
+  expect((frame as HTMLIFrameElement).style.pointerEvents).toBe("none");
+  fireEvent.click(screen.getByRole("button", { name: "Take control" }));
+  await waitFor(() => expect(calls.some((c) => c.action === "browser_takeover")).toBe(true));
+  expect(await screen.findByRole("button", { name: "Hand back to Civi" })).toBeInTheDocument();
+  expect((screen.getByTitle("Civi's live browser") as HTMLIFrameElement).style.pointerEvents).toBe(
+    "auto",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Hand back to Civi" }));
+  await waitFor(() => expect(calls.some((c) => c.action === "browser_handback")).toBe(true));
+  expect(await screen.findByRole("button", { name: "Take control" })).toBeInTheDocument();
 });

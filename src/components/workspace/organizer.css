@@ -1652,3 +1652,12 @@ body:has(.organizer-frame) { overflow:hidden; }
 .cv-browser > img { display:block; width:100%; max-height:38vh; object-fit:contain; object-position:top; background:#fff; }
 .cv-browser-empty { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:14px 14px; font-size:13px; color:#64717a; }
 .cv-browser-empty button { border:1px solid #d7e0e5; border-radius:10px; padding:6px 10px; font-size:12px; color:#142d40; background:#fff; }
+.cv-browser > header .cv-browser-primary { margin-left:auto; background:#064cff; color:#fff; }
+.cv-browser > header .cv-browser-primary:hover { background:#0640d4; }
+.cv-browser > header .cv-browser-primary + button { margin-left:0; }
+.cv-browser > header .cv-browser-primary ~ button:last-child { margin-left:0; }
+.cv-browser-chip.is-human { background:#fef3c7; color:#92400e; }
+.cv-browser-live { position:relative; background:#fff; }
+.cv-browser-live iframe { display:block; width:100%; height:min(46vh, 520px); border:0; }
+.cv-browser-live.is-human { box-shadow:inset 0 0 0 2px #f59e0b; }
+.cv-browser-live p { margin:0; padding:6px 12px; font-size:12px; color:#64717a; border-top:1px solid #eef2f5; }

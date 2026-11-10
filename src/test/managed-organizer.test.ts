@@ -92,6 +92,17 @@ function dependencies() {
     archive: vi.fn().mockResolvedValue(undefined),
     forceArchive: vi.fn().mockResolvedValue(undefined),
     clearLease: vi.fn().mockResolvedValue(undefined),
+    browserStore: {
+      get: vi.fn().mockResolvedValue(null),
+      save: vi.fn().mockResolvedValue(undefined),
+      forget: vi.fn().mockResolvedValue(null),
+      control: vi.fn().mockResolvedValue(true),
+    },
+    browserProvider: {
+      open: vi.fn(),
+      tab: vi.fn(),
+      close: vi.fn().mockResolvedValue(undefined),
+    },
     context: vi.fn().mockResolvedValue('{"mission":"Community service"}'),
     researchAgent: vi.fn().mockResolvedValue("web-agent"),
     research: vi.fn().mockResolvedValue(Response.json({ run: { status: "completed" } })),
@@ -652,6 +663,7 @@ describe("demo-day resilience", () => {
     const body = await (await handleManagedOrganizer(req({ action: "status" }), d)).json();
     expect(body.browser).toEqual({
       available: true,
+      live: null,
       note: null,
       title: "Reid Park Zoo events",
       screenshot: "data:image/jpeg;base64,BBBB",

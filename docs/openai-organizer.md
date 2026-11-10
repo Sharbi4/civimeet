@@ -30,6 +30,16 @@ An event can also queue a two-task Perplexity sequence: community research follo
 - Browserbase connected in the OpenAI dashboard is not used by CiviMeet yet. Conversations set their own tool list, which replaces tools saved on the agent; wiring Browserbase's MCP server in is a fallback to add only if OpenAI's hosted browser stays unavailable.
 - Not live-verified yet: whether this OpenAI project accepts the hosted browser and web search. If it doesn't, the chat says so and continues with what it has.
 
+## Civi's live browser (Browserbase)
+
+Set the server secret `BROWSERBASE_API_KEY` (and optionally `BROWSERBASE_PROJECT_ID`) to give Civi a live browser the team watches and can take over. OpenAI's hosted browser has no live view or take-over, so with Browserbase configured Civi uses this browser instead (web search stays on).
+
+- CiviMeet creates one Browserbase browser per conversation the first time Civi browses: 1280×800, ads blocked, CAPTCHA solving off, nothing recorded or logged, kept alive for up to 30 minutes (`keepAlive` needs a paid Browserbase plan; without it each step still works). It closes when the conversation is reset, started over or set aside.
+- The CDP connect URL is stored only in `private.organizer_browsers`, reachable through service-role RPCs (`get/save/forget_organizer_browser`, `set_organizer_browser_control`). Members get only Browserbase's https live-view link, through the authorized organizer endpoint.
+- Civi's tools: `browser_open`, `browser_read`, `browser_click`, `browser_search`, `browser_scroll`, `browser_back`. Each is checked before it runs (`browser-policy.ts`): public http(s) sites only; social networks, private addresses and sign-in details refused; clicks that would post, send, buy, donate, register, sign in or sign up refused; typing only into search boxes. If the page wanders somewhere disallowed, the browser goes back. Page text reaches the model labeled as untrusted data.
+- The live view sits above the chat, watch-only while Civi works. **Take control** makes it interactive and pauses every browser tool ("the team has taken control"); **Hand back to Civi** resumes; **Close** releases the browser.
+- Not live-verified yet: needs `BROWSERBASE_API_KEY` in the server secrets.
+
 ## Configuration
 
 Apply `202610310005_agent_work_runner.sql`, `202611090001_managed_organizer.sql` and `202611090002_openai_helper_threads.sql`.

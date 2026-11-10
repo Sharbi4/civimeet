@@ -6,6 +6,20 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { handleStewardResearch } from "../steward-research.server";
 import { organizerInstructions, organizerTools } from "./organizer-personality";
+import {
+  browserTools,
+  isBrowserTool,
+  runBrowserTool,
+  type BrowserProvider,
+  type BrowserRecord,
+  type BrowserStore,
+} from "./civi-browser.server";
+import {
+  browserbaseConfigured,
+  closeBrowser,
+  openBrowser,
+  withBrowserTab,
+} from "./browserbase.server";
 import { connectors } from "../connectors";
 import { paymentRequestSchema } from "../agent-payments";
 
@@ -26,7 +40,17 @@ const inputSchema = z
           ].includes(value),
         "Unknown organizer conversation",
       ),
-    action: z.enum(["status", "send", "resume", "cancel", "new", "reset"]),
+    action: z.enum([
+      "status",
+      "send",
+      "resume",
+      "cancel",
+      "new",
+      "reset",
+      "browser_takeover",
+      "browser_handback",
+      "browser_close",
+    ]),
     message: z.string().trim().min(1).max(6000).optional(),
     requestId: z.string().uuid().optional(),
   })
@@ -130,7 +154,7 @@ export function organizerCapabilities(
 ): OrganizerCapability[] {
   const off = (name: string) => env[name]?.trim().toLowerCase() === "false";
   return [
-    ...(off("OPENAI_ORGANIZER_BROWSER")
+    ...(off("OPENAI_ORGANIZER_BROWSER") || browserbaseConfigured(env)
       ? []
       : ([
           "browser",
@@ -168,6 +192,8 @@ export function organizerSetup(
   return {
     tools: [
       ...organizerTools,
+      // The live browser the team can watch and take over (Browserbase), when configured.
+      ...(browserbaseConfigured(env) ? browserTools : []),
       ...(level === "basic"
         ? []
         : [
@@ -346,6 +372,49 @@ const defaults = {
     if (r.error || !r.data?.length)
       throw new OrganizerError(409, "Conversation checkpoint changed. Refresh saved work.");
   },
+  browserStore: {
+    async get(conversation: string) {
+      const r = await database().rpc("get_organizer_browser", { conversation });
+      if (r.error) throw new OrganizerError(503, "Civi's browser state couldn't be read.");
+      return (r.data as BrowserRecord | null) ?? null;
+    },
+    async save(
+      conversation: string,
+      org: string,
+      session: { id: string; connectUrl: string; liveUrl: string; expiresAt: string },
+    ) {
+      const r = await database().rpc("save_organizer_browser", {
+        conversation,
+        workspace: org,
+        provider: session.id,
+        connect: session.connectUrl,
+        live: session.liveUrl,
+        expires: session.expiresAt,
+      });
+      if (r.error) throw new OrganizerError(503, "Civi's browser couldn't be saved.");
+    },
+    async forget(conversation: string, org: string) {
+      const r = await database().rpc("forget_organizer_browser", { conversation, workspace: org });
+      if (r.error) throw new OrganizerError(503, "Civi's browser couldn't be closed.");
+      return (r.data as string | null) ?? null;
+    },
+    async control(conversation: string, org: string, human: boolean) {
+      const r = await database().rpc("set_organizer_browser_control", {
+        conversation,
+        workspace: org,
+        human,
+      });
+      if (r.error) throw new OrganizerError(503, "Civi's browser couldn't be updated.");
+      return Boolean(r.data);
+    },
+  } as BrowserStore & {
+    control(conversation: string, org: string, human: boolean): Promise<boolean>;
+  },
+  browserProvider: {
+    open: openBrowser,
+    tab: withBrowserTab,
+    close: closeBrowser,
+  } as BrowserProvider,
   /** Drop a hold left by a connection that died before it could release it. */
   async clearLease(input: Input) {
     const r = await database()
@@ -517,6 +586,12 @@ const defaults = {
   },
 };
 export type OrganizerDependencies = typeof defaults;
+/** Close a conversation's live browser (best effort) when the conversation is set aside. */
+async function closeConversationBrowser(deps: OrganizerDependencies, row: SessionRow) {
+  if (!browserbaseConfigured()) return;
+  const provider = await deps.browserStore.forget(row.id, row.organization_id).catch(() => null);
+  if (provider) await deps.browserProvider.close(provider).catch(() => {});
+}
 /** OpenAI's customer-safe error text, trimmed and stripped of anything key-like. */
 function providerText(text: string) {
   return text
@@ -542,7 +617,14 @@ export function toolRequestId(callId: string) {
 export async function executeOrganizerTool(
   name: string,
   args: unknown,
-  scope: { org: string; actor: string; token: string; url: string; callId: string },
+  scope: {
+    org: string;
+    actor: string;
+    token: string;
+    url: string;
+    callId: string;
+    conversation?: string;
+  },
   deps: OrganizerDependencies,
 ) {
   await deps.authorize(scope.token, scope.org); // Revocation takes effect before each tool.
@@ -551,6 +633,16 @@ export async function executeOrganizerTool(
   if (name === "request_payment") {
     const input = paymentRequestSchema.parse(args);
     return deps.requestPayment(scope.token, scope.org, input);
+  }
+  if (isBrowserTool(name)) {
+    if (!scope.conversation || !browserbaseConfigured())
+      throw new OrganizerError(400, "Civi's live browser isn't set up.");
+    return runBrowserTool(name, args, {
+      conversation: scope.conversation,
+      org: scope.org,
+      store: deps.browserStore,
+      provider: deps.browserProvider,
+    });
   }
   if (name !== "research_local") throw new OrganizerError(400, "This tool is not available.");
   const input = z
@@ -640,9 +732,30 @@ export async function handleManagedOrganizer(
             503,
           );
     const api = deps.provider();
+    if (
+      input.action === "browser_takeover" ||
+      input.action === "browser_handback" ||
+      input.action === "browser_close"
+    ) {
+      const row = await deps.current(input);
+      if (!row) return json({ status: "no_browser" });
+      if (input.action === "browser_close") {
+        await closeConversationBrowser(deps, row);
+        return json({ status: "closed" });
+      }
+      const changed = await deps.browserStore.control(
+        row.id,
+        row.organization_id,
+        input.action === "browser_takeover",
+      );
+      return json({
+        status: changed ? (input.action === "browser_takeover" ? "human" : "civi") : "no_browser",
+      });
+    }
     if (input.action === "reset") {
       // Stop whatever the current conversation is doing and set it aside.
       const row = await deps.current(input);
+      if (row) await closeConversationBrowser(deps, row);
       if (row?.provider_id) {
         const providerId = row.provider_id;
         await api.events
@@ -656,6 +769,7 @@ export async function handleManagedOrganizer(
       const row = await deps.current(input);
       if (!row?.provider_id) {
         if (row && input.action === "new") {
+          await closeConversationBrowser(deps, row);
           await deps.archive(row);
           return json({ status: "ready" });
         }
@@ -677,6 +791,7 @@ export async function handleManagedOrganizer(
         if (row.lease_until && Date.parse(row.lease_until) > Date.now())
           throw new OrganizerError(409, "Wait for the current response to finish.");
         // Only archive the exact current row; provider history remains available for audit.
+        await closeConversationBrowser(deps, row);
         await deps.archive(row);
         return json({ status: "ready" });
       }
@@ -698,10 +813,14 @@ export async function handleManagedOrganizer(
       const lastBrowse = items.data.find((item) => item.type === "computer_use_call") as
         { title?: string | null; output?: { image_url?: string } | null } | undefined;
       const screenshot = lastBrowse?.output?.image_url;
+      const live = browserbaseConfigured()
+        ? await deps.browserStore.get(row.id).catch(() => null)
+        : null;
       return json({
         configuration,
         browser: {
-          available: session.environment?.type === "openai_hosted",
+          available: browserbaseConfigured() || session.environment?.type === "openai_hosted",
+          live: live ? { url: live.live_url, humanControl: live.human_control } : null,
           note: session.environment?.type === "openai_hosted" ? null : organizerBrowserRejection(),
           title: lastBrowse?.title ?? null,
           screenshot: screenshot?.startsWith("data:image/") ? screenshot : null,
@@ -845,6 +964,7 @@ export async function handleManagedOrganizer(
       }
       if (before.status !== "idle") {
         // Still stuck: set this conversation aside; the chat resends into a fresh one.
+        await closeConversationBrowser(deps, row);
         await deps.forceArchive(row);
         reserved = null;
         return json(
@@ -870,6 +990,7 @@ export async function handleManagedOrganizer(
     ) {
       // A full conversation never stops the team: set it aside and continue in a fresh one.
       // Civi reloads the organization's saved context there.
+      await closeConversationBrowser(deps, row);
       await deps.forceArchive(row);
       reserved = null;
       return json(
@@ -995,7 +1116,9 @@ export async function handleManagedOrganizer(
               message:
                 action.name === "research_local"
                   ? "Researching local options and saving sourced findings…"
-                  : "Reading your organization's saved context…",
+                  : isBrowserTool(action.name)
+                    ? "Civi is working in the browser…"
+                    : "Reading your organization's saved context…",
             });
             let result: { success: true; output: string } | { success: false; error: string };
             try {
@@ -1004,7 +1127,7 @@ export async function handleManagedOrganizer(
                 output: await executeOrganizerTool(
                   action.name,
                   action.arguments,
-                  { ...scope, callId: providerId + action.call_id },
+                  { ...scope, callId: providerId + action.call_id, conversation: row.id },
                   deps,
                 ),
               };
@@ -1013,6 +1136,16 @@ export async function handleManagedOrganizer(
                 success: false,
                 error: "The organization tool could not complete. Do not claim it succeeded.",
               };
+            }
+            if (isBrowserTool(action.name)) {
+              // Show (or keep showing) the live browser above the chat.
+              const live = await deps.browserStore.get(row.id).catch(() => null);
+              if (live)
+                send({
+                  type: "browser_live",
+                  url: live.live_url,
+                  humanControl: live.human_control,
+                });
             }
             if (abort.signal.aborted) return false;
             await api.events.create(providerId, {

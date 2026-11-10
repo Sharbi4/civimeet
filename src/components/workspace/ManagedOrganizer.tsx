@@ -17,6 +17,7 @@ type State = {
     title: string | null;
     screenshot: string | null;
     note?: string | null;
+    live?: { url: string; humanControl: boolean } | null;
   };
 };
 export function ManagedOrganizer({
@@ -41,6 +42,9 @@ export function ManagedOrganizer({
   // What Civi's browser is showing right now (screenshots stream in; nothing is stored).
   const [browser, setBrowser] = useState<{ title: string; screenshot?: string } | null>(null);
   const [browserOpen, setBrowserOpen] = useState(true);
+  // The live browser (Browserbase) the team can watch and take over; null when none is open.
+  const [live, setLive] = useState<{ url: string; humanControl: boolean } | null>(null);
+  const [liveBusy, setLiveBusy] = useState(false);
   const alive = useRef(true),
     connection = useRef<AbortController | null>(null);
   // Automatic reconnects in a row, so a task that keeps dropping doesn't loop forever.
@@ -180,6 +184,8 @@ export function ManagedOrganizer({
                 ...p,
                 [event.id]: event.type === "text" ? event.text : (p[event.id] || "") + event.text,
               }));
+            if (event.type === "browser_live" && typeof event.url === "string")
+              setLive({ url: event.url, humanControl: Boolean(event.humanControl) });
             if (event.type === "browser")
               setBrowser((current) => ({
                 title: typeof event.title === "string" ? event.title : "Using the browser",
@@ -287,6 +293,32 @@ export function ManagedOrganizer({
       );
     }
   }
+  useEffect(() => {
+    if (state.browser && "live" in state.browser) setLive(state.browser.live ?? null);
+  }, [state.browser]);
+  useEffect(() => {
+    const ended = (event: MessageEvent) => {
+      if (event.data === "browserbase-disconnected") {
+        setLive(null);
+        void refresh();
+      }
+    };
+    window.addEventListener("message", ended);
+    return () => window.removeEventListener("message", ended);
+  }, [refresh]);
+  async function liveControl(action: "browser_takeover" | "browser_handback" | "browser_close") {
+    setLiveBusy(true);
+    setError("");
+    try {
+      const result = (await (await call(action)).json()) as { status?: string };
+      if (action === "browser_close" || result.status === "no_browser") setLive(null);
+      else setLive((current) => current && { ...current, humanControl: result.status === "human" });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Civi's browser couldn't be updated.");
+    } finally {
+      setLiveBusy(false);
+    }
+  }
   const runRef = useRef(run);
   runRef.current = run;
   // Opening a conversation picks up a task that is still running or waiting on Civi's tools.
@@ -383,22 +415,64 @@ export function ManagedOrganizer({
           <header>
             <Globe size={14} aria-hidden="true" />
             <strong>Civi’s browser</strong>
-            <span className={`cv-browser-chip${busy && browser ? " is-live" : ""}`}>
-              {busy && browser
-                ? "Live"
-                : /Starting Civi/.test(activity)
-                  ? "Starting…"
-                  : state.browser?.available === false && state.messages.length > 0
-                    ? "Web search only"
-                    : "Ready"}
+            <span
+              className={`cv-browser-chip${(busy && browser) || (live && !live.humanControl) ? " is-live" : ""}${live?.humanControl ? " is-human" : ""}`}
+            >
+              {live
+                ? live.humanControl
+                  ? "You’re in control"
+                  : "Live"
+                : busy && browser
+                  ? "Live"
+                  : /Starting Civi/.test(activity)
+                    ? "Starting…"
+                    : state.browser?.available === false && state.messages.length > 0
+                      ? "Web search only"
+                      : "Ready"}
             </span>
             <span className="cv-browser-title">{browser?.title ?? state.browser?.title ?? ""}</span>
+            {live && (
+              <>
+                <button
+                  type="button"
+                  className="cv-browser-primary"
+                  disabled={liveBusy}
+                  onClick={() =>
+                    void liveControl(live.humanControl ? "browser_handback" : "browser_takeover")
+                  }
+                >
+                  {live.humanControl ? "Hand back to Civi" : "Take control"}
+                </button>
+                <button
+                  type="button"
+                  disabled={liveBusy}
+                  onClick={() => void liveControl("browser_close")}
+                >
+                  Close
+                </button>
+              </>
+            )}
             <button type="button" onClick={() => setBrowserOpen((open) => !open)}>
               {browserOpen ? "Hide" : "Show"}
             </button>
           </header>
           {browserOpen &&
-            (browser?.screenshot || state.browser?.screenshot ? (
+            (live ? (
+              <div className={`cv-browser-live${live.humanControl ? " is-human" : ""}`}>
+                {/* Browserbase's live view: watch-only while Civi works, interactive when you take control. */}
+                <iframe
+                  title="Civi's live browser"
+                  src={live.url}
+                  sandbox="allow-same-origin allow-scripts"
+                  allow="clipboard-read; clipboard-write"
+                  referrerPolicy="no-referrer"
+                  style={{ pointerEvents: live.humanControl ? "auto" : "none" }}
+                />
+                {!live.humanControl && (
+                  <p>Civi is browsing. Take control any time; Civi waits until you hand it back.</p>
+                )}
+              </div>
+            ) : browser?.screenshot || state.browser?.screenshot ? (
               <img
                 src={browser?.screenshot ?? state.browser?.screenshot ?? ""}
                 alt={`What Civi's browser shows: ${browser?.title ?? state.browser?.title ?? "the last page it opened"}`}
