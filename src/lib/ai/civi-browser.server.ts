@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { z } from "zod";
 import {
+  actionAllowed,
   clickAllowed,
   isSocialSite,
   publicSite,
@@ -69,12 +70,40 @@ export const browserTools = [
   },
   {
     type: "function" as const,
+    name: "browser_act",
+    description:
+      "Take an action for the organization in the live browser: post, comment, reply, like, react, share, join, follow, RSVP or message. The team sees exactly what you'll do and must approve it in the chat first; you get the real outcome. Use item for the button to press, or for a text box together with text (and then_click for the button that sends it, e.g. Post). Sign-ins, payments and deleting are never allowed.",
+    parameters: {
+      type: "object",
+      properties: {
+        description: {
+          type: "string",
+          maxLength: 300,
+          description:
+            "What this does and where, in plain words, e.g. Comment on Maria's post in Tucson Parents.",
+        },
+        item: { type: "integer", minimum: 1, maximum: 200 },
+        text: { type: "string", maxLength: 5000 },
+        then_click: { type: "integer", minimum: 1, maximum: 200 },
+      },
+      required: ["description", "item"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function" as const,
     name: "browser_back",
     description: "Go back to the previous page.",
     parameters: { type: "object", properties: {}, additionalProperties: false },
   },
 ];
 export const isBrowserTool = (name: string) => browserTools.some((tool) => tool.name === name);
+/** The chat reconnected while Civi waited for approval; the wait resumes on the next connection. */
+export class ApprovalWaitInterrupted extends Error {
+  constructor() {
+    super("Waiting for the team's approval continues after reconnecting.");
+  }
+}
 
 export type BrowserRecord = {
   provider_session: string;
@@ -89,6 +118,28 @@ export type BrowserStore = {
   /** The organization's saved browser profile, so sign-ins carry across conversations. */
   profile(org: string): Promise<string | null>;
   saveProfile(org: string, id: string): Promise<void>;
+};
+export type ActionRecord = {
+  id: string;
+  status: "pending" | "approved" | "declined" | "executing" | "done" | "failed" | "expired";
+  description: string;
+  site: string;
+  write_text: string | null;
+  result: string | null;
+};
+export type BrowserActions = {
+  request(
+    conversation: string,
+    org: string,
+    key: string,
+    details: { description: string; site: string; text: string | null },
+  ): Promise<ActionRecord>;
+  status(key: string): Promise<ActionRecord | null>;
+  mark(
+    key: string,
+    status: "executing" | "done" | "failed" | "expired",
+    result?: string,
+  ): Promise<void>;
 };
 export type BrowserProvider = {
   open(metadata: Record<string, string>, profile?: string | null): Promise<BrowserSession>;
@@ -179,7 +230,19 @@ const report = (page: Snapshot, note?: string) => {
   }).slice(0, 14000);
 };
 
+/** An unhurried, human pace between steps. */
+const pace = (min = 700, spread = 1100) =>
+  new Promise((resolve) => setTimeout(resolve, min + Math.random() * spread));
+
 const argsFor = {
+  browser_act: z
+    .object({
+      description: z.string().trim().min(3).max(300),
+      item: z.number().int().min(1).max(200),
+      text: z.string().max(5000).optional(),
+      then_click: z.number().int().min(1).max(200).optional(),
+    })
+    .strict(),
   browser_open: z.object({ url: z.string().min(3).max(500) }).strict(),
   browser_read: z.object({}).strict(),
   browser_click: z.object({ item: z.number().int().min(1).max(200) }).strict(),
@@ -194,7 +257,17 @@ const argsFor = {
 export async function runBrowserTool(
   name: string,
   args: unknown,
-  context: { conversation: string; org: string; store: BrowserStore; provider: BrowserProvider },
+  context: {
+    conversation: string;
+    org: string;
+    store: BrowserStore;
+    provider: BrowserProvider;
+    /** Needed for browser_act: approvals, the model's tool call key, and the live chat. */
+    actions?: BrowserActions;
+    callKey?: string;
+    notify?: (event: Record<string, unknown>) => void;
+    signal?: AbortSignal;
+  },
 ): Promise<string> {
   const schema = argsFor[name as keyof typeof argsFor];
   if (!schema) throw new Error("This browser tool is not available.");
@@ -210,6 +283,147 @@ export async function runBrowserTool(
     const site = publicSite(String(input["url"]));
     if (!site.ok) return JSON.stringify({ status: "refused", message: site.reason });
   }
+  /** Find a numbered item on the current page. */
+  const lookup = async (send: CdpSend, k: number) => {
+    const found = String(await evaluate(send, element(k)));
+    return found === "null" ? null : (JSON.parse(found) as PageItem);
+  };
+  /**
+   * An approved action (post, comment, like, join...): checked, shown to the team, run only after
+   * their OK and only once. The wait happens outside any browser connection.
+   */
+  const act = async (): Promise<string> => {
+    if (!context.actions || !context.callKey)
+      return JSON.stringify({ status: "unavailable", message: "Actions aren't available here." });
+    const actions = context.actions;
+    const key = context.callKey;
+    const n = Number(input["item"]);
+    const after = input["then_click"] === undefined ? null : Number(input["then_click"]);
+    const text = typeof input["text"] === "string" && input["text"] ? String(input["text"]) : null;
+    let record = await actions.status(key);
+    if (!record) {
+      // 1. Check what would be pressed, on the live page.
+      const checked = await inBrowser(async (send) => {
+        const target = await lookup(send, n);
+        const button = after === null ? null : await lookup(send, after);
+        if (!target || (after !== null && !button))
+          return { refused: "That item isn't on the page any more. Read the page again first." };
+        for (const item of [target, button].filter(Boolean) as PageItem[]) {
+          const allowed = actionAllowed(item);
+          if (!allowed.ok) return { refused: allowed.reason };
+        }
+        if (
+          text &&
+          !(target.tag === "textarea" || target.tag === "input" || target.role === "textbox")
+        )
+          return { refused: "Text can only go into a text box." };
+        const where = String(await evaluate(send, "location.href"));
+        let site = "";
+        try {
+          site = new URL(where).hostname;
+        } catch {
+          site = "";
+        }
+        return { site };
+      });
+      if ("refused" in checked)
+        return JSON.stringify({ status: "refused", message: checked.refused });
+      // 2. Ask the team (once per tool call; a reconnect finds the same request).
+      record = await actions.request(context.conversation, context.org, key, {
+        description: String(input["description"]),
+        site: checked.site,
+        text,
+      });
+    }
+    if (record.status === "done" || record.status === "failed")
+      return record.result ?? JSON.stringify({ status: record.status });
+    if (record.status === "executing")
+      return JSON.stringify({
+        status: "unknown",
+        message:
+          "This action may already have run. Check the page before doing anything else, and don't repeat it.",
+      });
+    if (record.status === "pending") {
+      context.notify?.({
+        type: "approval_request",
+        id: record.id,
+        description: record.description,
+        site: record.site,
+        text: record.write_text,
+      });
+      const deadline = Date.now() + 240_000;
+      while (record.status === "pending") {
+        if (context.signal?.aborted) throw new ApprovalWaitInterrupted();
+        if (Date.now() > deadline) {
+          await actions.mark(key, "expired");
+          context.notify?.({ type: "approval_result", id: record.id, status: "expired" });
+          return JSON.stringify({
+            status: "expired",
+            message:
+              "The team didn't approve this in time. Nothing was done; ask again if they still want it.",
+          });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        record = (await actions.status(key)) ?? record;
+      }
+    }
+    context.notify?.({ type: "approval_result", id: record.id, status: record.status });
+    if (record.status === "declined" || record.status === "expired")
+      return JSON.stringify({
+        status: record.status,
+        message: "The team said no. Nothing was done.",
+      });
+    if (record.status !== "approved") return JSON.stringify({ status: record.status });
+    // 3. Approved: do exactly what was shown, at a human pace, once.
+    if ((await context.store.get(context.conversation))?.human_control)
+      return JSON.stringify({
+        status: "paused",
+        message: "The team has taken control of the browser. Wait until they hand it back.",
+      });
+    await actions.mark(key, "executing");
+    const approved = record;
+    try {
+      const outcome = await inBrowser(async (send) => {
+        const target = await lookup(send, n);
+        const button = after === null ? null : await lookup(send, after);
+        if (!target || (after !== null && !button) || !actionAllowed(target).ok)
+          throw new Error("The page changed before this could run, so nothing was done.");
+        await pace();
+        // Focus the text box to write into it, or press the button: only what was approved.
+        await evaluate(
+          send,
+          text
+            ? `(() => { const el = document.querySelector('[data-civi="${n}"]'); el.scrollIntoView({ block: "center" }); el.focus(); return true; })()`
+            : `(() => { const el = document.querySelector('[data-civi="${n}"]'); el.scrollIntoView({ block: "center" }); el.click(); return true; })()`,
+        );
+        if (text) {
+          for (let i = 0; i < text.length; i += 24) {
+            await send("Input.insertText", { text: text.slice(i, i + 24) });
+            await pace(60, 140);
+          }
+          if (after !== null) {
+            await pace(500, 700);
+            await evaluate(
+              send,
+              `(() => { const el = document.querySelector('[data-civi="${after}"]'); el.scrollIntoView({ block: "center" }); el.click(); return true; })()`,
+            );
+          }
+        }
+        await settle(send);
+        return report(await snapshot(send), `Done: ${approved.description}`);
+      });
+      await actions.mark(key, "done", outcome);
+      return outcome;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "The action didn't complete.";
+      const outcome = JSON.stringify({
+        status: "failed",
+        message: `${message} Check the page before trying again.`,
+      });
+      await actions.mark(key, "failed", outcome).catch(() => {});
+      return outcome;
+    }
+  };
   const work = async (send: CdpSend) => {
     if (name === "browser_open") {
       const target = publicSite(String(input["url"]));
@@ -222,8 +436,14 @@ export async function runBrowserTool(
     }
     if (name === "browser_read") return report(await snapshot(send));
     if (name === "browser_scroll") {
-      await evaluate(send, `window.scrollBy(0, ${input["direction"] === "up" ? -700 : 700}), true`);
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Scroll in a few smooth steps, pausing to take the page in, like a person reading.
+      for (let step = 0; step < 3; step++) {
+        await evaluate(
+          send,
+          `window.scrollBy({ top: ${input["direction"] === "up" ? -260 : 260}, behavior: "smooth" }), true`,
+        );
+        await pace(450, 650);
+      }
       return report(await snapshot(send));
     }
     if (name === "browser_back") {
@@ -267,34 +487,39 @@ export async function runBrowserTool(
     await settle(send);
     return report(await snapshot(send), await guard(send));
   };
-  // Use the conversation's browser, opening one if needed; a browser that has ended is replaced once.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (!record) {
-      let profile = await context.store.profile(context.org).catch(() => null);
-      if (!profile) {
-        profile = await context.provider.createProfile().catch(() => null);
-        if (profile) await context.store.saveProfile(context.org, profile).catch(() => {});
+  // Run one step in the conversation's browser, opening one if needed; a browser that has ended
+  // is replaced once. Waiting for approval never holds a browser connection.
+  async function inBrowser<T>(step: (send: CdpSend) => Promise<T>): Promise<T> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (!record) {
+        let profile = await context.store.profile(context.org).catch(() => null);
+        if (!profile) {
+          profile = await context.provider.createProfile().catch(() => null);
+          if (profile) await context.store.saveProfile(context.org, profile).catch(() => {});
+        }
+        const session = await context.provider.open(
+          { civimeet_org: context.org, civimeet_conversation: context.conversation },
+          profile,
+        );
+        await context.store.save(context.conversation, context.org, session);
+        record = {
+          provider_session: session.id,
+          connect_url: session.connectUrl,
+          live_url: session.liveUrl,
+          human_control: false,
+        };
       }
-      const session = await context.provider.open(
-        { civimeet_org: context.org, civimeet_conversation: context.conversation },
-        profile,
-      );
-      await context.store.save(context.conversation, context.org, session);
-      record = {
-        provider_session: session.id,
-        connect_url: session.connectUrl,
-        live_url: session.liveUrl,
-        human_control: false,
-      };
+      try {
+        return await context.provider.tab(record.connect_url, step);
+      } catch (error) {
+        if (attempt > 0) throw error;
+        await context.store.forget(context.conversation, context.org).catch(() => null);
+        await context.provider.close(record.provider_session).catch(() => {});
+        record = null;
+      }
     }
-    try {
-      return await context.provider.tab(record.connect_url, work);
-    } catch (error) {
-      if (attempt > 0) throw error;
-      await context.store.forget(context.conversation, context.org).catch(() => null);
-      await context.provider.close(record.provider_session).catch(() => {});
-      record = null;
-    }
+    throw new Error("Civi's browser couldn't run that step.");
   }
-  throw new Error("Civi's browser couldn't run that step.");
+  if (name === "browser_act") return act();
+  return inBrowser(work);
 }

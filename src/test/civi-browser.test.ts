@@ -259,3 +259,150 @@ describe("browser policy", () => {
     expect(clickAllowed(link("Calendar", "https://reidparkzoo.org/events")).ok).toBe(true);
   });
 });
+
+describe("approved actions (browser_act)", () => {
+  type Status = "pending" | "approved" | "declined" | "executing" | "done" | "failed" | "expired";
+  function actions(decision: Status) {
+    const rows = new Map<
+      string,
+      {
+        id: string;
+        status: Status;
+        description: string;
+        site: string;
+        write_text: string | null;
+        result: string | null;
+      }
+    >();
+    const api = {
+      request: vi.fn(
+        async (
+          _c: string,
+          _o: string,
+          key: string,
+          d: { description: string; site: string; text: string | null },
+        ) => {
+          if (!rows.has(key))
+            rows.set(key, {
+              id: `a-${key}`,
+              status: "pending",
+              description: d.description,
+              site: d.site,
+              write_text: d.text,
+              result: null,
+            });
+          return { ...rows.get(key)! };
+        },
+      ),
+      // The person decides while Civi waits.
+      status: vi.fn(async (key: string) => {
+        const row = rows.get(key);
+        if (!row) return null;
+        if (row.status === "pending") row.status = decision;
+        return { ...row };
+      }),
+      mark: vi.fn(async (key: string, status: Status, result?: string) => {
+        const row = rows.get(key)!;
+        row.status = status;
+        if (result) row.result = result;
+      }),
+    };
+    return { api, rows };
+  }
+  const comment: Item = {
+    tag: "textarea",
+    type: "",
+    role: "textbox",
+    label: "Write a comment",
+    href: "",
+    inPasswordForm: false,
+    search: false,
+  };
+  it("asks first, then writes and posts at a human pace, once", { timeout: 20_000 }, async () => {
+    const { page, context } = setup([comment, button("Post")]);
+    const { api } = actions("approved");
+    const notify = vi.fn();
+    const full = { ...context, actions: api, callKey: "call-1", notify } as typeof context;
+    await runBrowserTool(
+      "browser_open",
+      { url: "https://www.facebook.com/groups/tucsonparents" },
+      full,
+    );
+    const out = JSON.parse(
+      await runBrowserTool(
+        "browser_act",
+        {
+          description: "Comment on the pantry post",
+          item: 1,
+          text: "Our mobile pantry is open Saturday 9–12 at Reid Park.",
+          then_click: 2,
+        },
+        full,
+      ),
+    );
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "approval_request",
+        description: "Comment on the pantry post",
+        site: "www.facebook.com",
+      }),
+    );
+    expect(page.typed.join("")).toBe("Our mobile pantry is open Saturday 9–12 at Reid Park.");
+    expect(page.typed.length).toBeGreaterThan(1); // typed in pieces, not all at once
+    expect(page.clicked).toEqual([2]);
+    expect(out.note).toMatch(/Done: Comment on the pantry post/);
+    expect(api.mark).toHaveBeenCalledWith("call-1", "executing");
+    // The same tool call again (e.g. after a reconnect) never posts twice.
+    await runBrowserTool(
+      "browser_act",
+      { description: "Comment on the pantry post", item: 1, text: "x", then_click: 2 },
+      full,
+    );
+    expect(page.clicked).toEqual([2]);
+  });
+  it("does nothing when the team declines", { timeout: 20_000 }, async () => {
+    const { page, context } = setup([button("Like")]);
+    const { api } = actions("declined");
+    const full = { ...context, actions: api, callKey: "call-2", notify: vi.fn() } as typeof context;
+    await runBrowserTool("browser_open", { url: "https://www.facebook.com" }, full);
+    const out = JSON.parse(
+      await runBrowserTool("browser_act", { description: "Like the post", item: 1 }, full),
+    );
+    expect(out.status).toBe("declined");
+    expect(page.clicked).toEqual([]);
+  });
+  it("never asks to sign in, pay or delete", async () => {
+    const { context } = setup([button("Log in"), button("Donate $25"), button("Delete post")]);
+    const { api } = actions("approved");
+    const full = { ...context, actions: api, callKey: "call-3" } as typeof context;
+    await runBrowserTool("browser_open", { url: "https://example.org" }, full);
+    for (const item of [1, 2, 3]) {
+      const out = JSON.parse(
+        await runBrowserTool("browser_act", { description: "x action", item }, {
+          ...full,
+          callKey: `k${item}`,
+        } as typeof context),
+      );
+      expect(out.status).toBe("refused");
+    }
+    expect(api.request).not.toHaveBeenCalled();
+  });
+  it("keeps waiting across a reconnect without closing the browser", async () => {
+    const { provider, context } = setup([button("Join group")]);
+    const { api } = actions("pending");
+    const controller = new AbortController();
+    const full = {
+      ...context,
+      actions: api,
+      callKey: "call-4",
+      notify: vi.fn(),
+      signal: controller.signal,
+    } as typeof context;
+    await runBrowserTool("browser_open", { url: "https://www.facebook.com" }, full);
+    controller.abort();
+    await expect(
+      runBrowserTool("browser_act", { description: "Join the group", item: 1 }, full),
+    ).rejects.toThrow(/continues after reconnecting/);
+    expect(provider.close).not.toHaveBeenCalled();
+  });
+});

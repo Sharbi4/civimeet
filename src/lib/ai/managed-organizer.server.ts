@@ -10,6 +10,8 @@ import {
   browserTools,
   isBrowserTool,
   runBrowserTool,
+  type ActionRecord,
+  type BrowserActions,
   type BrowserProvider,
   type BrowserRecord,
   type BrowserStore,
@@ -50,9 +52,12 @@ const inputSchema = z
       "browser_takeover",
       "browser_handback",
       "browser_close",
+      "browser_decide",
     ]),
     message: z.string().trim().min(1).max(6000).optional(),
     requestId: z.string().uuid().optional(),
+    actionId: z.string().uuid().optional(),
+    approve: z.boolean().optional(),
   })
   .strict();
 type Input = z.infer<typeof inputSchema>;
@@ -410,6 +415,66 @@ const defaults = {
   } as BrowserStore & {
     control(conversation: string, org: string, human: boolean): Promise<boolean>;
   },
+  browserActions: {
+    async request(
+      conversation: string,
+      org: string,
+      key: string,
+      details: { description: string; site: string; text: string | null },
+    ) {
+      const r = await database().rpc("request_browser_action", {
+        conversation,
+        workspace: org,
+        key,
+        action_description: details.description,
+        action_site: details.site,
+        action_text: details.text,
+      });
+      if (r.error) throw new OrganizerError(503, "Civi couldn't ask for approval.");
+      return r.data as ActionRecord;
+    },
+    async status(key: string) {
+      const r = await database().rpc("browser_action_status", { key });
+      if (r.error) throw new OrganizerError(503, "Civi couldn't check the approval.");
+      return (r.data as ActionRecord | null) ?? null;
+    },
+    async mark(key: string, status: "executing" | "done" | "failed" | "expired", result?: string) {
+      const r = await database().rpc("mark_browser_action", {
+        key,
+        next_status: status,
+        outcome: result ?? null,
+      });
+      if (r.error) throw new OrganizerError(503, "Civi couldn't record the action.");
+    },
+    async decide(org: string, actor: string, id: string, approve: boolean) {
+      const r = await database().rpc("decide_browser_action", {
+        workspace: org,
+        actor,
+        target: id,
+        approve,
+      });
+      if (r.error)
+        throw new OrganizerError(
+          409,
+          /already decided|expired/i.test(r.error.message)
+            ? "That request was already decided or has expired."
+            : "Your decision couldn't be saved.",
+        );
+      return String(r.data);
+    },
+    async pending(conversation: string) {
+      const r = await database().rpc("pending_browser_actions", { conversation });
+      if (r.error) return [];
+      return (
+        (r.data as { id: string; description: string; site: string; text: string | null }[]) ?? []
+      );
+    },
+  } as BrowserActions & {
+    decide(org: string, actor: string, id: string, approve: boolean): Promise<string>;
+    pending(
+      conversation: string,
+    ): Promise<{ id: string; description: string; site: string; text: string | null }[]>;
+  },
   browserProvider: {
     open: openBrowser,
     tab: withBrowserTab,
@@ -624,6 +689,8 @@ export async function executeOrganizerTool(
     url: string;
     callId: string;
     conversation?: string;
+    notify?: (event: Record<string, unknown>) => void;
+    signal?: AbortSignal;
   },
   deps: OrganizerDependencies,
 ) {
@@ -642,6 +709,10 @@ export async function executeOrganizerTool(
       org: scope.org,
       store: deps.browserStore,
       provider: deps.browserProvider,
+      actions: deps.browserActions,
+      callKey: scope.callId,
+      ...(scope.notify ? { notify: scope.notify } : {}),
+      ...(scope.signal ? { signal: scope.signal } : {}),
     });
   }
   if (name !== "research_local") throw new OrganizerError(400, "This tool is not available.");
@@ -732,6 +803,17 @@ export async function handleManagedOrganizer(
             503,
           );
     const api = deps.provider();
+    if (input.action === "browser_decide") {
+      if (!input.actionId || input.approve === undefined)
+        throw new OrganizerError(400, "Choose approve or decline.");
+      const status = await deps.browserActions.decide(
+        input.organizationId,
+        actor,
+        input.actionId,
+        input.approve,
+      );
+      return json({ status });
+    }
     if (
       input.action === "browser_takeover" ||
       input.action === "browser_handback" ||
@@ -821,6 +903,9 @@ export async function handleManagedOrganizer(
         browser: {
           available: browserbaseConfigured() || session.environment?.type === "openai_hosted",
           live: live ? { url: live.live_url, humanControl: live.human_control } : null,
+          approvals: browserbaseConfigured()
+            ? await deps.browserActions.pending(row.id).catch(() => [])
+            : [],
           note: session.environment?.type === "openai_hosted" ? null : organizerBrowserRejection(),
           title: lastBrowse?.title ?? null,
           screenshot: screenshot?.startsWith("data:image/") ? screenshot : null,
@@ -1127,7 +1212,13 @@ export async function handleManagedOrganizer(
                 output: await executeOrganizerTool(
                   action.name,
                   action.arguments,
-                  { ...scope, callId: providerId + action.call_id, conversation: row.id },
+                  {
+                    ...scope,
+                    callId: providerId + action.call_id,
+                    conversation: row.id,
+                    notify: send,
+                    signal: abort.signal,
+                  },
                   deps,
                 ),
               };

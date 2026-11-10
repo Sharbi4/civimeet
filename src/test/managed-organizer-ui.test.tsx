@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 vi.mock("@/components/workspace/WorkspaceGate", () => {
@@ -12,7 +12,13 @@ vi.mock("@/components/workspace/WorkspaceGate", () => {
 });
 const { ManagedOrganizer } = await import("@/components/workspace/ManagedOrganizer");
 
-type Call = { action: string; message?: string; requestId?: string };
+type Call = {
+  action: string;
+  message?: string;
+  requestId?: string;
+  actionId?: string;
+  approve?: boolean;
+};
 let calls: Call[] = [];
 const lines = (...events: unknown[]) =>
   new Response(events.map((event) => JSON.stringify(event) + "\n").join(""), {
@@ -182,4 +188,46 @@ it("shows Civi's live browser, watch-only until you take control", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Hand back to Civi" }));
   await waitFor(() => expect(calls.some((c) => c.action === "browser_handback")).toBe(true));
   expect(await screen.findByRole("button", { name: "Take control" })).toBeInTheDocument();
+});
+
+it("shows what Civi wants to do and acts only on Approve", async () => {
+  const decisions: Call[] = [];
+  serve((call) => {
+    if (call.action === "browser_decide") {
+      decisions.push(call);
+      return Response.json({ status: "approved" });
+    }
+    return Response.json({
+      ...ready,
+      status: "in_progress",
+      messages: [{ id: "u", role: "user", text: "Comment on the pantry post" }],
+      browser: {
+        available: true,
+        title: null,
+        screenshot: null,
+        live: null,
+        approvals: [
+          {
+            id: "33333333-3333-4333-8333-333333333333",
+            description: "Comment on the pantry post in Tucson Parents",
+            site: "www.facebook.com",
+            text: "Our mobile pantry is open Saturday 9–12.",
+          },
+        ],
+      },
+    });
+  });
+  render(<ManagedOrganizer thread="main" />);
+  const card = await screen.findByRole("region", { name: "Civi asks for approval" });
+  expect(card).toHaveTextContent("Comment on the pantry post in Tucson Parents");
+  expect(card).toHaveTextContent("www.facebook.com");
+  expect(card).toHaveTextContent("Our mobile pantry is open Saturday 9–12.");
+  fireEvent.click(within(card).getByRole("button", { name: "Approve" }));
+  await waitFor(() =>
+    expect(decisions[0]).toMatchObject({
+      action: "browser_decide",
+      actionId: "33333333-3333-4333-8333-333333333333",
+      approve: true,
+    }),
+  );
 });

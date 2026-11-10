@@ -18,8 +18,11 @@ type State = {
     screenshot: string | null;
     note?: string | null;
     live?: { url: string; humanControl: boolean } | null;
+    approvals?: Approval[];
   };
 };
+/** An action Civi wants to take in its browser, waiting for a person's OK. */
+type Approval = { id: string; description: string; site: string; text: string | null };
 export function ManagedOrganizer({
   thread,
   initialMessage = "",
@@ -45,6 +48,8 @@ export function ManagedOrganizer({
   // The live browser (Browserbase) the team can watch and take over; null when none is open.
   const [live, setLive] = useState<{ url: string; humanControl: boolean } | null>(null);
   const [liveBusy, setLiveBusy] = useState(false);
+  const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [deciding, setDeciding] = useState<string | null>(null);
   const alive = useRef(true),
     connection = useRef<AbortController | null>(null);
   // Automatic reconnects in a row, so a task that keeps dropping doesn't loop forever.
@@ -184,6 +189,22 @@ export function ManagedOrganizer({
                 ...p,
                 [event.id]: event.type === "text" ? event.text : (p[event.id] || "") + event.text,
               }));
+            if (event.type === "approval_request" && typeof event.id === "string")
+              setApprovals((list) =>
+                list.some((item) => item.id === event.id)
+                  ? list
+                  : [
+                      ...list,
+                      {
+                        id: event.id,
+                        description: String(event.description ?? ""),
+                        site: String(event.site ?? ""),
+                        text: typeof event.text === "string" ? event.text : null,
+                      },
+                    ],
+              );
+            if (event.type === "approval_result" && typeof event.id === "string")
+              setApprovals((list) => list.filter((item) => item.id !== event.id));
             if (event.type === "browser_live" && typeof event.url === "string")
               setLive({ url: event.url, humanControl: Boolean(event.humanControl) });
             if (event.type === "browser")
@@ -295,7 +316,21 @@ export function ManagedOrganizer({
   }
   useEffect(() => {
     if (state.browser && "live" in state.browser) setLive(state.browser.live ?? null);
+    if (state.browser?.approvals) setApprovals(state.browser.approvals);
   }, [state.browser]);
+  async function decide(item: Approval, approve: boolean) {
+    setDeciding(item.id);
+    setError("");
+    try {
+      await call("browser_decide", { actionId: item.id, approve });
+      setApprovals((list) => list.filter((entry) => entry.id !== item.id));
+      setActivity(approve ? "Approved. Civi is doing it now…" : "Declined. Nothing was done.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Your decision couldn't be saved.");
+    } finally {
+      setDeciding(null);
+    }
+  }
   useEffect(() => {
     const ended = (event: MessageEvent) => {
       if (event.data === "browserbase-disconnected") {
@@ -581,6 +616,30 @@ export function ManagedOrganizer({
                 <div>{Object.values(parts).join("\n\n")}</div>
               </article>
             )}
+            {approvals.map((item) => (
+              <section key={item.id} className="cv-approval" aria-label="Civi asks for approval">
+                <p className="cv-approval-title">Civi wants to: {item.description}</p>
+                {item.site && <p className="cv-approval-site">On {item.site}</p>}
+                {item.text && <blockquote>{item.text}</blockquote>}
+                <div>
+                  <button
+                    type="button"
+                    className="cv-approval-yes"
+                    disabled={deciding === item.id}
+                    onClick={() => void decide(item, true)}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deciding === item.id}
+                    onClick={() => void decide(item, false)}
+                  >
+                    Decline
+                  </button>
+                </div>
+              </section>
+            ))}
             {activity && (
               <p className="text-sm text-muted-foreground" role="status">
                 {activity}

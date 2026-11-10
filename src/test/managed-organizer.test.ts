@@ -100,6 +100,13 @@ function dependencies() {
       profile: vi.fn().mockResolvedValue(null),
       saveProfile: vi.fn().mockResolvedValue(undefined),
     },
+    browserActions: {
+      request: vi.fn(),
+      status: vi.fn().mockResolvedValue(null),
+      mark: vi.fn().mockResolvedValue(undefined),
+      decide: vi.fn().mockResolvedValue("approved"),
+      pending: vi.fn().mockResolvedValue([]),
+    },
     browserProvider: {
       open: vi.fn(),
       tab: vi.fn(),
@@ -667,6 +674,7 @@ describe("demo-day resilience", () => {
     expect(body.browser).toEqual({
       available: true,
       live: null,
+      approvals: [],
       note: null,
       title: "Reid Park Zoo events",
       screenshot: "data:image/jpeg;base64,BBBB",

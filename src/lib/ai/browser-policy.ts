@@ -91,3 +91,28 @@ export function typingAllowed(item: PageItem): { ok: true } | { ok: false; reaso
   if (!item.search) return { ok: false, reason: "Civi only types into search boxes." };
   return { ok: true };
 }
+
+const signInWords = /\b(log ?in|sign ?in|sign ?up|register|create account|password|forgot)\b/i;
+const paymentWords =
+  /\b(buy|purchase|pay|checkout|check out|donate|order|place order|add to (cart|bag)|subscribe|upgrade)\b/i;
+const destructiveWords = /\b(delete|remove|deactivate|unfriend|block|report|leave group)\b/i;
+/**
+ * Whether Civi may propose this action for approval. Everything here waits for a person's OK;
+ * sign-ins, payments and deleting are never Civi's to do, approved or not.
+ */
+export function actionAllowed(item: PageItem): { ok: true } | { ok: false; reason: string } {
+  if (item.inPasswordForm || item.type === "password" || signInWords.test(item.label))
+    return { ok: false, reason: "Signing in or creating accounts is always left to a person." };
+  if (paymentWords.test(item.label))
+    return {
+      ok: false,
+      reason: "Civi doesn't pay or buy in the browser. Use a payment request instead.",
+    };
+  if (destructiveWords.test(item.label))
+    return { ok: false, reason: `“${item.label}” can't be undone, so it's left to a person.` };
+  if (item.tag === "a" && item.href) {
+    const site = publicSite(item.href);
+    if (!site.ok) return site;
+  }
+  return { ok: true };
+}
