@@ -124,13 +124,19 @@ export const browserBlockedDomains = [
   "old.reddit.com",
 ];
 /** What Civi can use in a new conversation, best first: hosted browser, web search, none. */
-export type OrganizerCapability = "browser" | "browser_basic" | "search" | "basic";
+export type OrganizerCapability = "browser" | "browser_env" | "browser_basic" | "search" | "basic";
 export function organizerCapabilities(
   env: Record<string, string | undefined> = process.env,
 ): OrganizerCapability[] {
   const off = (name: string) => env[name]?.trim().toLowerCase() === "false";
   return [
-    ...(off("OPENAI_ORGANIZER_BROWSER") ? [] : (["browser", "browser_basic"] as const)),
+    ...(off("OPENAI_ORGANIZER_BROWSER")
+      ? []
+      : ([
+          "browser",
+          ...(organizerExistingEnvironment(env) ? (["browser_env"] as const) : []),
+          "browser_basic",
+        ] as const)),
     ...(off("OPENAI_ORGANIZER_WEB_SEARCH") ? [] : (["search"] as const)),
     "basic",
   ];
@@ -142,6 +148,17 @@ export function organizerEnvironmentTemplate(
 ) {
   const id = env["OPENAI_ORGANIZER_ENVIRONMENT_TEMPLATE_ID"]?.trim() ?? "";
   return /^[A-Za-z0-9_-]{4,120}$/.test(id) ? id : null;
+}
+/**
+ * An existing OpenAI-hosted environment to attach, if the server names one. A template ID put
+ * in the template setting is also tried this way, since the dashboard doesn't say which it is.
+ * Note: one existing environment is shared by every conversation that attaches it.
+ */
+export function organizerExistingEnvironment(
+  env: Record<string, string | undefined> = process.env,
+) {
+  const id = env["OPENAI_ORGANIZER_ENVIRONMENT_ID"]?.trim() || organizerEnvironmentTemplate(env);
+  return id && /^[A-Za-z0-9_-]{4,120}$/.test(id) ? id : null;
 }
 export function organizerSetup(
   level: OrganizerCapability,
@@ -156,7 +173,7 @@ export function organizerSetup(
         : [
             { type: "web_search" as const, mode: "live" as const, context_size: "medium" as const },
           ]),
-      ...(level === "browser" || level === "browser_basic"
+      ...(level.startsWith("browser")
         ? [{ type: "computer_use" as const, include_screenshots: true }]
         : []),
     ],
@@ -171,14 +188,13 @@ export function organizerSetup(
             desktop: { enabled: true },
             network: { access: "restricted" as const, blocked_domains: browserBlockedDomains },
           }
-        : level === "browser_basic"
-          ? // The simplest hosted browser; social networks are still refused by browserApproval.
-            {
-              type: "openai_hosted" as const,
-              ...(template ? { environment_template_id: template } : {}),
-              desktop: { enabled: true },
-            }
-          : { type: "none" as const },
+        : level === "browser_env"
+          ? // An existing environment is attached as-is (no other settings are allowed with it).
+            { type: "openai_hosted" as const, environment_id: organizerExistingEnvironment(env)! }
+          : level === "browser_basic"
+            ? // The simplest hosted browser; social networks are still refused by browserApproval.
+              { type: "openai_hosted" as const, desktop: { enabled: true } }
+            : { type: "none" as const },
   };
 }
 const browserBlocked = (host: string) =>

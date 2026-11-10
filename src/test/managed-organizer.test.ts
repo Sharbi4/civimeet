@@ -680,7 +680,7 @@ describe("held conversations", () => {
   });
 });
 
-import { organizerSetup } from "@/lib/ai/managed-organizer.server";
+import { organizerCapabilities, organizerSetup } from "@/lib/ai/managed-organizer.server";
 describe("environment template", () => {
   it("uses a dashboard environment template when the server names one", () => {
     const withTemplate = organizerSetup("browser", {
@@ -692,13 +692,23 @@ describe("environment template", () => {
       desktop: { enabled: true },
     });
     expect(withTemplate["container_size"]).toBeUndefined();
+    // If the ID turns out to be an existing environment, that is tried next, then a plain browser.
+    expect(
+      organizerSetup("browser_env", {
+        OPENAI_ORGANIZER_ENVIRONMENT_TEMPLATE_ID: "envtpl_civimeet123",
+      }).environment,
+    ).toEqual({ type: "openai_hosted", environment_id: "envtpl_civimeet123" });
     expect(
       (
         organizerSetup("browser_basic", {
           OPENAI_ORGANIZER_ENVIRONMENT_TEMPLATE_ID: "envtpl_civimeet123",
         }).environment as Record<string, unknown>
       )["environment_template_id"],
-    ).toBe("envtpl_civimeet123");
+    ).toBeUndefined();
+    expect(
+      organizerCapabilities({ OPENAI_ORGANIZER_ENVIRONMENT_TEMPLATE_ID: "envtpl_x123" }),
+    ).toEqual(["browser", "browser_env", "browser_basic", "search", "basic"]);
+    expect(organizerCapabilities({})).toEqual(["browser", "browser_basic", "search", "basic"]);
     expect(
       (organizerSetup("browser", {}).environment as Record<string, unknown>)[
         "environment_template_id"
