@@ -124,13 +124,13 @@ export const browserBlockedDomains = [
   "old.reddit.com",
 ];
 /** What Civi can use in a new conversation, best first: hosted browser, web search, none. */
-export type OrganizerCapability = "browser" | "search" | "basic";
+export type OrganizerCapability = "browser" | "browser_basic" | "search" | "basic";
 export function organizerCapabilities(
   env: Record<string, string | undefined> = process.env,
 ): OrganizerCapability[] {
   const off = (name: string) => env[name]?.trim().toLowerCase() === "false";
   return [
-    ...(off("OPENAI_ORGANIZER_BROWSER") ? [] : (["browser"] as const)),
+    ...(off("OPENAI_ORGANIZER_BROWSER") ? [] : (["browser", "browser_basic"] as const)),
     ...(off("OPENAI_ORGANIZER_WEB_SEARCH") ? [] : (["search"] as const)),
     "basic",
   ];
@@ -145,7 +145,7 @@ export function organizerSetup(level: OrganizerCapability) {
         : [
             { type: "web_search" as const, mode: "live" as const, context_size: "medium" as const },
           ]),
-      ...(level === "browser"
+      ...(level === "browser" || level === "browser_basic"
         ? [{ type: "computer_use" as const, include_screenshots: true }]
         : []),
     ],
@@ -157,7 +157,10 @@ export function organizerSetup(level: OrganizerCapability) {
             desktop: { enabled: true },
             network: { access: "restricted" as const, blocked_domains: browserBlockedDomains },
           }
-        : { type: "none" as const },
+        : level === "browser_basic"
+          ? // The simplest hosted browser; social networks are still refused by browserApproval.
+            { type: "openai_hosted" as const, desktop: { enabled: true } }
+          : { type: "none" as const },
   };
 }
 const browserBlocked = (host: string) =>
@@ -206,8 +209,16 @@ let savedAgentAccepted: boolean | null = null;
 // Remembers (per server instance) the best capability OpenAI accepted, so later conversations
 // don't retry setups this project doesn't support.
 let acceptedCapability: OrganizerCapability | null = null;
+let acceptedAt = 0;
+/** OpenAI's own words the last time it refused the hosted browser (customer-safe text). */
+let browserRejection: string | null = null;
+export function organizerBrowserRejection() {
+  return browserRejection;
+}
 export function resetOrganizerCapability() {
   acceptedCapability = null;
+  acceptedAt = 0;
+  browserRejection = null;
   savedAgentAccepted = null;
 }
 function database() {
@@ -657,6 +668,7 @@ export async function handleManagedOrganizer(
         configuration,
         browser: {
           available: session.environment?.type === "openai_hosted",
+          note: session.environment?.type === "openai_hosted" ? null : organizerBrowserRejection(),
           title: lastBrowse?.title ?? null,
           screenshot: screenshot?.startsWith("data:image/") ? screenshot : null,
         },
@@ -704,7 +716,9 @@ export async function handleManagedOrganizer(
       // Best setup first (hosted browser + web search), falling back when this OpenAI project
       // doesn't offer it, so the conversation itself always works.
       const levels = organizerCapabilities();
-      const start = acceptedCapability ? Math.max(0, levels.indexOf(acceptedCapability)) : 0;
+      // Re-try the best setup every 10 minutes, in case OpenAI has since enabled it.
+      const remembered = Date.now() - acceptedAt < 600_000 ? acceptedCapability : null;
+      const start = remembered ? Math.max(0, levels.indexOf(remembered)) : 0;
       let created: { id: string } | null = null;
       let lastError: unknown = null;
       const savedAgent = savedAgentAccepted === false ? null : organizerAgentId();
@@ -728,7 +742,7 @@ export async function handleManagedOrganizer(
               reasoning: { effort: "medium" },
               instructions:
                 organizerInstructions +
-                (level === "browser"
+                (level.startsWith("browser")
                   ? "\nTools in this conversation: web_search and computer_use (a browser for public websites) are available."
                   : level === "search"
                     ? "\nTools in this conversation: web_search is available; the browser is not."
@@ -746,18 +760,25 @@ export async function handleManagedOrganizer(
             metadata: { civimeet_session: row.id },
           } as SessionCreateParamsNonStreaming);
           acceptedCapability = level;
+          acceptedAt = Date.now();
+          if (level.startsWith("browser")) browserRejection = null;
           if (savedAgent) savedAgentAccepted = Boolean(agentId);
-          if (level !== levels[0])
+          if (!level.startsWith("browser") && levels.includes("browser"))
             notices.push(
-              level === "search"
+              (level === "search"
                 ? "Civi's browser isn't available on this OpenAI project yet, so Civi is using web search."
-                : "Web search and the browser aren't available on this OpenAI project yet, so Civi is answering without them.",
+                : "Web search and the browser aren't available on this OpenAI project yet, so Civi is answering without them.") +
+                (browserRejection ? ` OpenAI said: ${browserRejection}` : ""),
             );
           break;
         } catch (e) {
           // Only a rejected setup (bad request, no access) is worth a simpler try.
           if (!(e instanceof OpenAI.APIError) || ![400, 403, 404, 422].includes(e.status ?? 0))
             throw e;
+          if (level.startsWith("browser") && !agentId)
+            browserRejection = `${e.status}${e.param ? ` (${e.param})` : ""}: ${providerText(
+              (e.error as { message?: string } | undefined)?.message ?? e.message,
+            )}`;
           lastError = e;
         }
       }
@@ -1031,6 +1052,8 @@ export async function handleManagedOrganizer(
             else if (event.type === "agent.session.environment.failed") {
               // Later conversations skip the browser on this server; this one can't continue.
               acceptedCapability = "search";
+              acceptedAt = Date.now();
+              browserRejection = "the hosted browser failed to start";
               send({
                 type: "blocked",
                 message:

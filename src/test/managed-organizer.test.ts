@@ -199,23 +199,42 @@ describe("managed organizer authorization and execution", () => {
       replayed: false,
     }));
     api.create
+      .mockRejectedValueOnce(
+        OpenAI.APIError.generate(
+          400,
+          {
+            error: {
+              message: "Hosted environments are not enabled for this project.",
+              param: "environment",
+            },
+          },
+          "bad",
+          new Headers(),
+        ),
+      )
       .mockRejectedValueOnce(providerError(400))
       .mockRejectedValueOnce(providerError(400))
       .mockResolvedValue({ id: "new-provider" });
     const r = await handleManagedOrganizer(req(), d);
     const text = await r.text();
     expect(r.status).toBe(200);
-    expect(api.create).toHaveBeenCalledTimes(3);
-    expect(api.create.mock.calls[1]![0].environment.type).toBe("none");
-    expect(api.create.mock.calls[1]![0].agent.tools.map((t: { type: string }) => t.type)).toContain(
+    expect(api.create).toHaveBeenCalledTimes(4);
+    // Second try: the simplest hosted browser.
+    expect(api.create.mock.calls[1]![0].environment).toEqual({
+      type: "openai_hosted",
+      desktop: { enabled: true },
+    });
+    expect(api.create.mock.calls[2]![0].environment.type).toBe("none");
+    expect(api.create.mock.calls[2]![0].agent.tools.map((t: { type: string }) => t.type)).toContain(
       "web_search",
     );
     expect(
-      api.create.mock.calls[2]![0].agent.tools.every(
+      api.create.mock.calls[3]![0].agent.tools.every(
         (t: { type: string }) => t.type === "function",
       ),
     ).toBe(true);
     expect(text).toContain("aren't available on this OpenAI project yet");
+    expect(text).toContain("OpenAI said: 400");
     // The next conversation goes straight to what this project accepted.
     api.create.mockClear();
     await (await handleManagedOrganizer(req(), d)).text();
@@ -633,6 +652,7 @@ describe("demo-day resilience", () => {
     const body = await (await handleManagedOrganizer(req({ action: "status" }), d)).json();
     expect(body.browser).toEqual({
       available: true,
+      note: null,
       title: "Reid Park Zoo events",
       screenshot: "data:image/jpeg;base64,BBBB",
     });

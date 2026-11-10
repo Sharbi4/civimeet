@@ -12,7 +12,12 @@ type State = {
   hasOlderMessages?: boolean;
   usage?: { total_tokens: number };
   spend?: { consumed: number; limit: number };
-  browser?: { available: boolean; title: string | null; screenshot: string | null };
+  browser?: {
+    available: boolean;
+    title: string | null;
+    screenshot: string | null;
+    note?: string | null;
+  };
 };
 export function ManagedOrganizer({
   thread,
@@ -394,7 +399,7 @@ export function ManagedOrganizer({
               <div className="cv-browser-empty">
                 <span>
                   {state.browser?.available === false && state.messages.length > 0
-                    ? "This conversation uses web search: OpenAI hasn't enabled the hosted browser for this project. A new conversation tries the browser again."
+                    ? `This conversation uses web search: OpenAI didn't start the hosted browser for it.${state.browser?.note ? ` OpenAI said: ${state.browser.note}.` : ""} A new conversation tries the browser again.`
                     : "When Civi opens a website, you'll watch it here, live."}
                 </span>
                 <button
